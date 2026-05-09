@@ -218,6 +218,7 @@
   <div class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="resumen" role="tab">📊 Resumen</button>
     <button class="tab-btn" data-tab="alertas" role="tab">⚠️ Alertas <span class="tab-badge" id="tab-cnt-alerts">0</span></button>
+    <button class="tab-btn" data-tab="proveedores" role="tab">🏭 Proveedores</button>
     <button class="tab-btn" data-tab="detalle" role="tab">📋 Detalle <span class="tab-badge" id="tab-cnt-detail">0</span></button>
   </div>
 
@@ -271,6 +272,24 @@
           <div class="alert-list" id="list-crit"></div>
           <button class="show-more" data-list="crit">Ver más</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-proveedores" role="tabpanel">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Rotación por Proveedor <span id="prov-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:8px;"></span></h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-export-prov" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+          <input class="search-box" id="search-prov" type="text" placeholder="Buscar proveedor…" style="min-width:200px;"/>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="prov-headers"></tr></thead>
+          <tbody id="tbody-prov"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -996,6 +1015,7 @@ function render() {
 
   currentPage = 1;
   renderTable(rows);
+  renderProveedores(rows);
 }
 
 // ─── EXPORT CSV ────────────────────────────────────────────────────────────
@@ -1022,10 +1042,154 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+// ─── PROVEEDORES ───────────────────────────────────────────────────────────
+let provSortCol = '';
+let provSortDir = -1;
+let provSearchTerm = '';
+
+function renderProveedores(rows) {
+  // Build headers
+  const hdr = document.getElementById('prov-headers');
+  const monthCols = ROT_MONTHS.map(m => `<th class="num" data-pcol="${m.key}" style="cursor:pointer">${m.label}</th>`).join('');
+  hdr.innerHTML = `
+    <th data-pcol="supplier" style="cursor:pointer">Proveedor</th>
+    <th data-pcol="brand" style="cursor:pointer">Marca</th>
+    <th class="num" data-pcol="skus" style="cursor:pointer">SKUs</th>
+    <th class="num" data-pcol="vta_mes" style="cursor:pointer">Ventas Mes</th>
+    ${monthCols}
+    <th class="num" data-pcol="rot_prom" style="cursor:pointer">Promedio</th>
+    <th class="num" data-pcol="dias" style="cursor:pointer">Días</th>
+    <th data-pcol="obs" style="cursor:pointer">Obs</th>
+    <th data-pcol="tipo" style="cursor:pointer">Tipo</th>
+  `;
+  hdr.querySelectorAll('th[data-pcol]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.getAttribute('data-pcol');
+      if (provSortCol === col) provSortDir *= -1; else { provSortCol = col; provSortDir = -1; }
+      renderProveedores(lastRows);
+    });
+  });
+
+  // Group by supplier + brand
+  const map = {};
+  rows.forEach(r => {
+    const key = r.supplier + '||' + r.brand;
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    map[key].skus++;
+    map[key].vta_mes += r.vta_mes || 0;
+    ROT_MONTHS.forEach(m => {
+      if (r[m.key] != null) {
+        if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
+        map[key].months[m.key].sum += r[m.key];
+        map[key].months[m.key].n++;
+      }
+    });
+  });
+
+  let data = Object.values(map).map(d => {
+    const rotVals = ROT_MONTHS.map(m => d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null);
+    const validVals = rotVals.filter(v => v != null);
+    const rot_prom = validVals.length ? validVals.reduce((a,b) => a+b, 0) / validVals.length : null;
+    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
+    const monthAvgs = {};
+    ROT_MONTHS.forEach((m, i) => { monthAvgs[m.key] = rotVals[i]; });
+    return { ...d, ...monthAvgs, rot_prom, dias };
+  });
+
+  // Filter by search
+  const term = provSearchTerm.toLowerCase().trim();
+  if (term) data = data.filter(d => (d.supplier + ' ' + d.brand).toLowerCase().includes(term));
+
+  document.getElementById('prov-count').textContent = data.length.toLocaleString() + ' proveedores';
+
+  // Sort
+  if (provSortCol) {
+    data.sort((a, b) => {
+      const va = a[provSortCol], vb = b[provSortCol];
+      if (va == null) return 1; if (vb == null) return -1;
+      if (typeof va === 'number') return (va - vb) * provSortDir;
+      return String(va).localeCompare(String(vb)) * provSortDir;
+    });
+  } else {
+    data.sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
+  }
+
+  const obsColor = obs => obs === 'Cumple' ? '#10b981' : obs === 'No cumple' ? '#ef4444' : '#f59e0b';
+  const tierColor = v => v == null ? '#64748b' : v >= 1.3 ? '#10b981' : v >= 0.5 ? '#f59e0b' : '#ef4444';
+  const fmtRot = v => v == null ? '<span style="color:#475569">—</span>' : `<span style="color:${tierColor(v)};font-weight:600">${fmtDec(v)}</span>`;
+
+  const tbody = document.getElementById('tbody-prov');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="20" class="empty">Sin resultados</td></tr>'; return; }
+
+  tbody.innerHTML = data.map(d => {
+    const monthCells = ROT_MONTHS.map(m => `<td class="num">${fmtRot(d[m.key])}</td>`).join('');
+    const lastM = CURRENT_MONTH_KEY ? d[CURRENT_MONTH_KEY] : null;
+    return `<tr>
+      <td><b style="color:#f1f5f9">${escapeHtml(d.supplier)}</b></td>
+      <td style="color:#94a3b8">${escapeHtml(d.brand)}</td>
+      <td class="num">${d.skus}</td>
+      <td class="num">${fmtMoney(d.vta_mes)}</td>
+      ${monthCells}
+      <td class="num"><b>${fmtRot(d.rot_prom)}</b></td>
+      <td class="num" style="color:#94a3b8">${d.dias != null ? fmtDec(d.dias) : '—'}</td>
+      <td><span style="color:${obsColor(d.obs)};font-weight:600;font-size:12px">${escapeHtml(d.obs || '—')}</span></td>
+      <td style="color:#64748b;font-size:12px">${escapeHtml(d.tipo)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportProvCSV() {
+  const rows = lastRows;
+  if (!rows.length) return;
+  const map = {};
+  rows.forEach(r => {
+    const key = r.supplier + '||' + r.brand;
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    map[key].skus++;
+    map[key].vta_mes += r.vta_mes || 0;
+    ROT_MONTHS.forEach(m => {
+      if (r[m.key] != null) {
+        if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
+        map[key].months[m.key].sum += r[m.key];
+        map[key].months[m.key].n++;
+      }
+    });
+  });
+  const data = Object.values(map).map(d => {
+    const rotVals = ROT_MONTHS.map(m => d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null);
+    const validVals = rotVals.filter(v => v != null);
+    const rot_prom = validVals.length ? validVals.reduce((a,b) => a+b, 0) / validVals.length : null;
+    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
+    const monthAvgs = {};
+    ROT_MONTHS.forEach((m, i) => { monthAvgs[m.key] = rotVals[i]; });
+    return { ...d, ...monthAvgs, rot_prom, dias };
+  }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
+
+  const headers = ['Proveedor','Marca','SKUs','Ventas Mes',...ROT_MONTHS.map(m=>m.label),'Promedio','Dias','Obs','Tipo'];
+  const esc = v => { if (v==null) return ''; const s=String(v); if (s.indexOf(',')>=0||s.indexOf('"')>=0) return '"'+s.replace(/"/g,'""')+'"'; return s; };
+  const lines = [headers.join(',')];
+  data.forEach(d => {
+    const row = [d.supplier, d.brand, d.skus, d.vta_mes,
+      ...ROT_MONTHS.map(m => d[m.key] != null ? d[m.key].toFixed(2) : ''),
+      d.rot_prom != null ? d.rot_prom.toFixed(2) : '', d.dias != null ? d.dias.toFixed(2) : '', d.obs, d.tipo];
+    lines.push(row.map(esc).join(','));
+  });
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'proveedores_rotacion_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
 ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
   document.getElementById(id).addEventListener('change', () => { updateCascadeFilters(); render(); }));
 document.getElementById('btn-export').addEventListener('click', exportCSV);
+document.getElementById('btn-export-prov').addEventListener('click', exportProvCSV);
+document.getElementById('search-prov').addEventListener('input', e => {
+  provSearchTerm = e.target.value;
+  renderProveedores(lastRows);
+});
 document.getElementById('btn-reset').addEventListener('click', () => {
   ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('search').value = ''; searchTerm = '';
