@@ -717,7 +717,7 @@ const fmt = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { m
 const fmtMoney = n => (n == null || isNaN(n)) ? '—' : '$' + n.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 const fmtDec = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const escapeHtml = s => String(s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const avgBy = (rows, key) => { let s = 0, n = 0; for (const r of rows) { const v = r[key]; if (v != null) { s += v; n++; } } return n ? s / n : 0; };
+const avgBy = (rows, key) => { let s = 0, n = 0; for (const r of rows) { const v = r[key]; if (v != null) { const vc = Math.min(v, ROT_CAP); s += vc; n++; } } return n ? s / n : 0; };
 const tooltip = document.getElementById('tooltip');
 const showTip = (e, text) => { tooltip.textContent = text; tooltip.style.opacity = 1; tooltip.style.left = (e.pageX + 12) + 'px'; tooltip.style.top = (e.pageY - 10) + 'px'; };
 const hideTip = () => { tooltip.style.opacity = 0; };
@@ -727,12 +727,7 @@ const PALETTE = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4
 
 // ─── INSIGHTS ──────────────────────────────────────────────────────────────
 function renderInsights(rows) {
-  const rotVals = ROT_MONTHS.map(m => {
-    const vta = rows.reduce((a, r) => a + (r['Vta. Mes'] || r.vta_mes || 0), 0);
-    const inv = rows.reduce((a, r) => a + (r['Inv. prom'] || r.inv_prom || 0), 0);
-    // Use avgBy for earlier months (no inv data), corrected vta/inv for current
-    return avgBy(rows, m.key);
-  });
+  const rotVals = ROT_MONTHS.map(m => avgBy(rows, m.key));
   const _vtaCur = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
   const _invCur = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const curRot = _invCur > 0 ? _vtaCur / _invCur : rotVals[rotVals.length - 1];
