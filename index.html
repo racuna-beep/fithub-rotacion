@@ -279,7 +279,10 @@
     <div class="table-card">
       <div class="table-header">
         <h3>Detalle de SKUs <span id="row-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:8px;"></span></h3>
-        <input class="search-box" id="search2" type="text" placeholder="Buscar producto, SKU, marca…"/>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-export" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+          <input class="search-box" id="search2" type="text" placeholder="Buscar producto, SKU, marca…"/>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -372,7 +375,7 @@ function normalizeRow(raw, months) {
   r.supplier = raw['suppliers'] || raw['supplier'] || raw['Proveedor'] || '';
   r.brand    = raw['Brand'] || raw['brand'] || raw['Marca'] || '';
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
-  r.category = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || '';
+  r.category = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || '';
   r.vta_mes  = parseNum(raw['Vta. Mes'] || raw['vta_mes'] || raw['Ventas'] || 0);
   r.inv_prom = parseNum(raw['Inv. prom'] || raw['inv_prom'] || raw['Inv. Prom'] || raw['Inventario Promedio'] || 0);
   r.obs      = raw['Obs'] || raw['obs'] || raw['Estado'] || '';
@@ -447,7 +450,8 @@ async function loadData() {
     document.getElementById('meta-tiendas').textContent = new Set(DATA.map(r => r.Store)).size;
     document.getElementById('meta-skus').textContent = new Set(DATA.map(r => r.sku)).size.toLocaleString('es-CO');
     document.getElementById('meta-mes').textContent = ROT_LABELS[ROT_LABELS.length - 1];
-    document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
+    const now = new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
+    document.getElementById('last-update').textContent = 'Cargado: ' + now;
 
     // Update chart titles with current month
     const curLabel = ROT_LABELS[ROT_LABELS.length - 1];
@@ -535,24 +539,74 @@ function buildTableHeaders() {
 }
 
 // ─── FILTER DROPDOWNS ──────────────────────────────────────────────────────
+function populateSelect(id, values, allLabel) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${allLabel || 'Todos'}</option>`;
+  [...new Set(values)].filter(v => v).sort().forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  // Keep current value if still valid
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  else sel.value = '';
+}
+
 function repopulateFilters() {
-  const populate = (id, values) => {
-    const sel = document.getElementById(id);
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Todos</option>';
-    [...new Set(values)].filter(v => v).sort().forEach(v => {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = v;
-      sel.appendChild(o);
-    });
-    sel.value = cur;
-  };
-  populate('f-store', DATA.map(r => r.Store));
-  populate('f-brand', DATA.map(r => r.brand));
-  populate('f-supplier', DATA.map(r => r.supplier));
-  populate('f-category', DATA.map(r => r.category));
-  populate('f-obs', DATA.map(r => r.obs));
-  populate('f-pago', DATA.map(r => r['Tipo de Pago']));
+  populateSelect('f-store', DATA.map(r => r.Store), 'Todas');
+  populateSelect('f-brand', DATA.map(r => r.brand), 'Todas');
+  populateSelect('f-supplier', DATA.map(r => r.supplier), 'Todos');
+  populateSelect('f-category', DATA.map(r => r.category), 'Todas');
+  populateSelect('f-obs', DATA.map(r => r.obs), 'Todos');
+  populateSelect('f-pago', DATA.map(r => r['Tipo de Pago']), 'Todos');
+}
+
+function updateCascadeFilters() {
+  if (!DATA.length) return;
+  // Get current non-category filters
+  const store    = document.getElementById('f-store').value;
+  const brand    = document.getElementById('f-brand').value;
+  const supplier = document.getElementById('f-supplier').value;
+  const obs      = document.getElementById('f-obs').value;
+  const pago     = document.getElementById('f-pago').value;
+  const tier     = document.getElementById('f-tier').value;
+  const trend    = document.getElementById('f-trend').value;
+  const term     = searchTerm.toLowerCase().trim();
+
+  // Filter base data with current selections (except category)
+  const base = DATA.filter(r => {
+    if (store    && r.Store !== store)           return false;
+    if (brand    && r.brand !== brand)           return false;
+    if (supplier && r.supplier !== supplier)     return false;
+    if (obs      && r.obs !== obs)               return false;
+    if (pago     && r['Tipo de Pago'] !== pago)  return false;
+    if (tier     && r.tier  && r.tier !== tier)   return false;
+    if (trend    && r.trend && r.trend !== trend) return false;
+    if (term) {
+      const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.Store).toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
+    return true;
+  });
+
+  // Repopulate category based on filtered base
+  populateSelect('f-category', base.map(r => r.category), 'Todas');
+
+  // Also cascade: if supplier selected, limit brands shown and vice versa
+  const baseForBrand = DATA.filter(r => {
+    if (store    && r.Store !== store)       return false;
+    if (supplier && r.supplier !== supplier) return false;
+    return true;
+  });
+  populateSelect('f-brand', baseForBrand.map(r => r.brand), 'Todas');
+
+  const baseForSupplier = DATA.filter(r => {
+    if (store && r.Store !== store) return false;
+    if (brand && r.brand !== brand) return false;
+    return true;
+  });
+  populateSelect('f-supplier', baseForSupplier.map(r => r.supplier), 'Todos');
 }
 
 // ─── FILTER ────────────────────────────────────────────────────────────────
@@ -646,8 +700,9 @@ function renderKPIs(rows) {
   const declinando = rows.filter(r => r.trend === 'declinando').length;
   const pct = n => totalSku ? ((n / totalSku) * 100).toFixed(1) + '%' : '0%';
   const curLabel = ROT_LABELS[ROT_LABELS.length - 1];
+  const uniqueSkus = new Set(rows.map(r => r.sku)).size;
   const kpis = [
-    { label: 'Total SKUs', val: fmt(totalSku), sub: 'Productos en vista', cls: 'purple' },
+    { label: 'Registros', val: fmt(totalSku), sub: `${fmt(uniqueSkus)} SKUs únicos`, cls: 'purple' },
     { label: 'Ventas del mes', val: fmtMoney(totalVta), sub: 'Suma Vta. Mes', cls: '' },
     { label: 'Inv. promedio', val: fmtMoney(totalInv), sub: 'Capital inmovilizado', cls: 'yellow' },
     { label: `Rot. prom ${curLabel}`, val: fmtDec(rotProm), sub: diasProm ? `${fmtDec(diasProm)} días · meta 1.30` : 'meta 1.30', cls: rotProm >= 1.3 ? 'green' : 'red' },
@@ -754,7 +809,7 @@ function renderDonut(svgId, data) {
 
 function renderBars(svgId, data, color, formatter, showMeta, allowNeg) {
   const svg = document.getElementById(svgId); svg.innerHTML = '';
-  const W = 400, H = 280, pl = 60, pr = 16, pt = 16, pb = 50;
+  const W = 400, H = 280, pl = 60, pr = 16, pt = 16, pb = 70;
   const cw = W - pl - pr, ch = H - pt - pb;
   if (!data.length) { svg.innerHTML = '<text x="200" y="140" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
   let max, min = 0;
@@ -784,7 +839,15 @@ function renderBars(svgId, data, color, formatter, showMeta, allowNeg) {
     else fill = d.color || color;
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); rect.setAttribute('x', x); rect.setAttribute('y', y); rect.setAttribute('width', bw); rect.setAttribute('height', Math.max(h, 1)); rect.setAttribute('fill', fill); rect.setAttribute('rx', 4); rect.classList.add('bar');
     rect.addEventListener('mousemove', e => showTip(e, `${d.label}: ${formatter(v)}`)); rect.addEventListener('mouseleave', hideTip); svg.appendChild(rect);
-    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text'); lbl.setAttribute('x', x + bw / 2); lbl.setAttribute('y', H - pb + 18); lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('fill', '#cbd5e1'); lbl.setAttribute('font-size', '11'); lbl.textContent = d.label.length > 14 ? d.label.slice(0, 12) + '…' : d.label; svg.appendChild(lbl);
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', x + bw / 2);
+    lbl.setAttribute('y', H - pb + 14);
+    lbl.setAttribute('text-anchor', 'end');
+    lbl.setAttribute('fill', '#cbd5e1');
+    lbl.setAttribute('font-size', '10');
+    lbl.setAttribute('transform', `rotate(-40, ${x + bw / 2}, ${H - pb + 14})`);
+    lbl.textContent = d.label.length > 16 ? d.label.slice(0, 14) + '…' : d.label;
+    svg.appendChild(lbl);
   });
 }
 
@@ -935,12 +998,38 @@ function render() {
   renderTable(rows);
 }
 
+// ─── EXPORT CSV ────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = lastRows;
+  if (!rows.length) return;
+  const cols = ['Store','sku','brand','supplier','product','category',
+    ...ROT_MONTHS.map(m => m.key),'dias_calc','trend','tier','obs','Tipo de Pago','vta_mes','inv_prom'];
+  const labels = ['Tienda','SKU','Marca','Proveedor','Producto','Categoria',
+    ...ROT_MONTHS.map(m => m.label),'Dias','Tendencia','Alerta','Estado','Tipo de Pago','Vta. Mes','Inv. Prom'];
+  const esc = v => {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const lines = [labels.join(',')];
+  rows.forEach(r => lines.push(cols.map(c => esc(r[c])).join(',')));
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'rotacion_fithub_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
 ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
-  document.getElementById(id).addEventListener('change', render));
+  document.getElementById(id).addEventListener('change', () => { updateCascadeFilters(); render(); }));
+document.getElementById('btn-export').addEventListener('click', exportCSV);
 document.getElementById('btn-reset').addEventListener('click', () => {
   ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('search').value = ''; searchTerm = ''; render();
+  document.getElementById('search').value = ''; searchTerm = '';
+  repopulateFilters(); render();
 });
 let searchTimer;
 ['search', 'search2'].forEach(id => {
@@ -962,6 +1051,14 @@ document.querySelectorAll('.show-more').forEach(btn => btn.addEventListener('cli
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 loadData();
+// Safety timeout: hide loading screen after 15s regardless
+setTimeout(() => {
+  const ls = document.getElementById('loading-screen');
+  if (ls && ls.style.display !== 'none') {
+    ls.style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+}, 15000);
 </script>
 </body>
 </html>
