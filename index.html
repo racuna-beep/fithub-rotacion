@@ -17,6 +17,11 @@
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .meta-info b { color: #f1f5f9; }
   .meta-right { display: flex; align-items: center; gap: 12px; }
+  .sort-toggle { background: rgba(255,255,255,0.06); color: #94a3b8; border: 1px solid #334155;
+    padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600;
+    white-space: nowrap; transition: background 0.2s; }
+  .sort-toggle:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
+  .sort-toggle.asc { color: #f59e0b; border-color: #f59e0b; }
   .btn-update { background: #10b981; color: white; border: none;
     padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px;
     display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
@@ -27,6 +32,18 @@
   .btn-update.loading .icon { display: none; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .last-update { font-size: 12px; color: #64748b; }
+
+  /* Tooltip */
+  #tt { position: fixed; pointer-events: none; z-index: 9999; display: none;
+    background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; color: #f1f5f9; line-height: 1.6;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-width: 220px; }
+  #tt b { color: #e8390e; }
+  #tt .tt-val { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  #tt .tt-sub { color: #94a3b8; font-size: 11px; }
+  #tt .tt-ok  { color: #10b981; font-weight: 600; }
+  #tt .tt-warn{ color: #f59e0b; font-weight: 600; }
+  #tt .tt-bad { color: #ef4444; font-weight: 600; }
 
   /* Loading screen */
   #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -167,15 +184,21 @@
   .bar { transition: opacity 0.15s; cursor: pointer; }
   .bar:hover { opacity: 0.8; }
   .spark { vertical-align: middle; margin-left: 6px; }
-  #tooltip { position: fixed; background: #1e293b; color: #f1f5f9; border: 1px solid #475569;
-    padding: 6px 10px; border-radius: 6px; font-size: 12px; pointer-events: none;
-    opacity: 0; transition: opacity 0.1s; z-index: 9999; }
+  #tooltip { position: fixed; background: #0f172a; color: #f1f5f9; border: 1px solid #475569;
+    padding: 10px 14px; border-radius: 8px; font-size: 12px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s; z-index: 9999; max-width: 240px; line-height: 1.6;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  #tooltip strong { color: #f1f5f9; display: block; margin-bottom: 2px; }
+  #tooltip .tt-val { color: #10b981; font-weight: 700; font-size: 14px; }
+  #tooltip .tt-sub { color: #64748b; font-size: 11px; }
+  [data-tip] { cursor: help; }
 </style>
 </head>
 <body>
 <div id="tooltip"></div>
 
 <!-- Loading screen -->
+<div id="tt"></div>
 <div id="loading-screen">
   <div class="loader-badge">Super Tiendas</div>
   <div class="loader-logo">fit<span>hub</span></div>
@@ -249,12 +272,27 @@
         <svg class="chart" id="chart-trend" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
       <div class="card"><h3 id="chart-rot-title">Evolución rotación promedio</h3>
         <svg class="chart" id="chart-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div class="card"><h3 id="chart-store-rot-title">Rotación promedio por tienda</h3>
-        <svg class="chart" id="chart-store-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div class="card"><h3>Top 8 marcas por rotación</h3>
-        <svg class="chart" id="chart-brand-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div class="card"><h3>Top 8 categorías por rotación</h3>
-        <svg class="chart" id="chart-cat-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 id="chart-store-rot-title" style="margin:0">Rotación promedio por tienda</h3>
+          <button class="sort-toggle" data-chart="chart-store-rot" title="Cambiar orden">↕ Mejor → Peor</button>
+        </div>
+        <svg class="chart" id="chart-store-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0">Top 8 marcas por rotación</h3>
+          <button class="sort-toggle" data-chart="chart-brand-rot" title="Cambiar orden">↕ Mejor → Peor</button>
+        </div>
+        <svg class="chart" id="chart-brand-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0">Top 8 categorías por rotación</h3>
+          <button class="sort-toggle" data-chart="chart-cat-rot" title="Cambiar orden">↕ Mejor → Peor</button>
+        </div>
+        <svg class="chart" id="chart-cat-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
       <div class="card"><h3 id="chart-delta-title">Cambio mes anterior → actual</h3>
         <svg class="chart" id="chart-delta" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
       <div class="card"><h3>Ventas del mes por tienda</h3>
@@ -348,6 +386,8 @@ let CURRENT_MONTH_KEY = '';
 let PREV_MONTH_KEY = '';
 let sortCol = '';
 let sortDir = -1;
+// Bar chart sort directions: 1 = asc (peor a mejor), -1 = desc (mejor a peor)
+const barSortDirs = { 'chart-store-rot': -1, 'chart-brand-rot': -1, 'chart-cat-rot': -1 };
 let searchTerm = '';
 let currentPage = 1;
 let pageSize = 100;
@@ -738,6 +778,16 @@ function renderKPIs(rows) {
   const pct = n => totalSku ? ((n / totalSku) * 100).toFixed(1) + '%' : '0%';
   const curLabel = ROT_LABELS[ROT_LABELS.length - 1];
   const uniqueSkus = new Set(rows.map(r => r.sku)).size;
+  const KPI_TIPS = {
+    'Registros': 'Total de filas en el reporte. Un mismo SKU puede aparecer en varias tiendas.',
+    'Ventas del Mes': 'Suma de ventas del mes actual según el filtro aplicado.',
+    'Inv. Promedio': 'Capital inmovilizado promedio. Inventario que no se ha convertido en venta.',
+    'Rot. Prom': 'Rotación promedio del mes actual. Meta: ≥ 1.30 (el inventario se renueva más de una vez al mes).',
+    'Mejorando ↑': 'SKUs cuya rotación mejoró respecto al mes anterior. Tendencia positiva.',
+    'Declinando ↓': 'SKUs cuya rotación empeoró respecto al mes anterior. Requieren atención.',
+    'Cumplen Meta': 'SKUs con rotación ≥ 1.30 en el mes actual.',
+    'No Cumplen': 'SKUs con rotación < 1.30. Incluye Vigilar (0.50–1.30) y Atacar (< 0.50).'
+  };
   const kpis = [
     { label: 'Registros', val: fmt(totalSku), sub: `${fmt(uniqueSkus)} SKUs únicos`, cls: 'purple' },
     { label: 'Ventas del mes', val: fmtMoney(totalVta), sub: 'Suma Vta. Mes', cls: '' },
@@ -749,7 +799,7 @@ function renderKPIs(rows) {
     { label: 'No cumplen', val: noCumple + ' (' + pct(noCumple) + ')', sub: 'Requieren acción', cls: 'red' },
   ];
   document.getElementById('kpis').innerHTML = kpis.map(k =>
-    `<div class="kpi ${k.cls}">
+    `<div class="kpi ${k.cls}" data-tip="${(KPI_TIPS[k.label]||'').replace(/"/g,"'")}">
       <div class="kpi-label">${k.label}</div>
       <div class="kpi-value">${k.val}</div>
       <div class="kpi-sub">${k.sub}</div>
@@ -1013,13 +1063,16 @@ function render() {
   renderLine('chart-rot', rotLine, '#10b981');
 
   const storeRot = groupAvgRot(rows, 'Store', CURRENT_MONTH_KEY);
-  renderBars('chart-store-rot', storeRot, '#10b981', v => v.toFixed(2), true, false);
+  const sortedStoreRot = barSortDirs['chart-store-rot'] === -1 ? storeRot : [...storeRot].reverse();
+  renderBars('chart-store-rot', sortedStoreRot, '#10b981', v => v.toFixed(2), true, false);
 
   const brandRot = groupAvgRot(rows, 'brand', CURRENT_MONTH_KEY).filter(d => d.n >= 5).slice(0, 8);
-  renderBars('chart-brand-rot', brandRot, '#a855f7', v => v.toFixed(2), true, false);
+  const sortedBrandRot = barSortDirs['chart-brand-rot'] === -1 ? brandRot : [...brandRot].reverse();
+  renderBars('chart-brand-rot', sortedBrandRot, '#a855f7', v => v.toFixed(2), true, false);
 
   const catRot = groupAvgRot(rows, 'category', CURRENT_MONTH_KEY).filter(d => d.n >= 5).slice(0, 8);
-  renderBars('chart-cat-rot', catRot, '#ec4899', v => v.toFixed(2), true, false);
+  const sortedCatRot = barSortDirs['chart-cat-rot'] === -1 ? catRot : [...catRot].reverse();
+  renderBars('chart-cat-rot', sortedCatRot, '#ec4899', v => v.toFixed(2), true, false);
 
   if (PREV_MONTH_KEY) {
     const stores = [...new Set(rows.map(r => r.Store))].sort();
@@ -1199,10 +1252,69 @@ function exportProvCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+
+// ─── TOOLTIP ENGINE ─────────────────────────────────────────────────────────
+const tt = document.getElementById('tt');
+let ttVisible = false;
+
+function showTT(html, e) {
+  tt.innerHTML = html;
+  tt.style.display = 'block';
+  ttVisible = true;
+  moveTT(e);
+}
+function moveTT(e) {
+  if (!ttVisible) return;
+  const x = e.clientX, y = e.clientY;
+  const w = tt.offsetWidth, h = tt.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  tt.style.left = (x + 14 + w > vw ? x - w - 14 : x + 14) + 'px';
+  tt.style.top  = (y + 14 + h > vh ? y - h - 14 : y + 14) + 'px';
+}
+function hideTT() { tt.style.display = 'none'; ttVisible = false; }
+document.addEventListener('mousemove', moveTT);
+
+function tierLabel(v) {
+  if (v == null) return '<span class="tt-warn">Sin dato</span>';
+  if (v >= 1.3)  return `<span class="tt-ok">✓ Cumple meta (≥ 1.30)</span>`;
+  if (v >= 0.5)  return `<span class="tt-warn">⚠ Vigilar (0.50–1.30)</span>`;
+  return `<span class="tt-bad">✗ Atacar (&lt; 0.50)</span>`;
+}
+
+// KPI tooltips
+const KPI_TIPS = {
+  'kpi-0': { title: 'Registros', desc: 'Total de filas en la tabla (un SKU por tienda cuenta como registro separado). Abajo se muestra cuántos SKUs únicos hay.' },
+  'kpi-1': { title: 'Ventas del Mes', desc: 'Suma de las ventas del mes actual en todos los registros filtrados.' },
+  'kpi-2': { title: 'Inventario Promedio', desc: 'Capital promedio inmovilizado en inventario. Mientras más alto, más capital sin rotar.' },
+  'kpi-3': { title: 'Rotación Promedio', desc: 'Veces que el inventario rota en el mes. Meta: ≥ 1.30. Un valor de 1.30 = el inventario se renueva ~1.3 veces al mes.' },
+  'kpi-4': { title: 'Mejorando ↑', desc: 'SKUs cuya rotación subió vs el mes anterior. Tendencia positiva.' },
+  'kpi-5': { title: 'Declinando ↓', desc: 'SKUs cuya rotación bajó vs el mes anterior. Requieren atención.' },
+  'kpi-6': { title: 'Cumplen Meta', desc: 'SKUs con rotación ≥ 1.30. Estado OK.' },
+  'kpi-7': { title: 'No Cumplen', desc: 'SKUs con rotación < 1.30. Incluye Vigilar (0.50–1.30) y Atacar (< 0.50).' },
+};
+
+document.querySelectorAll('.kpi-card').forEach((card, i) => {
+  const tip = KPI_TIPS['kpi-' + i];
+  if (!tip) return;
+  card.style.cursor = 'help';
+  card.addEventListener('mouseenter', e => showTT(`<b>${tip.title}</b><br><span class="tt-sub">${tip.desc}</span>`, e));
+  card.addEventListener('mouseleave', hideTT);
+});
+
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
 ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
   document.getElementById(id).addEventListener('change', () => { updateCascadeFilters(); render(); }));
 document.getElementById('btn-export').addEventListener('click', exportCSV);
+document.querySelectorAll('.sort-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const chartId = btn.getAttribute('data-chart');
+    barSortDirs[chartId] *= -1;
+    const isAsc = barSortDirs[chartId] === 1;
+    btn.textContent = isAsc ? '↕ Peor → Mejor' : '↕ Mejor → Peor';
+    btn.classList.toggle('asc', isAsc);
+    render();
+  });
+});
 document.getElementById('btn-export-prov').addEventListener('click', exportProvCSV);
 document.getElementById('search-prov').addEventListener('input', e => {
   provSearchTerm = e.target.value;
@@ -1230,6 +1342,26 @@ document.querySelectorAll('.show-more').forEach(btn => btn.addEventListener('cli
   if (alertLimits[tier] >= 5000) alertLimits[tier] = 50; else alertLimits[tier] += 200;
   renderAlerts(lastRows);
 }));
+
+// ─── TOOLTIP SYSTEM ─────────────────────────────────────────────────────────
+const ttEl = document.getElementById('tooltip');
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) return;
+  ttEl.innerHTML = el.getAttribute('data-tip');
+  ttEl.style.opacity = '1';
+});
+document.addEventListener('mousemove', e => {
+  if (ttEl.style.opacity === '0') return;
+  const x = e.clientX + 14, y = e.clientY + 14;
+  const w = ttEl.offsetWidth, h = ttEl.offsetHeight;
+  ttEl.style.left = (x + w > window.innerWidth ? e.clientX - w - 8 : x) + 'px';
+  ttEl.style.top  = (y + h > window.innerHeight ? e.clientY - h - 8 : y) + 'px';
+});
+document.addEventListener('mouseout', e => {
+  if (!e.target.closest('[data-tip]')) return;
+  ttEl.style.opacity = '0';
+});
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 loadData();
