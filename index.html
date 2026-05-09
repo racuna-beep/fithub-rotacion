@@ -288,10 +288,10 @@
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <h3 style="margin:0">Top 8 categorías por rotación</h3>
+          <h3 style="margin:0">Categorías por rotación</h3>
           <button class="sort-toggle" data-chart="chart-cat-rot" title="Cambiar orden">↕ Mejor → Peor</button>
         </div>
-        <svg class="chart" id="chart-cat-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg>
+        <svg class="chart chart-wide" id="chart-cat-rot" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
       <div class="card"><h3 id="chart-delta-title">Cambio mes anterior → actual</h3>
         <svg class="chart" id="chart-delta" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -736,6 +736,8 @@ function renderInsights(rows) {
   const _vtaCur = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
   const _invCur = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const curRot = _invCur > 0 ? _vtaCur / _invCur : rotVals[rotVals.length - 1];
+  // Para el KPI de rotación promedio, usar cap para no distorsionar
+  const curRotCapped = rows.filter(r => r[CURRENT_MONTH_KEY] != null).reduce((a,r) => a + Math.min(r[CURRENT_MONTH_KEY], ROT_CAP), 0) / Math.max(1, rows.filter(r => r[CURRENT_MONTH_KEY] != null).length);
   const prevRot = rotVals.length >= 2 ? rotVals[rotVals.length - 2] : 0;
   const delta = prevRot > 0 ? ((curRot - prevRot) / prevRot * 100) : 0;
   const deltaClass = delta < 0 ? 'delta-down' : 'delta-up';
@@ -862,7 +864,8 @@ function renderAlerts(rows) {
 
 // ─── CHARTS ────────────────────────────────────────────────────────────────
 const groupSum = (rows, key, valKey) => { const m = {}; rows.forEach(r => { const k = r[key]; m[k] = (m[k] || 0) + (r[valKey] || 0); }); return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
-const groupAvgRot = (rows, key, monthKey) => { const m = {}; rows.forEach(r => { const k = r[key]; const v = r[monthKey]; if (v == null) return; if (!m[k]) m[k] = { sum: 0, n: 0 }; m[k].sum += v; m[k].n++; }); return Object.entries(m).map(([label, x]) => ({ label, value: x.n ? x.sum / x.n : 0, n: x.n })).sort((a, b) => b.value - a.value); };
+const ROT_CAP = 30; // Cap para promedios de gráficas (SKUs con inv~0 distorsionan)
+const groupAvgRot = (rows, key, monthKey) => { const m = {}; rows.forEach(r => { const k = r[key]; const v = r[monthKey]; if (v == null) return; const vc = Math.min(v, ROT_CAP); if (!m[k]) m[k] = { sum: 0, n: 0 }; m[k].sum += vc; m[k].n++; }); return Object.entries(m).map(([label, x]) => ({ label, value: x.n ? x.sum / x.n : 0, n: x.n })).sort((a, b) => b.value - a.value); };
 
 function renderDonut(svgId, data) {
   const svg = document.getElementById(svgId); svg.innerHTML = '';
@@ -894,9 +897,13 @@ function renderDonut(svgId, data) {
   });
 }
 
-function renderBars(svgId, data, color, formatter, showMeta, allowNeg) {
+function renderBarsCustom(svgId, data, color, formatter, showMeta, allowNeg, W, H) {
+  return renderBars(svgId, data, color, formatter, showMeta, allowNeg, W, H);
+}
+function renderBars(svgId, data, color, formatter, showMeta, allowNeg, W, H) {
   const svg = document.getElementById(svgId); svg.innerHTML = '';
-  const W = 400, H = 280, pl = 60, pr = 16, pt = 16, pb = 70;
+  W = W || 400; H = H || 280;
+  const pl = 60, pr = 16, pt = 16, pb = 70;
   const cw = W - pl - pr, ch = H - pt - pb;
   if (!data.length) { svg.innerHTML = '<text x="200" y="140" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
   let max, min = 0;
@@ -1070,9 +1077,12 @@ function render() {
   const sortedBrandRot = barSortDirs['chart-brand-rot'] === -1 ? brandRot : [...brandRot].reverse();
   renderBars('chart-brand-rot', sortedBrandRot, '#a855f7', v => v.toFixed(2), true, false);
 
-  const catRot = groupAvgRot(rows, 'category', CURRENT_MONTH_KEY).filter(d => d.n >= 5).slice(0, 8);
+  const catRot = groupAvgRot(rows, 'category', CURRENT_MONTH_KEY).filter(d => d.n >= 3);
   const sortedCatRot = barSortDirs['chart-cat-rot'] === -1 ? catRot : [...catRot].reverse();
-  renderBars('chart-cat-rot', sortedCatRot, '#ec4899', v => v.toFixed(2), true, false);
+  const catW = Math.max(400, sortedCatRot.length * 52);
+  const catSvg = document.getElementById('chart-cat-rot');
+  catSvg.setAttribute('viewBox', `0 0 ${catW} 320`);
+  renderBarsCustom('chart-cat-rot', sortedCatRot, '#ec4899', v => v.toFixed(2), true, false, catW, 320);
 
   if (PREV_MONTH_KEY) {
     const stores = [...new Set(rows.map(r => r.Store))].sort();
@@ -1252,54 +1262,6 @@ function exportProvCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-
-// ─── TOOLTIP ENGINE ─────────────────────────────────────────────────────────
-const tt = document.getElementById('tt');
-let ttVisible = false;
-
-function showTT(html, e) {
-  tt.innerHTML = html;
-  tt.style.display = 'block';
-  ttVisible = true;
-  moveTT(e);
-}
-function moveTT(e) {
-  if (!ttVisible) return;
-  const x = e.clientX, y = e.clientY;
-  const w = tt.offsetWidth, h = tt.offsetHeight;
-  const vw = window.innerWidth, vh = window.innerHeight;
-  tt.style.left = (x + 14 + w > vw ? x - w - 14 : x + 14) + 'px';
-  tt.style.top  = (y + 14 + h > vh ? y - h - 14 : y + 14) + 'px';
-}
-function hideTT() { tt.style.display = 'none'; ttVisible = false; }
-document.addEventListener('mousemove', moveTT);
-
-function tierLabel(v) {
-  if (v == null) return '<span class="tt-warn">Sin dato</span>';
-  if (v >= 1.3)  return `<span class="tt-ok">✓ Cumple meta (≥ 1.30)</span>`;
-  if (v >= 0.5)  return `<span class="tt-warn">⚠ Vigilar (0.50–1.30)</span>`;
-  return `<span class="tt-bad">✗ Atacar (&lt; 0.50)</span>`;
-}
-
-// KPI tooltips
-const KPI_TIPS = {
-  'kpi-0': { title: 'Registros', desc: 'Total de filas en la tabla (un SKU por tienda cuenta como registro separado). Abajo se muestra cuántos SKUs únicos hay.' },
-  'kpi-1': { title: 'Ventas del Mes', desc: 'Suma de las ventas del mes actual en todos los registros filtrados.' },
-  'kpi-2': { title: 'Inventario Promedio', desc: 'Capital promedio inmovilizado en inventario. Mientras más alto, más capital sin rotar.' },
-  'kpi-3': { title: 'Rotación Promedio', desc: 'Veces que el inventario rota en el mes. Meta: ≥ 1.30. Un valor de 1.30 = el inventario se renueva ~1.3 veces al mes.' },
-  'kpi-4': { title: 'Mejorando ↑', desc: 'SKUs cuya rotación subió vs el mes anterior. Tendencia positiva.' },
-  'kpi-5': { title: 'Declinando ↓', desc: 'SKUs cuya rotación bajó vs el mes anterior. Requieren atención.' },
-  'kpi-6': { title: 'Cumplen Meta', desc: 'SKUs con rotación ≥ 1.30. Estado OK.' },
-  'kpi-7': { title: 'No Cumplen', desc: 'SKUs con rotación < 1.30. Incluye Vigilar (0.50–1.30) y Atacar (< 0.50).' },
-};
-
-document.querySelectorAll('.kpi-card').forEach((card, i) => {
-  const tip = KPI_TIPS['kpi-' + i];
-  if (!tip) return;
-  card.style.cursor = 'help';
-  card.addEventListener('mouseenter', e => showTT(`<b>${tip.title}</b><br><span class="tt-sub">${tip.desc}</span>`, e));
-  card.addEventListener('mouseleave', hideTT);
-});
 
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
 ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
