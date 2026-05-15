@@ -37,6 +37,19 @@
   header h1 { font-size: 26px; font-weight: 800; color: var(--text); }
   header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
+  /* ── EXEC SUMMARY ── */
+  .exec-summary { background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(249,115,22,0.06));
+    border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 14px 20px;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .exec-pill { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .exec-pill b { font-size: 18px; font-weight: 800; }
+  .exec-pill .lbl { color: var(--muted); font-size: 11px; }
+  .exec-divider { width: 1px; height: 32px; background: var(--border); }
+  .exec-bar-wrap { flex: 1; min-width: 200px; }
+  .exec-bar-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .exec-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; display: flex; }
+  .exec-bar-seg { height: 100%; transition: width 0.4s; }
+
   /* ── META BAR ── */
   .meta-bar { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2);
     border-radius: 8px; padding: 10px 16px; display: flex; align-items: center;
@@ -139,6 +152,12 @@
     color: var(--muted); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px;
     font-weight: 600; margin-top: 4px; transition: all 0.15s; }
   .btn-ver-mas:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .btn-collapse { background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 0 4px; line-height: 1; transition: transform 0.2s, color 0.15s; }
+  .btn-collapse:hover { color: var(--text); }
+  .btn-collapse.collapsed { transform: rotate(-90deg); }
+  .alert-col-body { transition: all 0.2s; overflow: hidden; }
+  .alert-col-body.collapsed { display: none; }
 
   /* ── TABLE ── */
   .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
@@ -154,6 +173,9 @@
   td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); white-space: nowrap; }
   tr:hover td { background: rgba(249,115,22,0.04); }
   .badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  .dias-bar { display: flex; align-items: center; gap: 6px; }
+  .dias-bar-track { width: 60px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+  .dias-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
   .badge-red    { background: rgba(239,68,68,0.15); color: #f87171; }
   .badge-yellow { background: rgba(245,158,11,0.15); color: #fbbf24; }
   .badge-orange { background: rgba(249,115,22,0.15); color: #fb923c; }
@@ -191,6 +213,7 @@
     <p>Análisis de cobertura de inventario · Alertas de quiebre y exceso</p>
   </header>
 
+  <div id="exec-summary" class="exec-summary" style="display:none"></div>
   <div class="meta-bar">
     <span id="meta-txt"><b>—</b> registros · <b>—</b> tiendas · <b>—</b> SKUs únicos · <span id="last-update"></span></span>
     <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
@@ -232,6 +255,10 @@
     <div class="filter-group">
       <span class="filter-label">BÚSQUEDA</span>
       <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label" data-tip="Condición comercial: crédito o consignación">TIPO DE PAGO</span>
+      <select id="f-pago"><option value="">Todos</option></select>
     </div>
     <button class="btn-reset" id="btn-reset">✕ Limpiar</button>
   </div>
@@ -291,7 +318,7 @@
           <span class="badge-cnt" id="cnt-nv" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
         </div>
         <div class="alert-col-desc">Sin ventas registradas. Producto nuevo o sin movimiento.</div>
-        <div id="list-nuevo"></div>
+        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
       </div>
       <div class="alert-col quiebre">
         <div class="alert-col-hdr">
@@ -299,7 +326,7 @@
           <span class="badge-cnt" id="cnt-q" style="background:rgba(239,68,68,0.15);color:#f87171">0</span>
         </div>
         <div class="alert-col-desc">Tiene ventas pero 0 días de inventario. Acción inmediata.</div>
-        <div id="list-quiebre"></div>
+        <div class="alert-col-body" id="body-list-quiebre"><div id="list-quiebre"></div></div>
       </div>
       <div class="alert-col critico">
         <div class="alert-col-hdr">
@@ -307,7 +334,7 @@
           <span class="badge-cnt" id="cnt-c" style="background:rgba(249,115,22,0.15);color:#fb923c">0</span>
         </div>
         <div class="alert-col-desc">Menos de 7 días. Reponer de inmediato.</div>
-        <div id="list-critico"></div>
+        <div class="alert-col-body" id="body-list-critico"><div id="list-critico"></div></div>
       </div>
       <div class="alert-col bajo" style="border-top:3px solid var(--yellow)">
         <div class="alert-col-hdr">
@@ -315,7 +342,7 @@
           <span class="badge-cnt" id="cnt-b" style="background:rgba(245,158,11,0.15);color:#fbbf24">0</span>
         </div>
         <div class="alert-col-desc">Cobertura baja. Programar reposición pronto.</div>
-        <div id="list-revisar"></div>
+        <div class="alert-col-body" id="body-list-revisar"><div id="list-revisar"></div></div>
       </div>
       <div class="alert-col" style="border-top:3px solid #8b5cf6">
         <div class="alert-col-hdr">
@@ -323,7 +350,7 @@
           <span class="badge-cnt" id="cnt-ss" style="background:rgba(139,92,246,0.15);color:#a78bfa">0</span>
         </div>
         <div class="alert-col-desc">Exceso de inventario. Evaluar devolución o promoción.</div>
-        <div id="list-sobrestock"></div>
+        <div class="alert-col-body" id="body-list-sobrestock"><div id="list-sobrestock"></div></div>
       </div>
       <div class="alert-col exceso" style="border-top:3px solid #f43f5e">
         <div class="alert-col-hdr">
@@ -331,7 +358,7 @@
           <span class="badge-cnt" id="cnt-e" style="background:rgba(244,63,94,0.15);color:#fb7185">0</span>
         </div>
         <div class="alert-col-desc">Inventario supera vida útil. Riesgo de vencimiento.</div>
-        <div id="list-gestionar"></div>
+        <div class="alert-col-body" id="body-list-gestionar"><div id="list-gestionar"></div></div>
       </div>
     </div>
   </div>
@@ -379,7 +406,8 @@
               <th data-col="dias_inv" class="num" data-tip="Días de inventario = Inv. Actual / (Promedio Venta YTD / 30)">Días Inv.</th>
               <th data-col="vida_util" class="num" data-tip="Días estimados antes del vencimiento o deterioro del producto">Vida Útil</th>
               <th data-col="prom_vta" class="num" data-tip="Promedio de ventas diarias (YTD)">Prom. Vta YTD</th>
-              <th data-col="estado" class="num">Estado</th>
+              <th data-col="tipo_pago">Tipo Pago</th>
+              <th data-col="estado">Estado</th>
             </tr>
           </thead>
           <tbody id="det-tbody"></tbody>
@@ -449,17 +477,18 @@ function normalise(raw) {
   }
 
   return {
-    store:    str(g('store') || g('Store') || g('STORE')),
-    sku:      str(g('sku') || g('SKU')),
-    llave:    str(g('Llave') || g('llave')),
-    supplier: str(g('suppliers') || g('supplier') || g('Proveedor')),
-    brand:    str(g('brand') || g('Brand') || g('Marca')),
-    product:  str(g('product') || g('Product') || g('Producto')),
-    category: str(g('categories') || g('category') || g('Categoría') || g('Categoria')),
+    store:     str(g('store') || g('Store') || g('STORE')),
+    sku:       str(g('sku') || g('SKU')),
+    llave:     str(g('Llave') || g('llave')),
+    supplier:  str(g('suppliers') || g('supplier') || g('Proveedor')),
+    brand:     str(g('brand') || g('Brand') || g('Marca')),
+    product:   str(g('product') || g('Product') || g('Producto')),
+    category:  str(g('categories') || g('category') || g('Categoría') || g('Categoria')),
+    tipo_pago: str(g('Tipo de Pago') || g('tipo_pago') || g('TipoPago') || g('tipo de pago') || ''),
     inv_actual: inv,
-    dias_inv: dias,
+    dias_inv:  dias,
     vida_util: vidaUtil,
-    prom_vta: num(g('Promedio de Venta YTD')) || promVta,
+    prom_vta:  num(g('Promedio de Venta YTD')) || promVta,
     ventas,
     estado,
   };
@@ -506,6 +535,7 @@ function repopulateFilters() {
   populateSel('f-supplier', DATA.map(r=>r.supplier), 'Todos');
   populateSel('f-brand', DATA.map(r=>r.brand), 'Todas');
   populateSel('f-cat', DATA.map(r=>r.category), 'Todas');
+  populateSel('f-pago', DATA.map(r=>r.tipo_pago), 'Todos');
 }
 function cascadeFilters() {
   if (!DATA.length) return;
@@ -527,13 +557,15 @@ function filterRows() {
   const brand  = document.getElementById('f-brand').value;
   const cat    = document.getElementById('f-cat').value;
   const estado = document.getElementById('f-estado').value;
+  const pago   = document.getElementById('f-pago').value;
   const term   = searchTerm.toLowerCase();
   return DATA.filter(r => {
-    if (store  && r.store    !== store)    return false;
-    if (sup    && r.supplier !== sup)      return false;
-    if (brand  && r.brand    !== brand)    return false;
-    if (cat    && r.category !== cat)      return false;
-    if (estado && r.estado   !== estado)   return false;
+    if (store  && r.store     !== store)   return false;
+    if (sup    && r.supplier  !== sup)     return false;
+    if (brand  && r.brand     !== brand)   return false;
+    if (cat    && r.category  !== cat)     return false;
+    if (estado && r.estado    !== estado)  return false;
+    if (pago   && r.tipo_pago !== pago)    return false;
     if (term) {
       const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -577,6 +609,46 @@ const KPI_TIPS = {
   'Exceso': 'SKUs con inventario que supera su vida útil.',
   'Inv. Actual Total': 'Suma de unidades en inventario para los SKUs filtrados.',
 };
+function renderExecSummary(rows) {
+  const el = document.getElementById('exec-summary');
+  if (!rows.length) { el.style.display='none'; return; }
+  el.style.display = 'flex';
+  const total = rows.length;
+  const riesgo = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const pctRiesgo = ((riesgo/total)*100).toFixed(1);
+  const invRiesgo = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').reduce((a,r)=>a+(r.inv_actual||0),0);
+  const estados = ['nuevo','quiebre','critico','revisar','bien','sobrestock','gestionar'];
+  const colors  = ['#60a5fa','#ef4444','#f97316','#f59e0b','#10b981','#8b5cf6','#f43f5e'];
+  const counts  = estados.map(e=>rows.filter(r=>r.estado===e).length);
+  const segs = estados.map((e,i)=>counts[i]?`<div class="exec-bar-seg" style="width:${(counts[i]/total*100).toFixed(1)}%;background:${colors[i]}" data-tip="${e}: ${counts[i]} SKUs (${(counts[i]/total*100).toFixed(1)}%)"></div>`:'').join('');
+  el.innerHTML = `
+    <div class="exec-pill">
+      <div>
+        <div class="lbl">SKUs en riesgo</div>
+        <b style="color:${riesgo/total>0.2?'var(--red)':'var(--yellow)'}">${pctRiesgo}%</b>
+      </div>
+    </div>
+    <div class="exec-divider"></div>
+    <div class="exec-pill">
+      <div>
+        <div class="lbl">Quiebre + Crítico</div>
+        <b style="color:var(--red)">${fmt(riesgo)} SKUs</b>
+      </div>
+    </div>
+    <div class="exec-divider"></div>
+    <div class="exec-pill">
+      <div>
+        <div class="lbl">Unidades en riesgo</div>
+        <b style="color:var(--orange)">${fmt(invRiesgo)}</b>
+      </div>
+    </div>
+    <div class="exec-divider"></div>
+    <div class="exec-bar-wrap">
+      <div class="exec-bar-lbl"><span>Distribución de estados</span><span style="color:var(--text)">${fmt(total)} SKUs</span></div>
+      <div class="exec-bar-track">${segs}</div>
+    </div>`;
+}
+
 function renderKPIs(rows) {
   const dias = rows.filter(r=>r.dias_inv!=null).map(r=>r.dias_inv);
   const diasProm = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
@@ -742,13 +814,17 @@ function renderLine(rows) {
 
 // ── RENDER ALERTS ─────────────────────────────────────────────────────────────
 function sparkline(vals, color) {
-  const v = vals.filter(x=>x!=null);
-  if (v.length < 2) return '';
-  const W=52, H=24, max=Math.max(...v), min=Math.min(...v), rng=max-min||1;
+  const v = vals.filter(x=>x!=null && x>=0);
+  if (v.length < 2) return `<svg class="alert-sparkline" width="52" height="24"></svg>`;
+  const W=52, H=24, max=Math.max(...v,0.01), min=0, rng=max||1;
   const pts = v.map((val,i)=>`${(i/(v.length-1))*W},${H-(((val-min)/rng)*(H-4)+2)}`).join(' ');
+  const avg = v.reduce((a,b)=>a+b,0)/v.length;
+  const avgY = H-(((avg-min)/rng)*(H-4)+2);
+  const lastY = H-(((v[v.length-1]-min)/rng)*(H-4)+2);
   return `<svg class="alert-sparkline" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
-    <circle cx="${(v.length-1)/(v.length-1)*W}" cy="${H-(((v[v.length-1]-min)/rng)*(H-4)+2)}" r="2.5" fill="${color}"/>
+    <line x1="0" y1="${avgY}" x2="${W}" y2="${avgY}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="2,2"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" opacity="0.9"/>
+    <circle cx="${W}" cy="${lastY}" r="2.5" fill="${color}"/>
   </svg>`;
 }
 
@@ -779,6 +855,15 @@ function renderAlertCards(id, list, color, valFn, subFn, cntId, limit) {
   if (rest > 0) {
     el.innerHTML += `<button class="btn-ver-mas" onclick="this.previousSibling&&expandAlert(this,'${id}',lastRows)">Ver más (${rest} restantes)</button>`;
   }
+}
+
+function toggleAlertCol(btn) {
+  btn.classList.toggle('collapsed');
+  const col = btn.closest('.alert-col');
+  const desc = col.querySelector('.alert-col-desc');
+  const body = col.querySelector('.alert-col-body');
+  if (desc) desc.style.display = desc.style.display === 'none' ? '' : 'none';
+  if (body) body.classList.toggle('collapsed');
 }
 
 function expandAlert(btn, id, rows) {
@@ -816,14 +901,11 @@ function renderProveedores(rows) {
   const map = {};
   rows.forEach(r => {
     const k = r.supplier;
-    if (!map[k]) map[k] = { supplier:k, skus:0, inv:0, diasSum:0, diasN:0, quiebre:0, critico:0, bajo:0, exceso:0 };
+    if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
     map[k].skus++;
     map[k].inv += r.inv_actual||0;
-    if (r.dias_inv!=null) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
-    if (r.estado==='quiebre') map[k].quiebre++;
-    if (r.estado==='critico') map[k].critico++;
-    if (r.estado==='bajo')    map[k].bajo++;
-    if (r.estado==='exceso')  map[k].exceso++;
+    if (r.dias_inv!=null && r.dias_inv<999) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
+    if (r.estado) map[k][r.estado]=(map[k][r.estado]||0)+1;
   });
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN?d.diasSum/d.diasN:null}));
   if (term) data = data.filter(d=>d.supplier.toLowerCase().includes(term));
@@ -834,14 +916,18 @@ function renderProveedores(rows) {
   });
   document.getElementById('cnt-prov').textContent = data.length + ' proveedores';
   const cols = [
-    { key:'supplier', label:'Proveedor' },
-    { key:'skus', label:'SKUs', num:true },
-    { key:'inv', label:'Inv. Total', num:true },
-    { key:'dias_prom', label:'Días Prom.', num:true },
-    { key:'quiebre', label:'🚨 Quiebre', num:true },
-    { key:'critico', label:'🔴 Crítico', num:true },
-    { key:'bajo', label:'🟡 Bajo', num:true },
-    { key:'exceso', label:'🔵 Exceso', num:true },
+    { key:'supplier',   label:'Proveedor' },
+    { key:'tipo_pago',  label:'Tipo Pago' },
+    { key:'skus',       label:'SKUs', num:true },
+    { key:'inv',        label:'Inv. Total', num:true },
+    { key:'dias_prom',  label:'Días Prom.', num:true },
+    { key:'nuevo',      label:'🆕 Nuevo', num:true },
+    { key:'quiebre',    label:'🚨 Quiebre', num:true },
+    { key:'critico',    label:'🔴 Crítico', num:true },
+    { key:'revisar',    label:'🟡 Revisar', num:true },
+    { key:'bien',       label:'🟢 Bien', num:true },
+    { key:'sobrestock', label:'🔵 Sobrestock', num:true },
+    { key:'gestionar',  label:'⚠️ Gestionar', num:true },
   ];
   document.getElementById('prov-thead').innerHTML = cols.map(c=>
     `<th class="${c.num?'num':''}" data-pcol="${c.key}" style="cursor:pointer">${c.label}</th>`
@@ -853,13 +939,19 @@ function renderProveedores(rows) {
       renderProveedores(lastRows);
     });
   });
-  const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':'#10b981';
+  const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':v>=60?'#8b5cf6':'#10b981';
+  const maxDias = Math.max(...data.map(d=>d.dias_prom||0), 1);
   document.getElementById('prov-tbody').innerHTML = data.map(d=>`
     <tr>
       <td><b style="color:var(--text)">${escH(d.supplier)}</b></td>
       <td class="num">${fmt(d.skus)}</td>
       <td class="num">${fmt(d.inv)}</td>
-      <td class="num"><span style="color:${diasColor(d.dias_prom)};font-weight:700">${fmtD(d.dias_prom)}</span></td>
+      <td class="num">
+        <div class="dias-bar">
+          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:36px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom):'—'}</span>
+          <div class="dias-bar-track"><div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div></div>
+        </div>
+      </td>
       <td class="num" style="color:${d.quiebre?'var(--red)':'var(--muted)'}">${d.quiebre||0}</td>
       <td class="num" style="color:${d.critico?'var(--red)':'var(--muted)'}">${d.critico||0}</td>
       <td class="num" style="color:${d.bajo?'var(--yellow)':'var(--muted)'}">${d.bajo||0}</td>
@@ -878,7 +970,8 @@ function renderTable(rows) {
   });
   document.getElementById('row-count').textContent = fmt(filtered.length) + ' registros';
   const start=(currentPage-1)*pageSize, slice=filtered.slice(start,start+pageSize);
-  const diasTip = v => v==null?'Sin dato':v<=0?'🚨 Sin stock':v<=7?`🔴 Crítico — ${fmtD(v)} días`:v<=15?`🟡 Bajo — ${fmtD(v)} días`:`🟢 ${fmtD(v)} días de cobertura`;
+  const fmtDias = v => v==null?'—':v===Infinity||v>999?'∞':fmtD(v);
+  const diasTip = v => v==null?'Sin dato':v<=0?'🚨 Sin stock':v===Infinity||v>999?'Sin ventas — días infinitos':v<=7?`🔴 Crítico — ${fmtD(v)} días`:v<=15?`🟡 Bajo — ${fmtD(v)} días`:`🟢 ${fmtD(v)} días de cobertura`;
   document.getElementById('det-tbody').innerHTML = slice.length ? slice.map(r=>`
     <tr>
       <td>${escH(r.store)}</td>
@@ -888,9 +981,10 @@ function renderTable(rows) {
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${escH(r.product)}</td>
       <td style="color:var(--muted)">${escH(r.category)}</td>
       <td class="num">${fmt(r.inv_actual)}</td>
-      <td class="num" data-tip="${diasTip(r.dias_inv)}"><b style="color:${r.dias_inv!=null?r.dias_inv<=7?'var(--red)':r.dias_inv<=15?'var(--yellow)':'var(--green)':'var(--muted)'}">${fmtD(r.dias_inv)}</b></td>
+      <td class="num" data-tip="${diasTip(r.dias_inv)}"><b style="color:${r.dias_inv!=null?r.dias_inv<=7?'var(--red)':r.dias_inv<=15?'var(--yellow)':'var(--green)':'var(--muted)'}">${fmtDias(r.dias_inv)}</b></td>
       <td class="num" data-tip="Vida útil del producto: ${fmtD(r.vida_util)} días">${fmtD(r.vida_util)}</td>
       <td class="num">${fmtD(r.prom_vta)}</td>
+      <td style="color:var(--muted);font-size:11px">${escH(r.tipo_pago||'—')}</td>
       <td>${estadoBadge(r.estado)}</td>
     </tr>`).join('') : '<tr><td colspan="11" class="empty">Sin resultados</td></tr>';
   const pages = Math.ceil(filtered.length/pageSize)||1;
@@ -918,10 +1012,10 @@ function exportProvCSV() {
     map[r.supplier][r.estado]=(map[r.supplier][r.estado]||0)+1;
   });
   const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null}));
-  const headers=['Proveedor','SKUs','Inv Total','Dias Prom','Quiebre','Critico','Bajo','Exceso'];
+  const headers=['Proveedor','SKUs','Inv Total','Dias Prom','Tipo Pago','Quiebre','Critico','Revisar','Sobrestock','Gestionar'];
   const esc=v=>{if(v==null)return'';const s=String(v);return s.indexOf(',')>=0||s.indexOf('"')>=0?'"'+s.replace(/"/g,'""')+'"':s;};
   const lines=[headers.join(',')];
-  data.forEach(d=>lines.push([d.supplier,d.skus,d.inv,d.dias_prom!=null?d.dias_prom.toFixed(1):'',d.quiebre||0,d.critico||0,d.bajo||0,d.exceso||0].map(esc).join(',')));
+  data.forEach(d=>lines.push([d.supplier,d.skus,d.inv,d.dias_prom!=null?d.dias_prom.toFixed(1):'',d.tipo_pago||'',d.quiebre||0,d.critico||0,d.revisar||0,d.sobrestock||0,d.gestionar||0].map(esc).join(',')));
   const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download='proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.csv'; a.click(); URL.revokeObjectURL(url);
@@ -931,6 +1025,7 @@ function exportProvCSV() {
 function render() {
   const rows = filterRows();
   lastRows = rows;
+  renderExecSummary(rows);
   renderKPIs(rows);
 
   // Charts
@@ -996,11 +1091,11 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 });
 
 // ── FILTER EVENTS ─────────────────────────────────────────────────────────────
-['f-store','f-supplier','f-brand','f-cat','f-estado'].forEach(id=>{
+['f-store','f-supplier','f-brand','f-cat','f-estado','f-pago'].forEach(id=>{
   document.getElementById(id).addEventListener('change',()=>{cascadeFilters();render();});
 });
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ['f-store','f-supplier','f-brand','f-cat','f-estado'].forEach(id=>document.getElementById(id).value='');
+  ['f-store','f-supplier','f-brand','f-cat','f-estado','f-pago'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-search').value=''; searchTerm='';
   repopulateFilters(); render();
 });
