@@ -251,40 +251,31 @@
   <div class="filters">
     <div class="filter-group">
       <span class="filter-label" data-tip="Filtra por tienda STF">TIENDA</span>
-      <select id="f-store"><option value="">Todas</option></select>
+      <div class="ms-wrap" id="ms-store"></div>
     </div>
     <div class="filter-group">
       <span class="filter-label" data-tip="Filtra por proveedor">PROVEEDOR</span>
-      <select id="f-supplier"><option value="">Todos</option></select>
+      <div class="ms-wrap" id="ms-supplier"></div>
     </div>
     <div class="filter-group">
       <span class="filter-label" data-tip="Filtra por marca">MARCA</span>
-      <select id="f-brand"><option value="">Todas</option></select>
+      <div class="ms-wrap" id="ms-brand"></div>
     </div>
     <div class="filter-group">
-      <span class="filter-label" data-tip="Filtra por categoría — se actualiza según proveedor">CATEGORÍA</span>
-      <select id="f-cat"><option value="">Todas</option></select>
+      <span class="filter-label" data-tip="Filtra por categoría">CATEGORÍA</span>
+      <div class="ms-wrap" id="ms-cat"></div>
     </div>
     <div class="filter-group">
       <span class="filter-label" data-tip="Estado de cobertura del inventario">ESTADO</span>
-      <select id="f-estado">
-        <option value="">Todos</option>
-        <option value="nuevo">🆕 Nuevo</option>
-        <option value="quiebre">🚨 Quiebre</option>
-        <option value="critico">🔴 Crítico</option>
-        <option value="revisar">🟡 Revisar</option>
-        <option value="bien">🟢 Bien</option>
-        <option value="sobrestock">🔵 Sobrestock</option>
-        <option value="gestionar">⚠️ Gestionar</option>
-      </select>
+      <div class="ms-wrap" id="ms-estado"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label" data-tip="Condición comercial: crédito o consignación">TIPO DE PAGO</span>
+      <div class="ms-wrap" id="ms-pago"></div>
     </div>
     <div class="filter-group">
       <span class="filter-label">BÚSQUEDA</span>
       <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Condición comercial: crédito o consignación">TIPO DE PAGO</span>
-      <select id="f-pago"><option value="">Todos</option></select>
     </div>
     <button class="btn-reset" id="btn-reset">✕ Limpiar</button>
   </div>
