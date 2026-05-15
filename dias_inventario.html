@@ -320,10 +320,7 @@
         </div>
         <svg class="chart chart-wide" id="chart-cat" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div class="card">
-        <h3>Evolución ventas mensuales</h3>
-        <svg class="chart" id="chart-ventas" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
+
     </div>
   </div>
 
@@ -478,16 +475,21 @@ function normalise(raw) {
   };
   const num = v => {
     if (v == null || v === '') return null;
-    // Handle Colombian format: dots as thousands sep, comma as decimal
+    if (typeof v === 'number') return isFinite(v) ? v : null;
     let s = String(v).replace(/[$\s]/g,'').trim();
-    // If has dots but no comma (e.g. 1.234.567), remove dots
-    if (s.includes('.') && !s.includes(',')) s = s.replace(/\./g,'');
-    // If has both (e.g. 1.234,56), remove dots and replace comma
-    else if (s.includes('.') && s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
-    // If only comma (e.g. 1234,56), replace comma with dot
-    else if (!s.includes('.') && s.includes(',')) s = s.replace(',','.');
+    if (!s) return null;
+    // Remove all dots (Colombian thousands separator) then handle comma as decimal
+    // Pattern: if string has comma, treat dot as thousands sep
+    if (s.includes(',')) {
+      s = s.replace(/\./g,'').replace(',','.');
+    } else {
+      // No comma: dots could be thousands sep (multiple dots) or decimal (single dot at end)
+      const dots = (s.match(/\./g)||[]).length;
+      if (dots > 1) s = s.replace(/\./g,''); // multiple dots = thousands
+      // single dot = decimal, leave as-is
+    }
     const n = parseFloat(s);
-    return isNaN(n) ? null : n;
+    return isNaN(n) || !isFinite(n) ? null : n;
   };
   const str = v => v == null ? '' : String(v).trim();
 
@@ -989,7 +991,7 @@ function renderAlertCards(id, list, color, valFn, subFn, cntId, limit) {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px 0;text-align:center">Sin registros ✓</div>';
     return;
   }
-  const shown = list.slice(0, limit||50);
+  const shown = list.slice(0, limit||200);
   const rest = list.length - shown.length;
   el.innerHTML = shown.map(r => {
     const spark = sparkline(r.ventas||[], color);
@@ -1005,9 +1007,7 @@ function renderAlertCards(id, list, color, valFn, subFn, cntId, limit) {
       </div>
     </div>`;
   }).join('');
-  if (rest > 0) {
-    el.innerHTML += `<button class="btn-ver-mas" onclick="this.previousSibling&&expandAlert(this,'${id}',lastRows)">Ver más (${rest} restantes)</button>`;
-  }
+  // scroll handles the rest — no ver mas button needed
 }
 
 function toggleAlertCol(btn) {
@@ -1061,7 +1061,8 @@ function renderProveedores(rows) {
     if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
     map[k].skus++;
     map[k].inv += r.inv_actual||0;
-    if (r.dias_inv!=null && r.dias_inv>0 && r.dias_inv<500 && r.estado!=='sin_movimiento' && r.estado!=='nuevo') { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
+    const validEstados = ['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
     if (r.estado) map[k][r.estado]=(map[k][r.estado]||0)+1;
   });
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN?d.diasSum/d.diasN:null}));
@@ -1209,7 +1210,7 @@ function render() {
   renderBars('chart-cat', catD, '#8b5cf6', catW, 280);
 
   renderDonut(rows);
-  renderLine(rows);
+
   renderAlerts(rows);
   renderProveedores(rows);
   currentPage = 1;
