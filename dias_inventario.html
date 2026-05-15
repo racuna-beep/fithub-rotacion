@@ -172,7 +172,7 @@
     overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
   .alert-card-right { text-align: right; flex-shrink: 0; }
   .alert-card-val { font-size: 15px; font-weight: 800; }
-  .alert-card-sub { font-size: 10px; color: var(--muted); }
+  .alert-card-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
   .alert-sparkline { flex-shrink: 0; }
   .btn-ver-mas { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
     color: var(--muted); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px;
@@ -207,6 +207,7 @@
   .badge-orange { background: rgba(249,115,22,0.15); color: #fb923c; }
   .badge-green  { background: rgba(16,185,129,0.15); color: #34d399; }
   .badge-blue   { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .badge-purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
   .empty { text-align: center; color: var(--muted); padding: 40px; }
   .page-ctrl { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .page-ctrl button { background: var(--surface2); border: 1px solid var(--border); color: var(--text);
@@ -475,7 +476,19 @@ function normalise(raw) {
     }
     return null;
   };
-  const num = v => { if (v == null || v === '') return null; const n = parseFloat(String(v).replace(/[$,\s]/g,'')); return isNaN(n) ? null : n; };
+  const num = v => {
+    if (v == null || v === '') return null;
+    // Handle Colombian format: dots as thousands sep, comma as decimal
+    let s = String(v).replace(/[$\s]/g,'').trim();
+    // If has dots but no comma (e.g. 1.234.567), remove dots
+    if (s.includes('.') && !s.includes(',')) s = s.replace(/\./g,'');
+    // If has both (e.g. 1.234,56), remove dots and replace comma
+    else if (s.includes('.') && s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+    // If only comma (e.g. 1234,56), replace comma with dot
+    else if (!s.includes('.') && s.includes(',')) s = s.replace(',','.');
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  };
   const str = v => v == null ? '' : String(v).trim();
 
   const ventas = VENTA_MONTHS.map(m => num(g(m)));
@@ -510,7 +523,8 @@ function normalise(raw) {
     brand:     str(g('brand') || g('Brand') || g('Marca')),
     product:   str(g('product') || g('Product') || g('Producto')),
     category:  str(g('categories') || g('category') || g('Categoría') || g('Categoria')),
-    tipo_pago: str(g('Tipo de Pago') || g('tipo_pago') || g('TipoPago') || g('tipo de pago') || ''),
+    tipo_pago:      str(g('Tipo de Pago') || g('tipo_pago') || g('TipoPago') || g('tipo de pago') || ''),
+    inv_valorizado: num(g('Inventario Actual Valorizado') || g('Inv Valorizado') || g('inv_valorizado')),
     inv_actual: inv,
     dias_inv:  dias,
     vida_util: vidaUtil,
@@ -712,20 +726,26 @@ const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 
 function estadoBadge(e) {
   const MAP = {
-    quiebre: ['badge-red',   '🚨 Quiebre'],
-    critico: ['badge-red',   '🔴 Crítico'],
-    bajo:    ['badge-yellow','🟡 Bajo'],
-    normal:  ['badge-green', '🟢 Normal'],
-    exceso:  ['badge-blue',  '🔵 Exceso'],
+    nuevo:          ['badge-blue',   '🆕 Nuevo'],
+    sin_movimiento: ['badge-blue',   '😴 Sin Mov.'],
+    quiebre:        ['badge-red',    '🚨 Quiebre'],
+    critico:        ['badge-red',    '🔴 Crítico'],
+    revisar:        ['badge-yellow', '🟡 Revisar'],
+    bien:           ['badge-green',  '🟢 Bien'],
+    sobrestock:     ['badge-purple', '🔵 Sobrestock'],
+    gestionar:      ['badge-orange', '⚠️ Gestionar'],
   };
-  const [cls, lbl] = MAP[e] || ['badge-green','—'];
   const tips = {
-    quiebre: 'Sin inventario — quiebre de stock inmediato',
-    critico: 'Menos de 7 días de cobertura — acción urgente',
-    bajo: 'Entre 8 y 15 días — reponer pronto',
-    normal: 'Cobertura adecuada',
-    exceso: 'Inventario supera la vida útil del producto',
+    nuevo:          'Sin inventario ni ventas — producto pendiente de entrada',
+    sin_movimiento: 'Tiene inventario pero sin ventas — revisar o discontinuar',
+    quiebre:        'Tiene ventas pero 0 días de inventario — acción inmediata',
+    critico:        '1 a 7 días de cobertura — reponer urgente',
+    revisar:        '8 a 15 días de cobertura — programar reposición',
+    bien:           '16 a 59 días de cobertura — nivel adecuado',
+    sobrestock:     '60+ días de cobertura — exceso de inventario',
+    gestionar:      'Días de inventario supera vida útil — riesgo de vencimiento',
   };
+  const [cls, lbl] = MAP[e] || ['badge-green', e || '—'];
   return `<span class="badge ${cls}" data-tip="${tips[e]||''}">${lbl}</span>`;
 }
 
@@ -780,22 +800,25 @@ function renderExecSummary(rows) {
 }
 
 function renderKPIs(rows) {
-  const dias = rows.filter(r=>r.dias_inv!=null).map(r=>r.dias_inv);
+  const dias = rows.filter(r=>r.dias_inv!=null && r.dias_inv>0 && r.dias_inv<500 && r.estado!=='sin_movimiento' && r.estado!=='nuevo').map(r=>r.dias_inv);
   const diasProm = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
-  const nuevo     = rows.filter(r=>r.estado==='nuevo').length;
-  const quiebre   = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
-  const revisar   = rows.filter(r=>r.estado==='revisar').length;
-  const sobrestock= rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
-  const invTotal = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
-  const uniqueSkus = new Set(rows.map(r=>r.sku)).size;
+  const nuevo        = rows.filter(r=>r.estado==='nuevo').length;
+  const sinMov       = rows.filter(r=>r.estado==='sin_movimiento').length;
+  const quiebre      = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const revisar      = rows.filter(r=>r.estado==='revisar').length;
+  const sobrestock   = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
+  const invTotal     = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
+  const uniqueSkus   = new Set(rows.map(r=>r.sku)).size;
   document.getElementById('kpis').innerHTML = [
-    { label:'Registros',       val:fmt(rows.length),   sub:`${fmt(uniqueSkus)} SKUs únicos`, cls:'orange' },
-    { label:'Días Inv. Prom',  val:fmtD(diasProm),     sub:'días promedio cobertura',        cls:'blue' },
-    { label:'Nuevo',            val:fmt(nuevo),       sub:'sin ventas registradas',          cls:'blue' },
-    { label:'Quiebre / Crítico',val:fmt(quiebre),     sub:`${((quiebre/rows.length||0)*100).toFixed(1)}% del total`, cls:'red' },
-    { label:'Revisar',          val:fmt(revisar),     sub:'8 a 15 días cobertura',            cls:'yellow' },
-    { label:'Sobrestock',       val:fmt(sobrestock),  sub:'60+ días o supera vida útil',      cls:'purple' },
-    { label:'Inv. Actual Total',val:fmt(invTotal),      sub:'unidades en stock',              cls:'green' },
+    { label:'Registros',        val:fmt(rows.length),  sub:`${fmt(uniqueSkus)} SKUs únicos`,                          cls:'orange' },
+    { label:'Días Inv. Prom',   val:fmtD(diasProm),    sub:'días promedio cobertura',                                 cls:'blue'   },
+    { label:'🆕 Nuevo',         val:fmt(nuevo),        sub:'sin inv. ni ventas',                                      cls:'purple' },
+    { label:'😴 Sin Movimiento',val:fmt(sinMov),       sub:'con inv. pero sin ventas',                                cls:'blue'   },
+    { label:'Quiebre / Crítico',val:fmt(quiebre),      sub:`${((quiebre/rows.length||0)*100).toFixed(1)}% del total`, cls:'red'    },
+    { label:'Revisar',          val:fmt(revisar),      sub:'8 a 15 días cobertura',                                   cls:'yellow' },
+    { label:'Sobrestock',       val:fmt(sobrestock),   sub:'60+ días o supera vida útil',                             cls:'purple' },
+    { label:'Inv. Actual Total',   val:fmt(invTotal),                                    sub:'unidades en stock',         cls:'green'  },
+    { label:'Inv. Valorizado',      val:fmtM(rows.reduce((a,r)=>a+(r.inv_valorizado||0),0)), sub:'capital en inventario',     cls:'orange' },
   ].map(k=>`<div class="kpi ${k.cls}" data-tip="${(KPI_TIPS[k.label]||'').replace(/"/g,"'")}">
     <div class="kpi-label">${k.label}</div>
     <div class="kpi-value">${k.val}</div>
@@ -855,7 +878,7 @@ function renderBars(svgId, data, color, W, H) {
 // ── RENDER DONUT ──────────────────────────────────────────────────────────────
 function renderDonut(rows) {
   const svg = document.getElementById('chart-donut'); svg.innerHTML = '';
-  const counts = { nuevo:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
+  const counts = { nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
   rows.forEach(r => { if(counts[r.estado]!=null) counts[r.estado]++; });
   const total = rows.length || 1;
   const items = [
@@ -1019,13 +1042,14 @@ function renderAlerts(rows) {
   const gestionar_l = rows.filter(r=>r.estado==='gestionar').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   const nuevo_l2      = rows.filter(r=>r.estado==='nuevo').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
   const sin_mov_l     = rows.filter(r=>r.estado==='sin_movimiento').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
-  renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`, r=>'Sin ventas ni stock', 'cnt-nv');
-  renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>`Inv: ${fmt(r.inv_actual)}`, r=>'Sin ventas',          'cnt-sm');
-  renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-q');
-  renderAlertCards('list-critico',    critico_l,    '#f97316',       r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-c');
-  renderAlertCards('list-revisar',    revisar_l,    'var(--yellow)', r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-b');
-  renderAlertCards('list-sobrestock', sobrestock_l, '#8b5cf6',       r=>`${fmtD(r.dias_inv)} días`,  r=>`Vida: ${fmtD(r.vida_util)} días`, 'cnt-ss');
-  renderAlertCards('list-gestionar',  gestionar_l,  '#f43f5e',       r=>`${fmtD(r.dias_inv)} días`,  r=>`Vida: ${fmtD(r.vida_util)} días`, 'cnt-e');
+  const subInv = r => `${fmt(r.inv_actual)} uds${r.inv_valorizado ? ' · ' + fmtM(r.inv_valorizado) : ''}`;
+  renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`,  r=>'Sin ventas ni stock',         'cnt-nv');
+  renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>fmtM(r.inv_valorizado||0),    subInv,                           'cnt-sm');
+  renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-q');
+  renderAlertCards('list-critico',    critico_l,    '#f97316',       r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-c');
+  renderAlertCards('list-revisar',    revisar_l,    'var(--yellow)', r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-b');
+  renderAlertCards('list-sobrestock', sobrestock_l, '#8b5cf6',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-ss');
+  renderAlertCards('list-gestionar',  gestionar_l,  '#f43f5e',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-e');
 }
 
 // ── RENDER PROVEEDORES ────────────────────────────────────────────────────────
@@ -1037,7 +1061,7 @@ function renderProveedores(rows) {
     if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
     map[k].skus++;
     map[k].inv += r.inv_actual||0;
-    if (r.dias_inv!=null && r.dias_inv<999) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
+    if (r.dias_inv!=null && r.dias_inv>0 && r.dias_inv<500 && r.estado!=='sin_movimiento' && r.estado!=='nuevo') { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
     if (r.estado) map[k][r.estado]=(map[k][r.estado]||0)+1;
   });
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN?d.diasSum/d.diasN:null}));
