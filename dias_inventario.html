@@ -85,6 +85,32 @@
   select, .search-input { background: var(--bg); border: 1px solid var(--border); color: var(--text);
     padding: 7px 10px; border-radius: 6px; font-size: 13px; min-width: 140px; }
   select:focus, .search-input:focus { outline: none; border-color: var(--orange); }
+
+  /* ── MULTI-SELECT ── */
+  .ms-wrap { position: relative; min-width: 140px; }
+  .ms-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 28px 7px 10px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    width: 100%; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: border-color 0.15s; user-select: none; }
+  .ms-btn:hover, .ms-btn.open { border-color: var(--orange); }
+  .ms-btn::after { content: '▾'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 11px; pointer-events: none; }
+  .ms-dropdown { position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%; max-width: 280px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    z-index: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none; overflow: hidden; }
+  .ms-dropdown.open { display: block; }
+  .ms-search { width: 100%; background: var(--bg); border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); padding: 8px 10px; font-size: 12px; outline: none; }
+  .ms-search::placeholder { color: var(--muted); }
+  .ms-list { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+  .ms-opt { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer;
+    font-size: 12px; color: var(--text); transition: background 0.1s; white-space: nowrap; }
+  .ms-opt:hover { background: rgba(249,115,22,0.08); }
+  .ms-opt input[type=checkbox] { accent-color: var(--orange); width: 13px; height: 13px; flex-shrink: 0; }
+  .ms-opt.select-all { border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: 11px; }
+  .ms-footer { padding: 6px 10px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+  .ms-clear { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; padding: 3px 6px; border-radius: 4px; }
+  .ms-clear:hover { color: var(--text); background: rgba(255,255,255,0.06); }
   .btn-reset { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border);
     padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
   .btn-reset:hover { background: rgba(255,255,255,0.1); color: var(--text); }
@@ -312,13 +338,21 @@
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
     <div class="alert-cols">
+      <div class="alert-col" style="border-top:3px solid #94a3b8">
+        <div class="alert-col-hdr">
+          <h4 style="color:#94a3b8">🆕 Nuevo</h4>
+          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#94a3b8">0</span>
+        </div>
+        <div class="alert-col-desc">Sin inventario y sin ventas — producto nuevo pendiente de entrada.</div>
+        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
+      </div>
       <div class="alert-col" style="border-top:3px solid #60a5fa">
         <div class="alert-col-hdr">
-          <h4 style="color:#60a5fa">🆕 Nuevo</h4>
-          <span class="badge-cnt" id="cnt-nv" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
+          <h4 style="color:#60a5fa">😴 Sin Movimiento</h4>
+          <span class="badge-cnt" id="cnt-sm" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
         </div>
-        <div class="alert-col-desc">Sin ventas registradas. Producto nuevo o sin movimiento.</div>
-        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
+        <div class="alert-col-desc">Tiene inventario pero sin ventas. Revisar rotación o discontinuar.</div>
+        <div class="alert-col-body" id="body-list-sin_movimiento"><div id="list-sin_movimiento"></div></div>
       </div>
       <div class="alert-col quiebre">
         <div class="alert-col-hdr">
@@ -522,50 +556,146 @@ async function loadData() {
 }
 
 // ── FILTERS ──────────────────────────────────────────────────────────────────
-function populateSel(id, vals, all) {
-  const s = document.getElementById(id), cur = s.value;
-  s.innerHTML = `<option value="">${all}</option>`;
-  [...new Set(vals)].filter(v=>v).sort().forEach(v => {
-    const o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o);
+// ── MULTI-SELECT SYSTEM ────────────────────────────────────────────────────
+const MS_STATE = {};
+
+function msCreate(wrapperId, placeholder, onChange) {
+  const wrap = document.getElementById(wrapperId);
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <button class="ms-btn" id="btn-${wrapperId}">${placeholder}</button>
+    <div class="ms-dropdown" id="dd-${wrapperId}">
+      <input class="ms-search" placeholder="Buscar…" id="search-${wrapperId}"/>
+      <div class="ms-list" id="list-${wrapperId}"></div>
+      <div class="ms-footer"><button class="ms-clear" id="clear-${wrapperId}">Limpiar selección</button></div>
+    </div>`;
+  MS_STATE[wrapperId] = { selected: new Set(), placeholder, onChange };
+  document.getElementById('btn-'+wrapperId).addEventListener('click', e => {
+    e.stopPropagation(); msToggle(wrapperId);
   });
-  if ([...s.options].some(o=>o.value===cur)) s.value = cur; else s.value = '';
+  document.getElementById('search-'+wrapperId).addEventListener('input', e => {
+    msRenderOpts(wrapperId, e.target.value.toLowerCase());
+  });
+  document.getElementById('clear-'+wrapperId).addEventListener('click', e => {
+    e.stopPropagation();
+    MS_STATE[wrapperId].selected.clear();
+    msUpdateBtn(wrapperId); msRenderOpts(wrapperId, '');
+    onChange();
+  });
 }
+
+function msToggle(id) {
+  const dd = document.getElementById('dd-'+id);
+  const isOpen = dd.classList.contains('open');
+  // close all
+  document.querySelectorAll('.ms-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    document.getElementById('btn-'+d.id.replace('dd-','')).classList.remove('open');
+  });
+  if (!isOpen) {
+    dd.classList.add('open');
+    document.getElementById('btn-'+id).classList.add('open');
+    document.getElementById('search-'+id).value = '';
+    msRenderOpts(id, '');
+    document.getElementById('search-'+id).focus();
+  }
+}
+
+function msRenderOpts(id, filter) {
+  const state = MS_STATE[id];
+  const list = document.getElementById('list-'+id);
+  const opts = [...state.options||[]].filter(v => !filter || v.toLowerCase().includes(filter));
+  const allChk = opts.length && opts.every(v => state.selected.has(v));
+  list.innerHTML = `<label class="ms-opt select-all">
+    <input type="checkbox" ${allChk?'checked':''} id="all-${id}"/> Seleccionar todo
+  </label>` + opts.map(v => `<label class="ms-opt">
+    <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${state.selected.has(v)?'checked':''}/>${v}
+  </label>`).join('');
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.id === 'all-'+id) {
+        opts.forEach(v => cb.checked ? state.selected.add(v) : state.selected.delete(v));
+      } else {
+        cb.checked ? state.selected.add(cb.value) : state.selected.delete(cb.value);
+      }
+      msUpdateBtn(id); msRenderOpts(id, document.getElementById('search-'+id).value.toLowerCase());
+      state.onChange();
+    });
+  });
+}
+
+function msUpdateBtn(id) {
+  const state = MS_STATE[id];
+  const btn = document.getElementById('btn-'+id);
+  const n = state.selected.size;
+  btn.textContent = n === 0 ? state.placeholder : n === 1 ? [...state.selected][0] : `${n} seleccionados`;
+}
+
+function msSetOptions(id, vals) {
+  const state = MS_STATE[id];
+  if (!state) return;
+  const prev = new Set(state.selected);
+  state.options = [...new Set(vals)].filter(v=>v).sort();
+  // keep only valid selections
+  state.selected = new Set([...prev].filter(v => state.options.includes(v)));
+  msUpdateBtn(id);
+  msRenderOpts(id, '');
+}
+
+function msGetSelected(id) { return MS_STATE[id] ? MS_STATE[id].selected : new Set(); }
+function msClear(id) { if(MS_STATE[id]) { MS_STATE[id].selected.clear(); msUpdateBtn(id); } }
+
+// Close dropdowns on outside click
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    const btn = document.getElementById('btn-'+d.id.replace('dd-',''));
+    if (btn) btn.classList.remove('open');
+  });
+});
+
 function repopulateFilters() {
-  populateSel('f-store', DATA.map(r=>r.store), 'Todas');
-  populateSel('f-supplier', DATA.map(r=>r.supplier), 'Todos');
-  populateSel('f-brand', DATA.map(r=>r.brand), 'Todas');
-  populateSel('f-cat', DATA.map(r=>r.category), 'Todas');
-  populateSel('f-pago', DATA.map(r=>r.tipo_pago), 'Todos');
+  msSetOptions('ms-store',    DATA.map(r=>r.store));
+  msSetOptions('ms-supplier', DATA.map(r=>r.supplier));
+  msSetOptions('ms-brand',    DATA.map(r=>r.brand));
+  msSetOptions('ms-cat',      DATA.map(r=>r.category));
+  msSetOptions('ms-estado',   ['nuevo','quiebre','critico','revisar','bien','sobrestock','gestionar']);
+  msSetOptions('ms-pago',     DATA.map(r=>r.tipo_pago));
 }
+
 function cascadeFilters() {
   if (!DATA.length) return;
-  const store = document.getElementById('f-store').value;
-  const sup   = document.getElementById('f-supplier').value;
-  const brand = document.getElementById('f-brand').value;
-  const base  = DATA.filter(r => (!store || r.store===store) && (!sup || r.supplier===sup) && (!brand || r.brand===brand));
-  populateSel('f-cat', base.map(r=>r.category), 'Todas');
-  const baseForBrand = DATA.filter(r => (!store || r.store===store) && (!sup || r.supplier===sup));
-  populateSel('f-brand', baseForBrand.map(r=>r.brand), 'Todas');
-  const baseForSup = DATA.filter(r => (!store || r.store===store) && (!brand || r.brand===brand));
-  populateSel('f-supplier', baseForSup.map(r=>r.supplier), 'Todos');
+  const stores    = msGetSelected('ms-store');
+  const sups      = msGetSelected('ms-supplier');
+  const brands    = msGetSelected('ms-brand');
+  const base = DATA.filter(r =>
+    (!stores.size || stores.has(r.store)) &&
+    (!sups.size   || sups.has(r.supplier)) &&
+    (!brands.size || brands.has(r.brand))
+  );
+  msSetOptions('ms-cat', base.map(r=>r.category));
+  const baseForBrand = DATA.filter(r => (!stores.size||stores.has(r.store)) && (!sups.size||sups.has(r.supplier)));
+  msSetOptions('ms-brand', baseForBrand.map(r=>r.brand));
+  const baseForSup = DATA.filter(r => (!stores.size||stores.has(r.store)) && (!brands.size||brands.has(r.brand)));
+  msSetOptions('ms-supplier', baseForSup.map(r=>r.supplier));
 }
 
 // ── FILTER ROWS ──────────────────────────────────────────────────────────────
 function filterRows() {
-  const store  = document.getElementById('f-store').value;
-  const sup    = document.getElementById('f-supplier').value;
-  const brand  = document.getElementById('f-brand').value;
-  const cat    = document.getElementById('f-cat').value;
-  const estado = document.getElementById('f-estado').value;
-  const pago   = document.getElementById('f-pago').value;
-  const term   = searchTerm.toLowerCase();
+  const stores  = msGetSelected('ms-store');
+  const sups    = msGetSelected('ms-supplier');
+  const brands  = msGetSelected('ms-brand');
+  const cats    = msGetSelected('ms-cat');
+  const estados = msGetSelected('ms-estado');
+  const pagos   = msGetSelected('ms-pago');
+  const term    = searchTerm.toLowerCase();
   return DATA.filter(r => {
-    if (store  && r.store     !== store)   return false;
-    if (sup    && r.supplier  !== sup)     return false;
-    if (brand  && r.brand     !== brand)   return false;
-    if (cat    && r.category  !== cat)     return false;
-    if (estado && r.estado    !== estado)  return false;
-    if (pago   && r.tipo_pago !== pago)    return false;
+    if (stores.size  && !stores.has(r.store))      return false;
+    if (sups.size    && !sups.has(r.supplier))     return false;
+    if (brands.size  && !brands.has(r.brand))      return false;
+    if (cats.size    && !cats.has(r.category))     return false;
+    if (estados.size && !estados.has(r.estado))    return false;
+    if (pagos.size   && !pagos.has(r.tipo_pago))   return false;
     if (term) {
       const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -672,7 +802,7 @@ function renderKPIs(rows) {
     <div class="kpi-sub">${k.sub}</div>
   </div>`).join('');
   document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos · <span id="last-update">Cargado: ${new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</span>`;
-  document.getElementById('cnt-alertas').textContent = quiebre + revisar + sobrestock;
+  document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','critico','revisar','sin_movimiento'].includes(r.estado)).length;
   document.getElementById('cnt-detalle').textContent = fmt(rows.length);
 }
 
@@ -867,10 +997,10 @@ function toggleAlertCol(btn) {
 }
 
 function expandAlert(btn, id, rows) {
-  const map = { 'list-nuevo':'nuevo','list-quiebre':'quiebre','list-critico':'critico','list-revisar':'revisar','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
+  const map = { 'list-nuevo':'nuevo','list-sin_movimiento':'sin_movimiento','list-quiebre':'quiebre','list-critico':'critico','list-revisar':'revisar','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
   const estado = map[id];
   const full = rows.filter(r=>r.estado===estado).sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const colorMap = { nuevo:'#60a5fa', quiebre:'var(--red)', critico:'#f97316', revisar:'var(--yellow)', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
+  const colorMap = { nuevo:'#94a3b8', sin_movimiento:'#60a5fa', quiebre:'var(--red)', critico:'#f97316', revisar:'var(--yellow)', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
   renderAlertCards(id, full, colorMap[estado], r=>`${fmtD(r.dias_inv)} días`,
     r=>r.vida_util!=null?`Vida: ${fmtD(r.vida_util)} días`:`Inv: ${fmt(r.inv_actual)}`, null, 999);
   btn.remove();
@@ -881,13 +1011,16 @@ function renderAlerts(rows) {
   const critico  = rows.filter(r=>r.estado==='critico').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const bajo     = rows.filter(r=>r.estado==='bajo').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const exceso   = rows.filter(r=>r.estado==='exceso').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-  const nuevo_l     = rows.filter(r=>r.estado==='nuevo').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
+
   const quiebre_l   = rows.filter(r=>r.estado==='quiebre').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const critico_l   = rows.filter(r=>r.estado==='critico').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const revisar_l   = rows.filter(r=>r.estado==='revisar').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const sobrestock_l= rows.filter(r=>r.estado==='sobrestock').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   const gestionar_l = rows.filter(r=>r.estado==='gestionar').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-  renderAlertCards('list-nuevo',      nuevo_l,      '#60a5fa',       r=>`Inv: ${fmt(r.inv_actual)}`,  r=>`Sin ventas`,                      'cnt-nv');
+  const nuevo_l2      = rows.filter(r=>r.estado==='nuevo').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
+  const sin_mov_l     = rows.filter(r=>r.estado==='sin_movimiento').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
+  renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`, r=>'Sin ventas ni stock', 'cnt-nv');
+  renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>`Inv: ${fmt(r.inv_actual)}`, r=>'Sin ventas',          'cnt-sm');
   renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-q');
   renderAlertCards('list-critico',    critico_l,    '#f97316',       r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-c');
   renderAlertCards('list-revisar',    revisar_l,    'var(--yellow)', r=>`${fmtD(r.dias_inv)} días`,  r=>`Inv: ${fmt(r.inv_actual)}`,        'cnt-b');
@@ -901,7 +1034,7 @@ function renderProveedores(rows) {
   const map = {};
   rows.forEach(r => {
     const k = r.supplier;
-    if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
+    if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
     map[k].skus++;
     map[k].inv += r.inv_actual||0;
     if (r.dias_inv!=null && r.dias_inv<999) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
@@ -921,7 +1054,8 @@ function renderProveedores(rows) {
     { key:'skus',       label:'SKUs', num:true },
     { key:'inv',        label:'Inv. Total', num:true },
     { key:'dias_prom',  label:'Días Prom.', num:true },
-    { key:'nuevo',      label:'🆕 Nuevo', num:true },
+    { key:'nuevo',          label:'🆕 Nuevo', num:true },
+    { key:'sin_movimiento', label:'😴 Sin Mov.', num:true },
     { key:'quiebre',    label:'🚨 Quiebre', num:true },
     { key:'critico',    label:'🔴 Crítico', num:true },
     { key:'revisar',    label:'🟡 Revisar', num:true },
@@ -1091,11 +1225,9 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 });
 
 // ── FILTER EVENTS ─────────────────────────────────────────────────────────────
-['f-store','f-supplier','f-brand','f-cat','f-estado','f-pago'].forEach(id=>{
-  document.getElementById(id).addEventListener('change',()=>{cascadeFilters();render();});
-});
+// Multi-select onChange already wired in msCreate
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ['f-store','f-supplier','f-brand','f-cat','f-estado','f-pago'].forEach(id=>document.getElementById(id).value='');
+  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-estado','ms-pago'].forEach(msClear);
   document.getElementById('f-search').value=''; searchTerm='';
   repopulateFilters(); render();
 });
