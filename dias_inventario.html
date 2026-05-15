@@ -490,7 +490,8 @@ function normalise(raw) {
   const tieneVentas = ventas.some(v => v != null && v > 0);
   let estado = 'normal';
   if (!tieneVentas) {
-    estado = 'nuevo';
+    const invNum = inv != null ? inv : 0;
+    estado = invNum > 0 ? 'sin_movimiento' : 'nuevo';
   } else if (dias != null) {
     if (dias <= 0)                              estado = 'quiebre';
     else if (dias <= 7)                         estado = 'critico';
