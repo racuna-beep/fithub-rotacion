@@ -302,33 +302,11 @@
   <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
 
-    <!-- Fila 1: Donut + Top proveedores críticos -->
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card">
+    <!-- Fila 1: Donut -->
+    <div style="margin-bottom:16px">
+      <div class="card" style="max-width:480px">
         <div class="card-header"><h3>Distribución por estado</h3></div>
         <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>🚨 Top proveedores en riesgo</h3></div>
-        <div id="prov-risk-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;max-height:240px;overflow-y:auto"></div>
-      </div>
-    </div>
-
-    <!-- Fila 2: Días promedio por tienda + Top 10 proveedores días inv -->
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="card-header">
-          <h3>Días inv. promedio por tienda</h3>
-          <button class="sort-toggle" id="sort-store" data-dir="-1">↕ Mayor → Menor</button>
-        </div>
-        <svg class="chart" id="chart-store" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <h3>Top 10 proveedores por días inv.</h3>
-          <button class="sort-toggle" id="sort-sup" data-dir="-1">↕ Mayor → Menor</button>
-        </div>
-        <svg class="chart" id="chart-sup" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
     </div>
 
@@ -915,7 +893,7 @@ function renderExecSummary(rows) {
 }
 
 function renderKPIs(rows) {
-  const dias = rows.filter(r=>r.dias_inv!=null && r.dias_inv>0 && r.dias_inv<500 && r.estado!=='sin_movimiento' && r.estado!=='nuevo').map(r=>r.dias_inv);
+  const dias = rows.filter(r=>r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0).map(r=>r.dias_inv);
   const diasProm    = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
   const nuevo       = rows.filter(r=>r.estado==='nuevo').length;
   const sinMov      = rows.filter(r=>r.estado==='sin_movimiento').length;
@@ -1249,41 +1227,6 @@ function renderStackedByStore(rows) {
   });
 }
 
-// ── RENDER TOP PROVEEDORES EN RIESGO ─────────────────────────────────────────
-function renderProvRisk(rows) {
-  const el = document.getElementById('prov-risk-list');
-  if (!el) return;
-  const map = {};
-  rows.forEach(r => {
-    const k = r.supplier || '(Sin proveedor)';
-    if (!map[k]) map[k] = { supplier:k, quiebre:0, critico:0, total:0 };
-    map[k].total++;
-    if (r.estado==='quiebre') map[k].quiebre++;
-    if (r.estado==='critico') map[k].critico++;
-  });
-  const data = Object.values(map)
-    .map(d=>({...d, riesgo:d.quiebre+d.critico}))
-    .filter(d=>d.riesgo>0)
-    .sort((a,b)=>b.riesgo-a.riesgo)
-    .slice(0,8);
-  if (!data.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center">✅ Sin proveedores en quiebre o crítico</div>'; return; }
-  const maxR = Math.max(...data.map(d=>d.riesgo),1);
-  el.innerHTML = data.map(d=>{
-    const pct = ((d.riesgo/d.total)*100).toFixed(0);
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(d.supplier)}</div>
-        <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
-          <div style="height:100%;width:${(d.riesgo/maxR*100).toFixed(0)}%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:2px"></div>
-        </div>
-      </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:15px;font-weight:800;color:#ef4444">${d.riesgo}</div>
-        <div style="font-size:10px;color:#64748b">${pct}% de sus SKUs</div>
-      </div>
-    </div>`;
-  }).join('');
-}
 
 // ── RENDER TOP SKUs EN RIESGO ─────────────────────────────────────────────────
 function renderTopRisk(rows) {
@@ -1360,17 +1303,17 @@ function renderProveedores(rows) {
       <td><b style="color:var(--text)">${escH(d.supplier)}</b></td>
       <td class="num">${fmt(d.skus)}</td>
       <td class="num">
-        <div class="dias-bar">
-          <span style="font-weight:600;min-width:50px;text-align:right">${fmt(d.inv)}</span>
-          <div class="dias-bar-track" style="width:70px">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <span style="font-weight:600">${fmt(d.inv)}</span>
+          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
             <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
           </div>
         </div>
       </td>
       <td class="num">
-        <div class="dias-bar">
-          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:40px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-          <div class="dias-bar-track">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <span style="color:${diasColor(d.dias_prom)};font-weight:700">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
             <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
           </div>
         </div>
@@ -1502,17 +1445,17 @@ function renderMarcas(rows) {
       <td><b style="color:var(--text)">${escH(d.brand)}</b></td>
       <td class="num">${fmt(d.skus)}</td>
       <td class="num">
-        <div class="dias-bar">
-          <span style="font-weight:600;min-width:50px;text-align:right">${fmt(d.inv)}</span>
-          <div class="dias-bar-track" style="width:70px">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <span style="font-weight:600">${fmt(d.inv)}</span>
+          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
             <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
           </div>
         </div>
       </td>
       <td class="num">
-        <div class="dias-bar">
-          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:40px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-          <div class="dias-bar-track">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <span style="color:${diasColor(d.dias_prom)};font-weight:700">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
             <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
           </div>
         </div>
@@ -1614,8 +1557,6 @@ function render() {
   renderBars('chart-cat', catD, '#8b5cf6', catW, 280);
 
   renderDonut(rows);
-  renderStackedByStore(rows);
-  renderProvRisk(rows);
   renderTopRisk(rows);
 
   renderAlerts(rows);
