@@ -223,6 +223,7 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
   #tooltip strong { color: var(--text); display: block; margin-bottom: 2px; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -241,9 +242,18 @@
   </header>
 
   <div id="exec-summary" class="exec-summary" style="display:none"></div>
-  <div class="meta-bar">
-    <span id="meta-txt"><b>—</b> registros · <b>—</b> tiendas · <b>—</b> SKUs únicos · <span id="last-update"></span></span>
-    <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
+  <div class="meta-bar" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span id="meta-txt" style="font-size:13px"><b>—</b> registros · <b>—</b> tiendas · <b>—</b> SKUs únicos</span>
+      <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
+    </div>
+    <div id="last-update-bar" style="display:none;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.35);border-radius:6px;padding:6px 12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">🕐</span>
+      <div>
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:700">Última actualización</div>
+        <div id="last-update" style="font-size:13px;font-weight:700;color:#f97316"></div>
+      </div>
+    </div>
   </div>
   <div class="err-bar" id="err-bar"></div>
 
@@ -285,6 +295,7 @@
     <button class="tab-btn active" data-tab="resumen">📊 Resumen</button>
     <button class="tab-btn" data-tab="alertas">⚠️ Alertas <span class="tab-badge" id="cnt-alertas">0</span></button>
     <button class="tab-btn" data-tab="proveedores">🏭 Proveedores</button>
+    <button class="tab-btn" data-tab="marcas">🏷️ Marcas</button>
     <button class="tab-btn" data-tab="detalle">📋 Detalle <span class="tab-badge" id="cnt-detalle">0</span></button>
   </div>
 
@@ -418,7 +429,7 @@
       <div class="table-header">
         <h3>Días de Inventario por Proveedor <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ CSV</button>
+          <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
           <input class="search-input" id="f-search-prov" placeholder="Buscar proveedor…" style="min-width:180px;"/>
         </div>
       </div>
@@ -431,13 +442,32 @@
     </div>
   </div>
 
+  <!-- MARCAS -->
+  <div class="tab-panel" id="panel-marcas">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Días de Inventario por Marca <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
+          <input class="search-input" id="f-search-marca" placeholder="Buscar marca…" style="min-width:180px;"/>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="marca-thead"></tr></thead>
+          <tbody id="marca-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- DETALLE -->
   <div class="tab-panel" id="panel-detalle">
     <div class="table-card">
       <div class="table-header">
         <h3>Detalle SKUs <span id="row-count" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-exp-det" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ CSV</button>
+          <button id="btn-exp-det" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
           <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;"/>
         </div>
       </div>
@@ -457,6 +487,7 @@
               <th data-col="prom_vta" class="num" data-tip="Promedio de ventas diarias (YTD)">Prom. Vta YTD</th>
               <th data-col="tipo_pago">Tipo Pago</th>
               <th data-col="estado">Estado</th>
+              <th style="min-width:140px">Nota</th>
             </tr>
           </thead>
           <tbody id="det-tbody"></tbody>
@@ -495,9 +526,12 @@ function detectVentaColumns(rawRows) {
   VENTA_LABELS = found.map(k => k.trim().replace(/^[Vv]enta\s+/, ''));
 }
 
-let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '';
+let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '', searchMarcaTerm = '';
+let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
+function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
 let sortCol = 'dias_inv', sortDir = -1;
 let provSortCol = 'inv', provSortDir = -1;
+let marcaSortCol = 'inv', marcaSortDir = -1;
 let pageSize = 50, currentPage = 1;
 const sortDirs = { store: -1, sup: -1, cat: -1 };
 
@@ -917,7 +951,11 @@ function renderKPIs(rows) {
       <div class="kpi-sub">${k.sub}</div>
     </div>`).join('');
 
-  document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos · <span id="last-update">Cargado: ${new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</span>`;
+  document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos`;
+  const luEl = document.getElementById('last-update');
+  const luBar = document.getElementById('last-update-bar');
+  if (luEl) luEl.textContent = new Date().toLocaleString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if (luBar) luBar.style.display = 'flex';
   document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','critico','revisar','sin_movimiento'].includes(r.estado)).length;
   document.getElementById('cnt-detalle').textContent = fmt(rows.length);
 }
@@ -1368,7 +1406,16 @@ function renderTable(rows) {
       <td class="num">${fmtD(r.prom_vta)}</td>
       <td style="color:var(--muted);font-size:11px">${escH(r.tipo_pago||'—')}</td>
       <td>${estadoBadge(r.estado)}</td>
-    </tr>`).join('') : '<tr><td colspan="11" class="empty">Sin resultados</td></tr>';
+      <td>
+        <input type="text" value="${escH(NOTAS[r.store+'|'+r.sku]||'')}"
+          placeholder="agregar nota…"
+          style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:11px;width:130px;outline:none"
+          data-key="${escH(r.store+'|'+r.sku)}"
+          onfocus="this.style.borderColor='var(--orange)'"
+          onblur="this.style.borderColor='var(--border)';NOTAS[this.dataset.key]=this.value.trim();saveNotas()"
+        />
+      </td>
+    </tr>`).join('') : '<tr><td colspan="12" class="empty">Sin resultados</td></tr>';
   const pages = Math.ceil(filtered.length/pageSize)||1;
   document.getElementById('pg-info').textContent = `Pág. ${currentPage} / ${pages}`;
   document.getElementById('pg-prev').disabled = currentPage<=1;
@@ -1404,6 +1451,138 @@ function exportProvCSV() {
   const url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download='proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.csv'; a.click(); URL.revokeObjectURL(url);
 }
+
+// ── RENDER MARCAS ────────────────────────────────────────────────────────────
+function renderMarcas(rows) {
+  const term = searchMarcaTerm.toLowerCase();
+  const map = {};
+  rows.forEach(r => {
+    const k = r.brand || '(Sin marca)';
+    if (!map[k]) map[k] = { brand:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0 };
+    map[k].skus++;
+    map[k].inv     += r.inv_actual    || 0;
+    map[k].inv_val += r.inv_valorizado|| 0;
+    const validEstados = ['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
+      map[k].diasSum += r.dias_inv; map[k].diasN++;
+    }
+  });
+  let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
+  if (term) data = data.filter(d=>d.brand.toLowerCase().includes(term));
+  data.sort((a,b)=>{
+    const va=a[marcaSortCol], vb=b[marcaSortCol];
+    if (va==null) return 1; if (vb==null) return -1;
+    return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * marcaSortDir;
+  });
+  document.getElementById('cnt-marca').textContent = data.length + ' marcas';
+  const cols = [
+    { key:'brand',     label:'Marca',               num:false },
+    { key:'skus',      label:'Cant. SKUs',           num:true  },
+    { key:'inv',       label:'Stock Actual (uds)',   num:true  },
+    { key:'dias_prom', label:'Dias Inv. Promedio',   num:true  },
+    { key:'inv_val',   label:'Inv. Valorizado',      num:true  },
+  ];
+  document.getElementById('marca-thead').innerHTML = cols.map(c => {
+    const active = marcaSortCol === c.key;
+    const arrow  = active ? (marcaSortDir === -1 ? ' ↓' : ' ↑') : '';
+    return `<th class="${c.num?'num':''}" data-mcol="${c.key}" style="cursor:pointer${active?';color:var(--orange)':''}">${c.label}${arrow}</th>`;
+  }).join('');
+  document.querySelectorAll('#marca-thead th[data-mcol]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const col=th.getAttribute('data-mcol');
+      if(marcaSortCol===col) marcaSortDir*=-1; else{marcaSortCol=col;marcaSortDir=-1;}
+      renderMarcas(lastRows);
+    });
+  });
+  const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':v>=60?'#8b5cf6':'#10b981';
+  const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
+  const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
+  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d=>`
+    <tr>
+      <td><b style="color:var(--text)">${escH(d.brand)}</b></td>
+      <td class="num">${fmt(d.skus)}</td>
+      <td class="num">
+        <div class="dias-bar">
+          <span style="font-weight:600;min-width:50px;text-align:right">${fmt(d.inv)}</span>
+          <div class="dias-bar-track" style="width:70px">
+            <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
+          </div>
+        </div>
+      </td>
+      <td class="num">
+        <div class="dias-bar">
+          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:40px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+          <div class="dias-bar-track">
+            <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
+          </div>
+        </div>
+      </td>
+      <td class="num" style="color:var(--green)">${d.inv_val ? fmtM(d.inv_val) : '—'}</td>
+    </tr>`).join('') : '<tr><td colspan="5" class="empty">Sin resultados</td></tr>';
+}
+
+// ── EXPORT EXCEL ─────────────────────────────────────────────────────────────
+function exportExcel(rows, filename) {
+  const headers = ['Tienda','SKU','Marca','Proveedor','Producto','Categoria','Inv. Actual','Dias Inv','Vida Util','Prom Vta YTD','Estado','Nota'];
+  const wsData = [headers];
+  rows.forEach(r => wsData.push([
+    r.store, r.sku, r.brand, r.supplier, r.product, r.category,
+    r.inv_actual, r.dias_inv, r.vida_util, r.prom_vta, r.estado,
+    NOTAS[r.store+'|'+r.sku] || ''
+  ]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  // Column widths
+  ws['!cols'] = [10,14,18,22,30,18,12,10,10,14,12,20].map(w=>({wch:w}));
+  // Header style via cell refs
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c:C})];
+    if (cell) cell.s = { font:{bold:true}, fill:{fgColor:{rgb:'1E2D3D'}} };
+  }
+  XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+  XLSX.writeFile(wb, filename+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportProvExcel() {
+  const map={};
+  lastRows.forEach(r=>{
+    const k=r.supplier||'(Sin proveedor)';
+    if(!map[k]) map[k]={supplier:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
+    map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
+    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
+  });
+  const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null})).sort((a,b)=>(b.inv||0)-(a.inv||0));
+  const wsData=[['Proveedor','Cant. SKUs','Stock Actual (uds)','Dias Inv. Promedio','Inv. Valorizado']];
+  data.forEach(d=>wsData.push([d.supplier,d.skus,d.inv,d.dias_prom!=null?+d.dias_prom.toFixed(1):null,d.inv_val||0]));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:28},{wch:12},{wch:18},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Proveedores');
+  XLSX.writeFile(wb,'proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportMarcaExcel() {
+  const map={};
+  lastRows.forEach(r=>{
+    const k=r.brand||'(Sin marca)';
+    if(!map[k]) map[k]={brand:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
+    map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
+    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
+  });
+  const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null})).sort((a,b)=>(b.inv||0)-(a.inv||0));
+  const wsData=[['Marca','Cant. SKUs','Stock Actual (uds)','Dias Inv. Promedio','Inv. Valorizado']];
+  data.forEach(d=>wsData.push([d.brand,d.skus,d.inv,d.dias_prom!=null?+d.dias_prom.toFixed(1):null,d.inv_val||0]));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:28},{wch:12},{wch:18},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Marcas');
+  XLSX.writeFile(wb,'marcas_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ── NOTAS CSS ─────────────────────────────────────────────────────────────────
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
 function render() {
@@ -1441,6 +1620,7 @@ function render() {
 
   renderAlerts(rows);
   renderProveedores(rows);
+  renderMarcas(rows);
   currentPage = 1;
   renderTable(rows);
 }
@@ -1501,8 +1681,10 @@ document.getElementById('pg-next').addEventListener('click',()=>{currentPage++;r
 document.getElementById('pg-size').addEventListener('change',e=>{pageSize=parseInt(e.target.value);currentPage=1;renderTable(lastRows);});
 
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
-document.getElementById('btn-exp-det').addEventListener('click',()=>exportCSV(lastRows,'dias_inventario'));
-document.getElementById('btn-exp-prov').addEventListener('click',exportProvCSV);
+document.getElementById('btn-exp-det').addEventListener('click',()=>exportExcel(lastRows,'dias_inventario'));
+document.getElementById('btn-exp-prov').addEventListener('click',exportProvExcel);
+document.getElementById('btn-exp-marca').addEventListener('click',exportMarcaExcel);
+document.getElementById('f-search-marca').addEventListener('input',e=>{ searchMarcaTerm=e.target.value; renderMarcas(lastRows); });
 document.getElementById('btn-refresh').addEventListener('click',()=>{DATA=[];loadData();});
 
 // ── TOOLTIP SYSTEM ────────────────────────────────────────────────────────────
