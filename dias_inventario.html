@@ -290,7 +290,28 @@
 
   <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
-    <div class="grid-3">
+
+    <!-- Fila 1: Donut + Barras por tienda apiladas + Top proveedores críticos -->
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header"><h3>Distribución por estado</h3></div>
+        <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Estados por tienda</h3>
+          <span style="font-size:11px;color:var(--muted)">SKUs apilados</span>
+        </div>
+        <svg class="chart" id="chart-store-stacked" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🚨 Top proveedores en riesgo</h3></div>
+        <div id="prov-risk-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;max-height:240px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Fila 2: Días promedio por tienda + Top 10 proveedores días inv -->
+    <div class="grid-2" style="margin-bottom:16px">
       <div class="card">
         <div class="card-header">
           <h3>Días inv. promedio por tienda</h3>
@@ -305,14 +326,23 @@
         </div>
         <svg class="chart" id="chart-sup" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <h3>Distribución por estado</h3>
-        </div>
-        <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
     </div>
-    <div class="grid-2">
+
+    <!-- Fila 3: Top SKUs en riesgo + Categorías -->
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header"><h3>🔥 Top SKUs en riesgo (Quiebre + Crítico)</h3></div>
+        <div class="table-wrap" style="max-height:260px;overflow-y:auto">
+          <table>
+            <thead><tr>
+              <th>Producto</th><th>Tienda</th><th>Proveedor</th>
+              <th class="num" data-tip="Días de inventario">Días Inv.</th>
+              <th>Estado</th>
+            </tr></thead>
+            <tbody id="top-risk-tbody"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="card">
         <div class="card-header">
           <h3>Categorías por días inv.</h3>
@@ -320,8 +350,8 @@
         </div>
         <svg class="chart chart-wide" id="chart-cat" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-
     </div>
+
   </div>
 
   <!-- ALERTAS -->
@@ -455,7 +485,7 @@ const VENTA_LABELS = ['Enero','Febrero','Marzo','Abril','Mayo'];
 
 let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '';
 let sortCol = 'dias_inv', sortDir = -1;
-let provSortCol = 'dias_prom', provSortDir = -1;
+let provSortCol = 'inv', provSortDir = -1;
 let pageSize = 50, currentPage = 1;
 const sortDirs = { store: -1, sup: -1, cat: -1 };
 
@@ -765,67 +795,101 @@ function renderExecSummary(rows) {
   const el = document.getElementById('exec-summary');
   if (!rows.length) { el.style.display='none'; return; }
   el.style.display = 'flex';
+  el.style.flexDirection = 'column';
+  el.style.gap = '14px';
   const total = rows.length;
-  const riesgo = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
-  const pctRiesgo = ((riesgo/total)*100).toFixed(1);
-  const invRiesgo = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').reduce((a,r)=>a+(r.inv_actual||0),0);
-  const estados = ['nuevo','quiebre','critico','revisar','bien','sobrestock','gestionar'];
-  const colors  = ['#60a5fa','#ef4444','#f97316','#f59e0b','#10b981','#8b5cf6','#f43f5e'];
+  const quiebre   = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const sobrestock = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
+  const sinMov    = rows.filter(r=>r.estado==='sin_movimiento').length;
+  const bien      = rows.filter(r=>r.estado==='bien').length;
+  const pctQ  = ((quiebre/total)*100).toFixed(1);
+  const pctSS = ((sobrestock/total)*100).toFixed(1);
+  const valSS = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const valSM = rows.filter(r=>r.estado==='sin_movimiento').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const valTotal = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const pctCapInm = valTotal ? (((valSS+valSM)/valTotal)*100).toFixed(1) : '0.0';
+  const estados = ['nuevo','sin_movimiento','quiebre','critico','revisar','bien','sobrestock','gestionar'];
+  const labels  = ['Nuevo','Sin Mov.','Quiebre','Crítico','Revisar','Bien','Sobrestock','Gestionar'];
+  const colors  = ['#60a5fa','#94a3b8','#ef4444','#f97316','#f59e0b','#10b981','#8b5cf6','#f43f5e'];
   const counts  = estados.map(e=>rows.filter(r=>r.estado===e).length);
-  const segs = estados.map((e,i)=>counts[i]?`<div class="exec-bar-seg" style="width:${(counts[i]/total*100).toFixed(1)}%;background:${colors[i]}" data-tip="${e}: ${counts[i]} SKUs (${(counts[i]/total*100).toFixed(1)}%)"></div>`:'').join('');
+  const segs = estados.map((e,i)=>counts[i]?`<div class="exec-bar-seg" style="width:${(counts[i]/total*100).toFixed(1)}%;background:${colors[i]}" data-tip="${labels[i]}: ${counts[i]} SKUs (${(counts[i]/total*100).toFixed(1)}%)"></div>`:'').join('');
+  // Legend
+  const legend = estados.map((e,i)=>counts[i]?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8"><span style="width:8px;height:8px;border-radius:2px;background:${colors[i]};display:inline-block"></span>${labels[i]} <b style="color:#e2e8f0">${counts[i]}</b></span>`:'').filter(Boolean).join('');
   el.innerHTML = `
-    <div class="exec-pill">
-      <div>
-        <div class="lbl">SKUs en riesgo</div>
-        <b style="color:${riesgo/total>0.2?'var(--red)':'var(--yellow)'}">${pctRiesgo}%</b>
-      </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between">
+      <div style="font-size:12px;font-weight:700;color:#f97316;letter-spacing:1px;text-transform:uppercase">📊 Resumen ejecutivo</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${legend}</div>
     </div>
-    <div class="exec-divider"></div>
-    <div class="exec-pill">
-      <div>
-        <div class="lbl">Quiebre + Crítico</div>
-        <b style="color:var(--red)">${fmt(riesgo)} SKUs</b>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+      <!-- Capital inmovilizado — protagonista -->
+      <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:14px 20px;min-width:200px;flex:1">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#a78bfa;text-transform:uppercase;margin-bottom:6px">💰 Capital inmovilizado</div>
+        <div style="font-size:28px;font-weight:900;color:#c4b5fd;line-height:1">${fmtM(valSS+valSM)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">${pctCapInm}% del inv. valorizado total · Sobrestock + Sin Movimiento</div>
+        <div style="margin-top:10px;display:flex;gap:12px">
+          <div><div style="font-size:10px;color:#94a3b8">🔵 Sobrestock/Gestionar</div><div style="font-size:14px;font-weight:700;color:#a78bfa">${fmtM(valSS)} <span style="font-size:11px;font-weight:400">(${sobrestock} SKUs)</span></div></div>
+          <div><div style="font-size:10px;color:#94a3b8">😴 Sin Movimiento</div><div style="font-size:14px;font-weight:700;color:#94a3b8">${fmtM(valSM)} <span style="font-size:11px;font-weight:400">(${sinMov} SKUs)</span></div></div>
+        </div>
       </div>
-    </div>
-    <div class="exec-divider"></div>
-    <div class="exec-pill">
-      <div>
-        <div class="lbl">Unidades en riesgo</div>
-        <b style="color:var(--orange)">${fmt(invRiesgo)}</b>
+      <!-- Riesgo quiebre -->
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:14px 20px;min-width:160px;flex:0 0 auto">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#f87171;text-transform:uppercase;margin-bottom:6px">🚨 Riesgo quiebre</div>
+        <div style="font-size:28px;font-weight:900;color:${quiebre/total>0.15?'#ef4444':'#f97316'};line-height:1">${pctQ}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">${fmt(quiebre)} SKUs · Quiebre + Crítico</div>
       </div>
-    </div>
-    <div class="exec-divider"></div>
-    <div class="exec-bar-wrap">
-      <div class="exec-bar-lbl"><span>Distribución de estados</span><span style="color:var(--text)">${fmt(total)} SKUs</span></div>
-      <div class="exec-bar-track">${segs}</div>
+      <!-- Salud general -->
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:14px 20px;min-width:160px;flex:0 0 auto">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#34d399;text-transform:uppercase;margin-bottom:6px">🟢 En nivel óptimo</div>
+        <div style="font-size:28px;font-weight:900;color:#10b981;line-height:1">${((bien/total)*100).toFixed(1)}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">${fmt(bien)} SKUs · 16–59 días cobertura</div>
+      </div>
+      <!-- Barra distribución -->
+      <div style="flex:2;min-width:220px;display:flex;flex-direction:column;justify-content:center;gap:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b">
+          <span>Distribución por estado</span><span style="color:#e2e8f0;font-weight:600">${fmt(total)} SKUs totales</span>
+        </div>
+        <div class="exec-bar-track" style="height:12px;border-radius:6px">${segs}</div>
+      </div>
     </div>`;
 }
 
 function renderKPIs(rows) {
   const dias = rows.filter(r=>r.dias_inv!=null && r.dias_inv>0 && r.dias_inv<500 && r.estado!=='sin_movimiento' && r.estado!=='nuevo').map(r=>r.dias_inv);
-  const diasProm = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
-  const nuevo        = rows.filter(r=>r.estado==='nuevo').length;
-  const sinMov       = rows.filter(r=>r.estado==='sin_movimiento').length;
-  const quiebre      = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
-  const revisar      = rows.filter(r=>r.estado==='revisar').length;
-  const sobrestock   = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
-  const invTotal     = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
-  const uniqueSkus   = new Set(rows.map(r=>r.sku)).size;
-  document.getElementById('kpis').innerHTML = [
-    { label:'Registros',        val:fmt(rows.length),  sub:`${fmt(uniqueSkus)} SKUs únicos`,                          cls:'orange' },
-    { label:'Días Inv. Prom',   val:fmtD(diasProm),    sub:'días promedio cobertura',                                 cls:'blue'   },
-    { label:'🆕 Nuevo',         val:fmt(nuevo),        sub:'sin inv. ni ventas',                                      cls:'purple' },
-    { label:'😴 Sin Movimiento',val:fmt(sinMov),       sub:'con inv. pero sin ventas',                                cls:'blue'   },
-    { label:'Quiebre / Crítico',val:fmt(quiebre),      sub:`${((quiebre/rows.length||0)*100).toFixed(1)}% del total`, cls:'red'    },
-    { label:'Revisar',          val:fmt(revisar),      sub:'8 a 15 días cobertura',                                   cls:'yellow' },
-    { label:'Sobrestock',       val:fmt(sobrestock),   sub:'60+ días o supera vida útil',                             cls:'purple' },
-    { label:'Inv. Actual Total',   val:fmt(invTotal),                                    sub:'unidades en stock',         cls:'green'  },
-    { label:'Inv. Valorizado',      val:fmtM(rows.reduce((a,r)=>a+(r.inv_valorizado||0),0)), sub:'capital en inventario',     cls:'orange' },
-  ].map(k=>`<div class="kpi ${k.cls}" data-tip="${(KPI_TIPS[k.label]||'').replace(/"/g,"'")}">
-    <div class="kpi-label">${k.label}</div>
-    <div class="kpi-value">${k.val}</div>
-    <div class="kpi-sub">${k.sub}</div>
-  </div>`).join('');
+  const diasProm    = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
+  const nuevo       = rows.filter(r=>r.estado==='nuevo').length;
+  const sinMov      = rows.filter(r=>r.estado==='sin_movimiento').length;
+  const quiebre     = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const revisar     = rows.filter(r=>r.estado==='revisar').length;
+  const sobrestock  = rows.filter(r=>r.estado==='sobrestock').length;
+  const gestionar   = rows.filter(r=>r.estado==='gestionar').length;
+  const sobrestockTotal = sobrestock + gestionar;
+  const invTotal    = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
+  const invVal      = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const invValSS    = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
+  const n = rows.length || 1;
+
+  const kpis = [
+    // Fila 1 — Capital inmovilizado protagonista
+    { label:'💰 Capital Inmovilizado',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/invVal||0)*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil — capital atrapado sin rotación.' },
+    { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                           cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
+    { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                             cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
+    { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                     cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada en el período.' },
+    // Fila 2 — Riesgo de quiebre
+    { label:'🚨 Quiebre / Crítico',     val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                   cls:'red',    tip:'SKUs sin stock o con menos de 7 días de cobertura.' },
+    { label:'🟡 Revisar',               val: fmt(revisar),             sub:`8 a 15 días cobertura`,                                                        cls:'yellow', tip:'SKUs con cobertura baja — programar reposición pronto.' },
+    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),            sub:`unidades en stock`,                                                            cls:'green',  tip:'Suma de unidades en inventario para los SKUs filtrados.' },
+    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),             sub:`capital en inventario`,                                                        cls:'orange', tip:'Valor total del inventario a precio de costo o venta.' },
+    { label:'📅 Días Inv. Prom.',       val: fmtD(diasProm),           sub:`días promedio cobertura`,                                                      cls:'blue',   tip:'Promedio de días de inventario de todos los SKUs activos filtrados.' },
+  ];
+
+  document.getElementById('kpis').innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.cls}" data-tip="${k.tip.replace(/"/g,"'")}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
   document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos · <span id="last-update">Cargado: ${new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</span>`;
   document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','critico','revisar','sin_movimiento'].includes(r.estado)).length;
   document.getElementById('cnt-detalle').textContent = fmt(rows.length);
@@ -1052,20 +1116,145 @@ function renderAlerts(rows) {
   renderAlertCards('list-gestionar',  gestionar_l,  '#f43f5e',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-e');
 }
 
-// ── RENDER PROVEEDORES ────────────────────────────────────────────────────────
+// ── RENDER STACKED BARS BY STORE ─────────────────────────────────────────────
+function renderStackedByStore(rows) {
+  const svg = document.getElementById('chart-store-stacked');
+  if (!svg) return;
+  svg.innerHTML = '';
+  const W=400, H=260, pl=44, pr=12, pt=16, pb=72;
+  const cW=W-pl-pr, cH=H-pt-pb;
+  const estadosCfg = [
+    { key:'quiebre',        color:'#ef4444', label:'Quiebre' },
+    { key:'critico',        color:'#f97316', label:'Crítico' },
+    { key:'revisar',        color:'#f59e0b', label:'Revisar' },
+    { key:'bien',           color:'#10b981', label:'Bien' },
+    { key:'sobrestock',     color:'#8b5cf6', label:'Sobrestock' },
+    { key:'gestionar',      color:'#f43f5e', label:'Gestionar' },
+    { key:'sin_movimiento', color:'#94a3b8', label:'Sin Mov.' },
+    { key:'nuevo',          color:'#60a5fa', label:'Nuevo' },
+  ];
+  const stores = [...new Set(rows.map(r=>r.store))].filter(Boolean).sort();
+  if (!stores.length) return;
+  const storeMap = {};
+  stores.forEach(s => { storeMap[s] = {}; estadosCfg.forEach(e => storeMap[s][e.key]=0); });
+  rows.forEach(r => { if(storeMap[r.store] && r.estado) storeMap[r.store][r.estado]=(storeMap[r.store][r.estado]||0)+1; });
+  const totals = stores.map(s => Object.values(storeMap[s]).reduce((a,b)=>a+b,0));
+  const maxT = Math.max(...totals, 1);
+  const bw = Math.max(20, Math.floor(cW/stores.length) - 8);
+  const gap = (cW - bw*stores.length) / (stores.length+1);
+  // Y gridlines
+  [0,0.25,0.5,0.75,1].forEach(f=>{
+    const y=pt+cH-(f*cH);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',pl); line.setAttribute('x2',W-pr);
+    line.setAttribute('y1',y); line.setAttribute('y2',y);
+    line.setAttribute('stroke','#1e2d3d'); line.setAttribute('stroke-width','1'); svg.appendChild(line);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',pl-4); t.setAttribute('y',y+4); t.setAttribute('text-anchor','end');
+    t.setAttribute('fill','#475569'); t.setAttribute('font-size','9'); t.textContent=Math.round(f*maxT); svg.appendChild(t);
+  });
+  stores.forEach((s,i)=>{
+    const x = pl + gap + i*(bw+gap);
+    let yOff = pt+cH;
+    estadosCfg.forEach(ec=>{
+      const n = storeMap[s][ec.key]||0;
+      if(!n) return;
+      const h = (n/maxT)*cH;
+      yOff -= h;
+      const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',x); rect.setAttribute('y',yOff);
+      rect.setAttribute('width',bw); rect.setAttribute('height',h);
+      rect.setAttribute('fill',ec.color); rect.setAttribute('rx','1');
+      rect.setAttribute('data-tip',`${s} · ${ec.label}: ${n} SKUs`);
+      svg.appendChild(rect);
+    });
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',x+bw/2); lbl.setAttribute('y',H-pb+14);
+    lbl.setAttribute('text-anchor','end'); lbl.setAttribute('fill','#94a3b8'); lbl.setAttribute('font-size','10');
+    lbl.setAttribute('transform',`rotate(-40,${x+bw/2},${H-pb+14})`);
+    lbl.textContent = s.length>12?s.slice(0,11)+'…':s; svg.appendChild(lbl);
+  });
+  // Mini legend bottom-right
+  const lx=W-pr-110, ly=pt;
+  estadosCfg.slice(0,4).forEach((ec,i)=>{
+    const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',lx); rect.setAttribute('y',ly+i*14); rect.setAttribute('width',8); rect.setAttribute('height',8); rect.setAttribute('fill',ec.color); rect.setAttribute('rx','1'); svg.appendChild(rect);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',lx+11); t.setAttribute('y',ly+i*14+8); t.setAttribute('fill','#64748b'); t.setAttribute('font-size','9'); t.textContent=ec.label; svg.appendChild(t);
+  });
+}
+
+// ── RENDER TOP PROVEEDORES EN RIESGO ─────────────────────────────────────────
+function renderProvRisk(rows) {
+  const el = document.getElementById('prov-risk-list');
+  if (!el) return;
+  const map = {};
+  rows.forEach(r => {
+    const k = r.supplier || '(Sin proveedor)';
+    if (!map[k]) map[k] = { supplier:k, quiebre:0, critico:0, total:0 };
+    map[k].total++;
+    if (r.estado==='quiebre') map[k].quiebre++;
+    if (r.estado==='critico') map[k].critico++;
+  });
+  const data = Object.values(map)
+    .map(d=>({...d, riesgo:d.quiebre+d.critico}))
+    .filter(d=>d.riesgo>0)
+    .sort((a,b)=>b.riesgo-a.riesgo)
+    .slice(0,8);
+  if (!data.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center">✅ Sin proveedores en quiebre o crítico</div>'; return; }
+  const maxR = Math.max(...data.map(d=>d.riesgo),1);
+  el.innerHTML = data.map(d=>{
+    const pct = ((d.riesgo/d.total)*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(d.supplier)}</div>
+        <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div style="height:100%;width:${(d.riesgo/maxR*100).toFixed(0)}%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:2px"></div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:15px;font-weight:800;color:#ef4444">${d.riesgo}</div>
+        <div style="font-size:10px;color:#64748b">${pct}% de sus SKUs</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER TOP SKUs EN RIESGO ─────────────────────────────────────────────────
+function renderTopRisk(rows) {
+  const tbody = document.getElementById('top-risk-tbody');
+  if (!tbody) return;
+  const risk = rows
+    .filter(r=>r.estado==='quiebre'||r.estado==='critico')
+    .sort((a,b)=>(a.dias_inv??-1)-(b.dias_inv??-1))
+    .slice(0,20);
+  if (!risk.length) { tbody.innerHTML='<tr><td colspan="5" class="empty">✅ Sin SKUs en quiebre o crítico</td></tr>'; return; }
+  tbody.innerHTML = risk.map(r=>`
+    <tr>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-weight:600">${escH((r.product||r.sku||'').slice(0,28))}</td>
+      <td style="color:var(--muted)">${escH(r.store)}</td>
+      <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis">${escH(r.supplier)}</td>
+      <td class="num"><b style="color:${r.dias_inv===0||r.dias_inv==null?'#ef4444':'#f97316'}">${r.dias_inv!=null?fmtD(r.dias_inv)+'d':'—'}</b></td>
+      <td>${estadoBadge(r.estado)}</td>
+    </tr>`).join('');
+}
+
+
 function renderProveedores(rows) {
   const term = searchProvTerm.toLowerCase();
   const map = {};
   rows.forEach(r => {
-    const k = r.supplier;
-    if (!map[k]) map[k] = { supplier:k, tipo_pago:r.tipo_pago||'', skus:0, inv:0, diasSum:0, diasN:0, nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
+    const k = r.supplier || '(Sin proveedor)';
+    if (!map[k]) map[k] = { supplier:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0 };
     map[k].skus++;
-    map[k].inv += r.inv_actual||0;
+    map[k].inv     += r.inv_actual    || 0;
+    map[k].inv_val += r.inv_valorizado|| 0;
     const validEstados = ['critico','revisar','bien','sobrestock','gestionar','quiebre'];
-    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) { map[k].diasSum+=r.dias_inv; map[k].diasN++; }
-    if (r.estado) map[k][r.estado]=(map[k][r.estado]||0)+1;
+    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
+      map[k].diasSum += r.dias_inv; map[k].diasN++;
+    }
   });
-  let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN?d.diasSum/d.diasN:null}));
+  let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
   if (term) data = data.filter(d=>d.supplier.toLowerCase().includes(term));
   data.sort((a,b)=>{
     const va=a[provSortCol], vb=b[provSortCol];
@@ -1073,24 +1262,21 @@ function renderProveedores(rows) {
     return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * provSortDir;
   });
   document.getElementById('cnt-prov').textContent = data.length + ' proveedores';
+
   const cols = [
-    { key:'supplier',   label:'Proveedor' },
-    { key:'tipo_pago',  label:'Tipo Pago' },
-    { key:'skus',       label:'SKUs', num:true },
-    { key:'inv',        label:'Inv. Total', num:true },
-    { key:'dias_prom',  label:'Días Prom.', num:true },
-    { key:'nuevo',          label:'🆕 Nuevo', num:true },
-    { key:'sin_movimiento', label:'😴 Sin Mov.', num:true },
-    { key:'quiebre',    label:'🚨 Quiebre', num:true },
-    { key:'critico',    label:'🔴 Crítico', num:true },
-    { key:'revisar',    label:'🟡 Revisar', num:true },
-    { key:'bien',       label:'🟢 Bien', num:true },
-    { key:'sobrestock', label:'🔵 Sobrestock', num:true },
-    { key:'gestionar',  label:'⚠️ Gestionar', num:true },
+    { key:'supplier',  label:'Proveedor',          num:false },
+    { key:'skus',      label:'Cant. SKUs',          num:true  },
+    { key:'inv',       label:'Stock Actual (uds)',  num:true  },
+    { key:'dias_prom', label:'Días Inv. Promedio',  num:true  },
+    { key:'inv_val',   label:'Inv. Valorizado',     num:true  },
   ];
-  document.getElementById('prov-thead').innerHTML = cols.map(c=>
-    `<th class="${c.num?'num':''}" data-pcol="${c.key}" style="cursor:pointer">${c.label}</th>`
-  ).join('');
+
+  document.getElementById('prov-thead').innerHTML = cols.map(c => {
+    const active = provSortCol === c.key;
+    const arrow  = active ? (provSortDir === -1 ? ' ↓' : ' ↑') : '';
+    return `<th class="${c.num?'num':''}" data-pcol="${c.key}" style="cursor:pointer${active?';color:var(--orange)':''}">${c.label}${arrow}</th>`;
+  }).join('');
+
   document.querySelectorAll('#prov-thead th[data-pcol]').forEach(th=>{
     th.addEventListener('click',()=>{
       const col=th.getAttribute('data-pcol');
@@ -1098,24 +1284,33 @@ function renderProveedores(rows) {
       renderProveedores(lastRows);
     });
   });
+
   const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':v>=60?'#8b5cf6':'#10b981';
-  const maxDias = Math.max(...data.map(d=>d.dias_prom||0), 1);
-  document.getElementById('prov-tbody').innerHTML = data.map(d=>`
+  const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
+  const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
+
+  document.getElementById('prov-tbody').innerHTML = data.length ? data.map(d=>`
     <tr>
       <td><b style="color:var(--text)">${escH(d.supplier)}</b></td>
       <td class="num">${fmt(d.skus)}</td>
-      <td class="num">${fmt(d.inv)}</td>
       <td class="num">
         <div class="dias-bar">
-          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:36px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom):'—'}</span>
-          <div class="dias-bar-track"><div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div></div>
+          <span style="font-weight:600;min-width:50px;text-align:right">${fmt(d.inv)}</span>
+          <div class="dias-bar-track" style="width:70px">
+            <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
+          </div>
         </div>
       </td>
-      <td class="num" style="color:${d.quiebre?'var(--red)':'var(--muted)'}">${d.quiebre||0}</td>
-      <td class="num" style="color:${d.critico?'var(--red)':'var(--muted)'}">${d.critico||0}</td>
-      <td class="num" style="color:${d.bajo?'var(--yellow)':'var(--muted)'}">${d.bajo||0}</td>
-      <td class="num" style="color:${d.exceso?'var(--blue)':'var(--muted)'}">${d.exceso||0}</td>
-    </tr>`).join('');
+      <td class="num">
+        <div class="dias-bar">
+          <span style="color:${diasColor(d.dias_prom)};font-weight:700;min-width:40px;text-align:right">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+          <div class="dias-bar-track">
+            <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
+          </div>
+        </div>
+      </td>
+      <td class="num" style="color:var(--green)">${d.inv_val ? fmtM(d.inv_val) : '—'}</td>
+    </tr>`).join('') : '<tr><td colspan="5" class="empty">Sin resultados</td></tr>';
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
@@ -1165,16 +1360,18 @@ function exportCSV(rows, filename) {
 function exportProvCSV() {
   const map={};
   lastRows.forEach(r=>{
-    if(!map[r.supplier]) map[r.supplier]={supplier:r.supplier,skus:0,inv:0,diasSum:0,diasN:0,quiebre:0,critico:0,bajo:0,exceso:0};
-    map[r.supplier].skus++; map[r.supplier].inv+=r.inv_actual||0;
-    if(r.dias_inv!=null){map[r.supplier].diasSum+=r.dias_inv;map[r.supplier].diasN++;}
-    map[r.supplier][r.estado]=(map[r.supplier][r.estado]||0)+1;
+    const k=r.supplier||'(Sin proveedor)';
+    if(!map[k]) map[k]={supplier:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
+    map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
+    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
   });
   const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null}));
-  const headers=['Proveedor','SKUs','Inv Total','Dias Prom','Tipo Pago','Quiebre','Critico','Revisar','Sobrestock','Gestionar'];
+  data.sort((a,b)=>(b.inv||0)-(a.inv||0));
+  const headers=['Proveedor','Cant. SKUs','Stock Actual (uds)','Dias Inv. Promedio','Inv. Valorizado'];
   const esc=v=>{if(v==null)return'';const s=String(v);return s.indexOf(',')>=0||s.indexOf('"')>=0?'"'+s.replace(/"/g,'""')+'"':s;};
   const lines=[headers.join(',')];
-  data.forEach(d=>lines.push([d.supplier,d.skus,d.inv,d.dias_prom!=null?d.dias_prom.toFixed(1):'',d.tipo_pago||'',d.quiebre||0,d.critico||0,d.revisar||0,d.sobrestock||0,d.gestionar||0].map(esc).join(',')));
+  data.forEach(d=>lines.push([d.supplier,d.skus,d.inv,d.dias_prom!=null?d.dias_prom.toFixed(1):'',d.inv_val||0].map(esc).join(',')));
   const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download='proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.csv'; a.click(); URL.revokeObjectURL(url);
@@ -1210,6 +1407,9 @@ function render() {
   renderBars('chart-cat', catD, '#8b5cf6', catW, 280);
 
   renderDonut(rows);
+  renderStackedByStore(rows);
+  renderProvRisk(rows);
+  renderTopRisk(rows);
 
   renderAlerts(rows);
   renderProveedores(rows);
