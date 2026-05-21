@@ -476,8 +476,24 @@
 
 <script>
 const APPS_URL = 'https://script.google.com/macros/s/AKfycbzWgtKzgLJkOdWT6dWBoEWHy8h1fwrnViBCcHBP3qncfDPtu71zuPTI5krpRhStvrZlfQ/exec';
-const VENTA_MONTHS = ['Venta Enero','Venta Febrero','Venta Marzo','Venta Abril','Venta Mayo'];
-const VENTA_LABELS = ['Enero','Febrero','Marzo','Abril','Mayo'];
+
+// Se detectan automaticamente desde los datos al cargar
+let VENTA_MONTHS = [];
+let VENTA_LABELS = [];
+
+function detectVentaColumns(rawRows) {
+  if (!rawRows.length) return;
+  const keys = Object.keys(rawRows[0]);
+  const ORDER = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const found = keys.filter(k => k.trim().toLowerCase().startsWith('venta '));
+  found.sort((a, b) => {
+    const ma = ORDER.findIndex(m => a.toLowerCase().includes(m.toLowerCase()));
+    const mb = ORDER.findIndex(m => b.toLowerCase().includes(m.toLowerCase()));
+    return (ma === -1 ? 99 : ma) - (mb === -1 ? 99 : mb);
+  });
+  VENTA_MONTHS = found;
+  VENTA_LABELS = found.map(k => k.trim().replace(/^[Vv]enta\s+/, ''));
+}
 
 let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '';
 let sortCol = 'dias_inv', sortDir = -1;
@@ -572,6 +588,7 @@ async function loadData() {
     const raw = await res.json();
     if (!Array.isArray(raw) || !raw.length) throw new Error('Sin datos');
     setLoader('Calculando indicadores…', 85);
+    detectVentaColumns(raw);
     DATA = raw.map(normalise).filter(r => r.store || r.sku);
     setLoader('Listo', 100);
     setTimeout(() => {
