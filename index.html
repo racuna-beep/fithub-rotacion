@@ -306,7 +306,7 @@
         <h3 style="margin:0">Top 30 marcas por rotación</h3>
         <button class="sort-toggle" data-chart="chart-brand-rot" title="Cambiar orden">↕ Mejor → Peor</button>
       </div>
-      <svg id="chart-brand-rot" style="width:100%;height:680px" viewBox="0 0 900 680" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="chart-brand-rot" style="width:100%" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
   </div>
@@ -1045,7 +1045,10 @@ function renderHBars(svgId, data) {
 function renderHBarsRot(svgId, data) {
   const svg = document.getElementById(svgId); svg.innerHTML = '';
   if (!data.length) { svg.innerHTML = '<text x="450" y="340" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
-  const W = 900, H = 680, pl = 170, pr = 80, pt = 20, pb = 20;
+  const ROW_H = 38;
+  const W = 900, H = data.length * ROW_H + 40, pl = 170, pr = 80, pt = 20, pb = 20;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
   const cw = W - pl - pr, ch = H - pt - pb;
   const max = Math.max(...data.map(d => d.value), 1.3);
   const bh = Math.max(14, (ch / data.length) * 0.65);
