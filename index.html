@@ -284,13 +284,7 @@
         </div>
         <svg class="chart" id="chart-store-rot" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <h3 style="margin:0">Top 30 marcas por rotación</h3>
-          <button class="sort-toggle" data-chart="chart-brand-rot" title="Cambiar orden">↕ Mejor → Peor</button>
-        </div>
-        <svg id="chart-brand-rot" style="width:100%;height:520px" viewBox="0 0 400 520" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
+
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <h3 style="margin:0">Categorías por rotación</h3>
@@ -304,6 +298,15 @@
         <svg class="chart" id="chart-store" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
       <div class="card"><h3>Ventas del mes por categoría</h3>
         <svg class="chart" id="chart-cat" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+
+    <!-- Top 30 marcas — full width horizontal -->
+    <div class="card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="margin:0">Top 30 marcas por rotación</h3>
+        <button class="sort-toggle" data-chart="chart-brand-rot" title="Cambiar orden">↕ Mejor → Peor</button>
+      </div>
+      <svg id="chart-brand-rot" style="width:100%;height:680px" viewBox="0 0 900 680" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
   </div>
@@ -1038,6 +1041,54 @@ function renderHBars(svgId, data) {
   });
 }
 
+// ─── HBARS ROTACION ────────────────────────────────────────────────────────
+function renderHBarsRot(svgId, data) {
+  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  if (!data.length) { svg.innerHTML = '<text x="450" y="340" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
+  const W = 900, H = 680, pl = 170, pr = 80, pt = 20, pb = 20;
+  const cw = W - pl - pr, ch = H - pt - pb;
+  const max = Math.max(...data.map(d => d.value), 1.3);
+  const bh = Math.max(14, (ch / data.length) * 0.65);
+  const bgap = ch / data.length;
+  const META = 1.3;
+  // Meta line
+  const mx = pl + (META / max) * cw;
+  const mline = document.createElementNS('http://www.w3.org/2000/svg','line');
+  mline.setAttribute('x1', mx); mline.setAttribute('x2', mx);
+  mline.setAttribute('y1', pt); mline.setAttribute('y2', H - pb);
+  mline.setAttribute('stroke', '#f59e0b'); mline.setAttribute('stroke-width', '1');
+  mline.setAttribute('stroke-dasharray', '4,3'); svg.appendChild(mline);
+  const mlbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+  mlbl.setAttribute('x', mx + 4); mlbl.setAttribute('y', pt + 10);
+  mlbl.setAttribute('fill', '#f59e0b'); mlbl.setAttribute('font-size', '10'); mlbl.textContent = 'Meta 1.30'; svg.appendChild(mlbl);
+  // Bars
+  data.forEach((d, i) => {
+    const barW = Math.max(2, (d.value / max) * cw);
+    const y = pt + bgap * i + (bgap - bh) / 2;
+    const color = d.value >= META ? '#10b981' : d.value >= 0.5 ? '#f59e0b' : '#ef4444';
+    // bg track
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x', pl); bg.setAttribute('y', y); bg.setAttribute('width', cw); bg.setAttribute('height', bh);
+    bg.setAttribute('fill', 'rgba(255,255,255,0.03)'); bg.setAttribute('rx', 3); svg.appendChild(bg);
+    // bar
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', pl); rect.setAttribute('y', y); rect.setAttribute('width', barW); rect.setAttribute('height', bh);
+    rect.setAttribute('fill', color); rect.setAttribute('rx', 3); rect.classList.add('bar');
+    rect.addEventListener('mousemove', e => showTip(e, `${d.label}: ${d.value.toFixed(2)}`));
+    rect.addEventListener('mouseleave', hideTip); svg.appendChild(rect);
+    // label
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', pl - 8); lbl.setAttribute('y', y + bh / 2 + 4);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('fill', '#cbd5e1'); lbl.setAttribute('font-size', '11');
+    lbl.textContent = d.label.length > 22 ? d.label.slice(0,20)+'…' : d.label; svg.appendChild(lbl);
+    // value
+    const val = document.createElementNS('http://www.w3.org/2000/svg','text');
+    val.setAttribute('x', pl + barW + 6); val.setAttribute('y', y + bh / 2 + 4);
+    val.setAttribute('fill', color); val.setAttribute('font-size', '11'); val.setAttribute('font-weight','700');
+    val.textContent = d.value.toFixed(2); svg.appendChild(val);
+  });
+}
+
 // ─── TABLE ─────────────────────────────────────────────────────────────────
 function renderTable(rows) {
   const sorted = rows.slice().sort((a, b) => {
@@ -1126,7 +1177,7 @@ function render() {
 
   const brandRot = groupAvgRot(rows, 'brand', CURRENT_MONTH_KEY).filter(d => d.n >= 5).slice(0, 8);
   const sortedBrandRot = (barSortDirs['chart-brand-rot'] === -1 ? brandRot : [...brandRot].reverse()).slice(0,30);
-  renderBars('chart-brand-rot', sortedBrandRot, '#a855f7', v => v.toFixed(2), true, false, 400, 520);
+  renderHBarsRot('chart-brand-rot', sortedBrandRot);
 
   const catRot = groupAvgRot(rows, 'category', CURRENT_MONTH_KEY).filter(d => d.n >= 3);
   const sortedCatRot = barSortDirs['chart-cat-rot'] === -1 ? catRot : [...catRot].reverse();
