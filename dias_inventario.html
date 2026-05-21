@@ -302,15 +302,29 @@
   <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
 
-    <!-- Fila 1: Donut -->
-    <div style="margin-bottom:16px">
-      <div class="card" style="max-width:480px">
+    <!-- Fila 1: Donut + Días por tienda + Top proveedores días -->
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="card">
         <div class="card-header"><h3>Distribución por estado</h3></div>
         <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Días inv. promedio por tienda</h3>
+          <button class="sort-toggle" id="sort-store" data-dir="-1">↕ Mayor → Menor</button>
+        </div>
+        <svg class="chart" id="chart-store" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Top 10 proveedores por días inv.</h3>
+          <button class="sort-toggle" id="sort-sup" data-dir="-1">↕ Mayor → Menor</button>
+        </div>
+        <svg class="chart" id="chart-sup" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
     </div>
 
-    <!-- Fila 3: Top SKUs en riesgo + Categorías -->
+    <!-- Fila 2: Top SKUs en riesgo + Categorías -->
     <div class="grid-2" style="margin-bottom:16px">
       <div class="card">
         <div class="card-header">
