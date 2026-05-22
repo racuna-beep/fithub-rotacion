@@ -457,6 +457,8 @@ const MONTH_VTA_INV = {
 function detectMonths(headers) {
   const found = [];
   headers.forEach(h => {
+    // Solo columnas de rotación precalculada (Rot. Inventario ...), no Vta. ni Inv. prom
+    if (!h.toLowerCase().includes('rot')) return;
     const lower = h.toLowerCase();
     for (const m of MONTH_ORDER) {
       if (lower.includes(m)) {
