@@ -300,14 +300,7 @@
         <svg class="chart" id="chart-cat" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid meet"></svg></div>
     </div>
 
-    <!-- Top 30 marcas — full width horizontal -->
-    <div class="card" style="margin-bottom:24px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <h3 style="margin:0">Top 30 marcas por rotación</h3>
-        <button class="sort-toggle" data-chart="chart-brand-rot" title="Cambiar orden">↕ Mejor → Peor</button>
-      </div>
-      <svg id="chart-brand-rot" style="width:100%" preserveAspectRatio="xMidYMid meet"></svg>
-    </div>
+
 
     <!-- Categoría × Estado heatmap — full width -->
     <div class="card" style="margin-bottom:24px">
@@ -410,7 +403,7 @@ let PREV_MONTH_KEY = '';
 let sortCol = '';
 let sortDir = -1;
 // Bar chart sort directions: 1 = asc (peor a mejor), -1 = desc (mejor a peor)
-const barSortDirs = { 'chart-store-rot': -1, 'chart-brand-rot': -1, 'chart-cat-rot': -1 };
+const barSortDirs = { 'chart-store-rot': -1, 'chart-cat-rot': -1 };
 let searchTerm = '';
 let currentPage = 1;
 let pageSize = 100;
@@ -740,7 +733,7 @@ const fmt = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { m
 const fmtMoney = n => (n == null || isNaN(n)) ? '—' : '$' + n.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 const fmtDec = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const escapeHtml = s => String(s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const avgBy = (rows, key) => { let s = 0, n = 0; for (const r of rows) { const v = r[key]; if (v != null) { const vc = Math.min(v, ROT_CAP); s += vc; n++; } } return n ? s / n : 0; };
+const avgBy = (rows, key) => { let s = 0, n = 0; for (const r of rows) { const v = r[key]; if (v != null && v > 0) { const vc = Math.min(v, ROT_CAP); s += vc; n++; } } return n ? s / n : 0; };
 const tooltip = document.getElementById('tooltip');
 const showTip = (e, text) => { tooltip.textContent = text; tooltip.style.opacity = 1; tooltip.style.left = (e.pageX + 12) + 'px'; tooltip.style.top = (e.pageY - 10) + 'px'; };
 const hideTip = () => { tooltip.style.opacity = 0; };
@@ -1039,7 +1032,12 @@ function renderLine(svgId, data, color) {
   const W = 400, H = 280, pl = 50, pr = 16, pt = 20, pb = 40;
   const cw = W - pl - pr, ch = H - pt - pb;
   if (!data.length) return;
-  const max = Math.max(...data.map(d => d.value), 1.5) * 1.2 || 1, min = 0;
+
+  // Filtrar puntos con valor > 0 para no distorsionar la escala con meses sin datos
+  const validData = data.filter(d => d.value > 0);
+  if (!validData.length) { svg.innerHTML = '<text x="200" y="140" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
+
+  const max = Math.max(...validData.map(d => d.value), 1.5) * 1.2 || 1, min = 0;
   for (let i = 0; i <= 4; i++) {
     const y = pt + (ch * i / 4);
     const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('x1', pl); ln.setAttribute('x2', pl + cw); ln.setAttribute('y1', y); ln.setAttribute('y2', y); ln.setAttribute('class', 'grid-line'); svg.appendChild(ln);
@@ -1048,16 +1046,54 @@ function renderLine(svgId, data, color) {
   const metaY = pt + ch - ((1.3 - min) / (max - min)) * ch;
   const ml = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ml.setAttribute('x1', pl); ml.setAttribute('x2', pl + cw); ml.setAttribute('y1', metaY); ml.setAttribute('y2', metaY); ml.setAttribute('stroke', '#f59e0b'); ml.setAttribute('stroke-dasharray', '4 3'); ml.setAttribute('stroke-width', '1.5'); svg.appendChild(ml);
   const mtxt = document.createElementNS('http://www.w3.org/2000/svg', 'text'); mtxt.setAttribute('x', pl + cw - 6); mtxt.setAttribute('y', metaY - 4); mtxt.setAttribute('fill', '#f59e0b'); mtxt.setAttribute('text-anchor', 'end'); mtxt.setAttribute('font-size', '10'); mtxt.textContent = 'Meta: 1.30'; svg.appendChild(mtxt);
+
   const step = cw / Math.max(data.length - 1, 1);
-  const pts = data.map((d, i) => [pl + i * step, pt + ch - ((d.value - min) / (max - min)) * ch]);
-  const path = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
-  const ar = document.createElementNS('http://www.w3.org/2000/svg', 'path'); ar.setAttribute('d', path + ` L ${pts[pts.length - 1][0]} ${pt + ch} L ${pts[0][0]} ${pt + ch} Z`); ar.setAttribute('fill', color); ar.setAttribute('opacity', '0.15'); svg.appendChild(ar);
-  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path'); ln.setAttribute('d', path); ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '2.5'); svg.appendChild(ln);
-  pts.forEach((p, i) => {
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]); c.setAttribute('r', 5); c.setAttribute('fill', color); c.setAttribute('stroke', '#1e293b'); c.setAttribute('stroke-width', '2');
-    c.addEventListener('mousemove', e => showTip(e, `${data[i].label}: ${data[i].value.toFixed(2)}`)); c.addEventListener('mouseleave', hideTip); svg.appendChild(c);
-    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text'); lbl.setAttribute('x', p[0]); lbl.setAttribute('y', H - pb + 18); lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('fill', '#cbd5e1'); lbl.setAttribute('font-size', '11'); lbl.textContent = data[i].label; svg.appendChild(lbl);
+  // Calcular posición X de todos los meses (incluso sin datos), Y solo si tienen valor
+  const allPts = data.map((d, i) => ({ x: pl + i * step, y: d.value > 0 ? pt + ch - ((d.value - min) / (max - min)) * ch : null, value: d.value, label: d.label }));
+  const validPts = allPts.filter(p => p.y !== null);
+
+  // Línea y área solo con puntos válidos
+  if (validPts.length >= 2) {
+    const path = validPts.map((p, i) => (i ? 'L' : 'M') + p.x + ' ' + p.y).join(' ');
+    const ar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    ar.setAttribute('d', path + ` L ${validPts[validPts.length-1].x} ${pt+ch} L ${validPts[0].x} ${pt+ch} Z`);
+    ar.setAttribute('fill', color); ar.setAttribute('opacity', '0.15'); svg.appendChild(ar);
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    ln.setAttribute('d', path); ln.setAttribute('fill', 'none'); ln.setAttribute('stroke', color); ln.setAttribute('stroke-width', '2.5'); svg.appendChild(ln);
+  }
+
+  // Dibujar todos los labels en el eje X; puntos solo donde hay datos
+  allPts.forEach((p, i) => {
+    // Label del mes siempre
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', p.x); lbl.setAttribute('y', H - pb + 18);
+    lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('fill', p.y !== null ? '#cbd5e1' : '#475569');
+    lbl.setAttribute('font-size', '11'); lbl.textContent = p.label; svg.appendChild(lbl);
+
+    if (p.y !== null) {
+      // Círculo con valor
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 5);
+      c.setAttribute('fill', color); c.setAttribute('stroke', '#1e293b'); c.setAttribute('stroke-width', '2');
+      c.addEventListener('mousemove', e => showTip(e, `${p.label}: ${p.value.toFixed(2)}`));
+      c.addEventListener('mouseleave', hideTip); svg.appendChild(c);
+      // Valor sobre el punto
+      const vl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      vl.setAttribute('x', p.x); vl.setAttribute('y', p.y - 9);
+      vl.setAttribute('text-anchor', 'middle'); vl.setAttribute('fill', color);
+      vl.setAttribute('font-size', '10'); vl.setAttribute('font-weight', '700');
+      vl.textContent = p.value.toFixed(2); svg.appendChild(vl);
+    } else {
+      // Punto tenue indicando sin datos
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', pt + ch);
+      c.setAttribute('r', 3); c.setAttribute('fill', '#334155'); c.setAttribute('opacity', '0.5');
+      c.addEventListener('mousemove', e => showTip(e, `${p.label}: sin datos`));
+      c.addEventListener('mouseleave', hideTip); svg.appendChild(c);
+    }
   });
+}
+
 }
 
 function renderHBars(svgId, data) {
@@ -1409,9 +1445,6 @@ function render() {
   const sortedStoreRot = barSortDirs['chart-store-rot'] === -1 ? storeRot : [...storeRot].reverse();
   renderBars('chart-store-rot', sortedStoreRot, '#10b981', v => v.toFixed(2), true, false);
 
-  const brandRot = groupAvgRot(rows, 'brand', CURRENT_MONTH_KEY).filter(d => d.n >= 5).slice(0, 8);
-  const sortedBrandRot = (barSortDirs['chart-brand-rot'] === -1 ? brandRot : [...brandRot].reverse()).slice(0,30);
-  renderHBarsRot('chart-brand-rot', sortedBrandRot);
 
   const catRot = groupAvgRot(rows, 'category', CURRENT_MONTH_KEY).filter(d => d.n >= 3);
   const sortedCatRot = barSortDirs['chart-cat-rot'] === -1 ? catRot : [...catRot].reverse();
