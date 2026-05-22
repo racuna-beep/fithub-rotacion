@@ -393,7 +393,7 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbxBzhGfwIXvkObFimkIUjJ8QDcMutFKjrq5XwrpQpBuSYtkvdQD1eB7eFtbqobIdxkvRg/exec';
+const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbyRlzxCn_2ZutNvAYnG36qSLR7z8_9poctTJqgsC_iCoXX4TeDCnS4TJ6mMNFNJV8Ylgg/exec';
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
 let DATA = [];
@@ -529,7 +529,7 @@ async function loadData() {
     let raw;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       let res;
       try {
         res = await fetch(SHEET_CSV_URL, { cache: 'no-store', signal: controller.signal });
@@ -542,7 +542,7 @@ async function loadData() {
       raw = await res.json();
     } catch(e) {
       clearInterval(loaderInterval);
-      if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado (20s). Verifica tu conexión o que el Apps Script esté activo.');
+      if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado (45s). El Apps Script está tardando mucho — intenta de nuevo.');
       throw new Error('No se pudo conectar con Apps Script: ' + e.message);
     }
     if (!Array.isArray(raw) || !raw.length) throw new Error('El Sheet está vacío o sin datos.');
@@ -1767,7 +1767,7 @@ setTimeout(() => {
     document.getElementById('app').style.display = 'block';
     showError('No se pudo cargar la información. Verifica que el Google Apps Script esté activo y vuelve a intentarlo con "Actualizar datos".');
   }
-}, 25000);
+}, 55000);
 </script>
 </body>
 </html>
