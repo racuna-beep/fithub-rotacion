@@ -309,6 +309,24 @@
       <svg id="chart-brand-rot" style="width:100%" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
 
+    <!-- Categoría × Estado heatmap — full width -->
+    <div class="card" style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="margin:0">Categoría × Estado <span style="font-weight:400;font-size:12px;color:#64748b;margin-left:8px;">SKUs por categoría y estado de rotación</span></h3>
+      </div>
+      <div style="overflow-x:auto">
+        <div id="chart-cat-estado"></div>
+      </div>
+    </div>
+
+    <!-- Tabla resumen por estado -->
+    <div class="card" style="margin-bottom:24px">
+      <div style="margin-bottom:14px">
+        <h3 style="margin:0">Resumen por estado de rotación <span style="font-weight:400;font-size:12px;color:#64748b;margin-left:8px;">Comparativo Cumple · No cumple · Nuevo</span></h3>
+      </div>
+      <div id="tabla-estado-resumen"></div>
+    </div>
+
   </div>
 
   <div class="tab-panel" id="panel-alertas" role="tabpanel">
@@ -919,7 +937,24 @@ function renderAlerts(rows) {
 // ─── CHARTS ────────────────────────────────────────────────────────────────
 const groupSum = (rows, key, valKey) => { const m = {}; rows.forEach(r => { const k = r[key]; m[k] = (m[k] || 0) + (r[valKey] || 0); }); return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
 const ROT_CAP = 30; // Cap para promedios de gráficas (SKUs con inv~0 distorsionan)
-const groupAvgRot = (rows, key, monthKey) => { const m = {}; rows.forEach(r => { const k = r[key]; const v = r[monthKey]; if (v == null) return; const vc = Math.min(v, ROT_CAP); if (!m[k]) m[k] = { sum: 0, n: 0 }; m[k].sum += vc; m[k].n++; }); return Object.entries(m).map(([label, x]) => ({ label, value: x.n ? x.sum / x.n : 0, n: x.n })).sort((a, b) => b.value - a.value); };
+// groupAvgRot: usa Vta/Inv ponderado (igual que el KPI) para consistencia entre gráficas y tarjetas
+const groupAvgRot = (rows, key, monthKey) => {
+  const m = {};
+  rows.forEach(r => {
+    const k = r[key];
+    if (!m[k]) m[k] = { vta: 0, inv: 0, n: 0 };
+    m[k].vta += r.vta_mes || 0;
+    m[k].inv += r.inv_prom || 0;
+    if (r[monthKey] != null) m[k].n++;
+  });
+  return Object.entries(m)
+    .map(([label, x]) => ({
+      label,
+      value: x.inv > 0 ? x.vta / x.inv : 0,
+      n: x.n
+    }))
+    .sort((a, b) => b.value - a.value);
+};
 
 function renderDonut(svgId, data) {
   const svg = document.getElementById(svgId); svg.innerHTML = '';
@@ -1092,6 +1127,201 @@ function renderHBarsRot(svgId, data) {
   });
 }
 
+
+// ─── CHART: CATEGORÍA × ESTADO ────────────────────────────────────────────
+function renderCatEstado(rows) {
+  const container = document.getElementById('chart-cat-estado');
+  if (!container) return;
+
+  const estados = ['Cumple', 'No cumple', 'Nuevo'];
+  const colorMap = { 'Cumple': '#10b981', 'No cumple': '#ef4444', 'Nuevo': '#f59e0b' };
+  const bgMap    = { 'Cumple': 'rgba(16,185,129,0.12)', 'No cumple': 'rgba(239,68,68,0.12)', 'Nuevo': 'rgba(245,158,11,0.12)' };
+
+  // Agrupar por categoría
+  const catMap = {};
+  rows.forEach(r => {
+    const cat = r.category || 'Sin categoría';
+    const obs = estados.includes(r.obs) ? r.obs : 'Sin estado';
+    if (!catMap[cat]) catMap[cat] = { total: 0 };
+    catMap[cat].total++;
+    catMap[cat][obs] = (catMap[cat][obs] || 0) + 1;
+  });
+
+  // Ordenar categorías por total desc
+  const cats = Object.entries(catMap)
+    .sort((a, b) => b[1].total - a[1].total)
+    .map(([cat]) => cat);
+
+  if (!cats.length) { container.innerHTML = '<div style="color:#64748b;text-align:center;padding:24px">Sin datos</div>'; return; }
+
+  // Construir tabla
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="background:#1a2332">
+        <th style="text-align:left;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;min-width:160px">Categoría</th>
+        <th style="text-align:right;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Total SKUs</th>`;
+
+  estados.forEach(e => {
+    html += `<th style="text-align:right;padding:8px 12px;color:${colorMap[e]};font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${e}</th>
+             <th style="text-align:right;padding:8px 12px;color:#475569;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">% ${e.split(' ')[0]}</th>`;
+  });
+
+  html += `<th style="text-align:left;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;min-width:160px">Distribución</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  cats.forEach((cat, idx) => {
+    const d = catMap[cat];
+    const total = d.total;
+    const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent';
+
+    // Barra de distribución proporcional
+    const barSegs = estados.map(e => {
+      const cnt = d[e] || 0;
+      const pct = total > 0 ? (cnt / total * 100) : 0;
+      return `<div style="width:${pct.toFixed(1)}%;background:${colorMap[e]};height:14px;display:inline-block;vertical-align:middle" title="${e}: ${cnt} (${pct.toFixed(0)}%)"></div>`;
+    }).join('');
+
+    html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04)">
+      <td style="padding:8px 12px;color:#e2e8f0;font-weight:500;white-space:nowrap">${cat}</td>
+      <td style="padding:8px 12px;text-align:right;color:#e2e8f0;font-weight:700">${total.toLocaleString('es-CO')}</td>`;
+
+    estados.forEach(e => {
+      const cnt = d[e] || 0;
+      const pct = total > 0 ? (cnt / total * 100) : 0;
+      html += `<td style="padding:8px 12px;text-align:right;color:${colorMap[e]};font-weight:600">${cnt.toLocaleString('es-CO')}</td>
+               <td style="padding:8px 12px;text-align:right;color:#64748b">${pct.toFixed(0)}%</td>`;
+    });
+
+    html += `<td style="padding:8px 12px;min-width:160px">
+        <div style="height:14px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,0.04);display:flex">
+          ${barSegs}
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ─── TABLA RESUMEN POR ESTADO ──────────────────────────────────────────────
+function renderTablaEstado(rows) {
+  const container = document.getElementById('tabla-estado-resumen');
+  if (!container) return;
+
+  const estados = ['Cumple', 'No cumple', 'Nuevo'];
+  const colorMap = { 'Cumple': '#10b981', 'No cumple': '#ef4444', 'Nuevo': '#f59e0b' };
+  const bgMap    = { 'Cumple': 'rgba(16,185,129,0.08)', 'No cumple': 'rgba(239,68,68,0.08)', 'Nuevo': 'rgba(245,158,11,0.08)' };
+  const borderMap = { 'Cumple': 'rgba(16,185,129,0.3)', 'No cumple': 'rgba(239,68,68,0.3)', 'Nuevo': 'rgba(245,158,11,0.3)' };
+  const iconMap  = { 'Cumple': '🟢', 'No cumple': '🔴', 'Nuevo': '🟡' };
+
+  const total = rows.length;
+
+  // Calcular métricas por estado
+  const grupos = estados.map(obs => {
+    const sub = rows.filter(r => r.obs === obs);
+    const n = sub.length;
+    const pct = total > 0 ? (n / total * 100) : 0;
+    const vta = sub.reduce((a, r) => a + (r.vta_mes || 0), 0);
+    const inv = sub.reduce((a, r) => a + (r.inv_prom || 0), 0);
+    const rot = inv > 0 ? vta / inv : 0;
+    const dias = rot > 0 ? 30 / rot : null;
+    const mejorando = sub.filter(r => r.trend === 'mejorando').length;
+    const declinando = sub.filter(r => r.trend === 'declinando').length;
+    const tiendas = new Set(sub.map(r => r.Store)).size;
+    const marcas = new Set(sub.map(r => r.brand)).size;
+    return { obs, n, pct, vta, inv, rot, dias, mejorando, declinando, tiendas, marcas };
+  });
+
+  const fmtM = v => '$' + v.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+  const fmtR = v => v > 0 ? v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+
+  // Cards resumen
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px">`;
+
+  grupos.forEach(g => {
+    const diasTxt = g.dias != null ? `${g.dias.toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})} días promedio` : '—';
+    const pctBar = g.pct.toFixed(1);
+    html += `
+    <div style="background:${bgMap[g.obs]};border:1px solid ${borderMap[g.obs]};border-radius:10px;padding:16px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:${colorMap[g.obs]}">${iconMap[g.obs]} ${g.obs}</div>
+        <div style="font-size:22px;font-weight:900;color:${colorMap[g.obs]}">${g.n.toLocaleString('es-CO')}</div>
+      </div>
+      <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;margin-bottom:12px;overflow:hidden">
+        <div style="height:100%;width:${pctBar}%;background:${colorMap[g.obs]};border-radius:3px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+        <div style="color:#94a3b8">% del total</div><div style="color:#e2e8f0;text-align:right;font-weight:600">${pctBar}%</div>
+        <div style="color:#94a3b8">Ventas del mes</div><div style="color:#e2e8f0;text-align:right;font-weight:600">${fmtM(g.vta)}</div>
+        <div style="color:#94a3b8">Inv. inmovilizado</div><div style="color:#e2e8f0;text-align:right;font-weight:600">${fmtM(g.inv)}</div>
+        <div style="color:#94a3b8">Rotación prom.</div><div style="color:${colorMap[g.obs]};text-align:right;font-weight:700">${fmtR(g.rot)}</div>
+        <div style="color:#94a3b8">Días de inventario</div><div style="color:#e2e8f0;text-align:right">${diasTxt}</div>
+        <div style="color:#94a3b8">Tiendas / Marcas</div><div style="color:#e2e8f0;text-align:right">${g.tiendas} / ${g.marcas}</div>
+        <div style="color:#10b981">↑ Mejorando</div><div style="color:#10b981;text-align:right;font-weight:600">${g.mejorando.toLocaleString('es-CO')} (${g.n ? (g.mejorando/g.n*100).toFixed(0) : 0}%)</div>
+        <div style="color:#ef4444">↓ Declinando</div><div style="color:#ef4444;text-align:right;font-weight:600">${g.declinando.toLocaleString('es-CO')} (${g.n ? (g.declinando/g.n*100).toFixed(0) : 0}%)</div>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  // Tabla comparativa por tienda × estado
+  const tiendas = [...new Set(rows.map(r => r.Store))].sort();
+  if (tiendas.length > 1) {
+    html += `<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#1a2332">
+          <th style="text-align:left;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Tienda</th>
+          <th style="text-align:right;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Total</th>`;
+
+    estados.forEach(e => {
+      html += `<th style="text-align:right;padding:8px 12px;color:${colorMap[e]};font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${iconMap[e]} ${e}</th>
+               <th style="text-align:right;padding:8px 12px;color:#475569;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">%</th>`;
+    });
+
+    html += `<th style="text-align:left;padding:8px 12px;color:#64748b;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;min-width:120px">Mix</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    tiendas.forEach((tienda, idx) => {
+      const sub = rows.filter(r => r.Store === tienda);
+      const tot = sub.length;
+      const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent';
+
+      const segs = estados.map(e => {
+        const cnt = sub.filter(r => r.obs === e).length;
+        const p = tot > 0 ? cnt / tot * 100 : 0;
+        return `<div style="width:${p.toFixed(1)}%;background:${colorMap[e]};height:14px;display:inline-block;vertical-align:middle" title="${e}: ${cnt}"></div>`;
+      }).join('');
+
+      html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04)">
+        <td style="padding:8px 12px;color:#e2e8f0;font-weight:600">${tienda}</td>
+        <td style="padding:8px 12px;text-align:right;color:#e2e8f0">${tot.toLocaleString('es-CO')}</td>`;
+
+      estados.forEach(e => {
+        const cnt = sub.filter(r => r.obs === e).length;
+        const p = tot > 0 ? (cnt / tot * 100) : 0;
+        html += `<td style="padding:8px 12px;text-align:right;color:${colorMap[e]};font-weight:600">${cnt.toLocaleString('es-CO')}</td>
+                 <td style="padding:8px 12px;text-align:right;color:#64748b">${p.toFixed(0)}%</td>`;
+      });
+
+      html += `<td style="padding:8px 12px;min-width:120px">
+          <div style="height:14px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,0.04);display:flex">${segs}</div>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
 // ─── TABLE ─────────────────────────────────────────────────────────────────
 function renderTable(rows) {
   const sorted = rows.slice().sort((a, b) => {
@@ -1164,14 +1394,15 @@ function render() {
   renderDonut('chart-obs', ['Cumple', 'No cumple', 'Nuevo'].map(k => ({ label: k, value: rows.filter(r => r.obs === k).length, color: COLORS[k] })).filter(d => d.value > 0));
   renderDonut('chart-trend', [{ label: 'Mejorando', value: rows.filter(r => r.trend === 'mejorando').length, color: TREND_COLORS.mejorando }, { label: 'Estable', value: rows.filter(r => r.trend === 'estable').length, color: TREND_COLORS.estable }, { label: 'Declinando', value: rows.filter(r => r.trend === 'declinando').length, color: TREND_COLORS.declinando }, { label: 'Sin datos', value: rows.filter(r => r.trend === 'sin_datos').length, color: TREND_COLORS.sin_datos }].filter(d => d.value > 0));
 
-  // Line chart: all detected months (aggregated vta/inv for current, avgBy for others)
-  const rotLine = ROT_MONTHS.map(m => ({ label: m.label, value: avgBy(rows, m.key) }));
-  // Override last point with correct vta/inv
-  if (rotLine.length) {
-    const vta = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
-    const inv = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
-    rotLine[rotLine.length - 1].value = inv > 0 ? vta / inv : rotLine[rotLine.length - 1].value;
-  }
+  // Line chart: mes actual usa Vta/Inv ponderado (igual que KPI), meses anteriores usan avgBy
+  const totalVtaLine = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
+  const totalInvLine = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
+  const rotLine = ROT_MONTHS.map((m, idx) => {
+    if (idx === ROT_MONTHS.length - 1) {
+      return { label: m.label, value: totalInvLine > 0 ? totalVtaLine / totalInvLine : avgBy(rows, m.key) };
+    }
+    return { label: m.label, value: avgBy(rows, m.key) };
+  });
   renderLine('chart-rot', rotLine, '#10b981');
 
   const storeRot = groupAvgRot(rows, 'Store', CURRENT_MONTH_KEY);
@@ -1191,7 +1422,14 @@ function render() {
 
   if (PREV_MONTH_KEY) {
     const stores = [...new Set(rows.map(r => r.Store))].sort();
-    const deltaData = stores.map(s => { const sub = rows.filter(r => r.Store === s); return { label: s, value: avgBy(sub, CURRENT_MONTH_KEY) - avgBy(sub, PREV_MONTH_KEY) }; });
+    const deltaData = stores.map(s => {
+      const sub = rows.filter(r => r.Store === s);
+      const vta = sub.reduce((a, r) => a + (r.vta_mes || 0), 0);
+      const inv = sub.reduce((a, r) => a + (r.inv_prom || 0), 0);
+      const rotCur = inv > 0 ? vta / inv : avgBy(sub, CURRENT_MONTH_KEY);
+      const rotPrev = avgBy(sub, PREV_MONTH_KEY);
+      return { label: s, value: rotCur - rotPrev };
+    });
     renderBars('chart-delta', deltaData, '#3b82f6', v => (v >= 0 ? '+' : '') + v.toFixed(2), false, true);
   }
 
@@ -1202,6 +1440,8 @@ function render() {
   currentPage = 1;
   renderTable(rows);
   renderProveedores(rows);
+  renderCatEstado(rows);
+  renderTablaEstado(rows);
 }
 
 // ─── EXPORT CSV ────────────────────────────────────────────────────────────
@@ -1256,13 +1496,14 @@ function renderProveedores(rows) {
     });
   });
 
-  // Group by supplier + brand
+  // Group by supplier + brand — acumular vta e inv para calcular rotación ponderada (igual que KPI)
   const map = {};
   rows.forEach(r => {
     const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, inv_prom: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
     map[key].skus++;
     map[key].vta_mes += r.vta_mes || 0;
+    map[key].inv_prom += r.inv_prom || 0;
     ROT_MONTHS.forEach(m => {
       if (r[m.key] != null) {
         if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
@@ -1273,12 +1514,14 @@ function renderProveedores(rows) {
   });
 
   let data = Object.values(map).map(d => {
-    const rotVals = ROT_MONTHS.map(m => d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null);
-    const validVals = rotVals.filter(v => v != null);
-    const rot_prom = validVals.length ? validVals.reduce((a,b) => a+b, 0) / validVals.length : null;
+    // rot_prom del mes actual: Vta/Inv ponderado (consistente con KPI)
+    const rot_prom = d.inv_prom > 0 ? d.vta_mes / d.inv_prom : null;
     const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
+    // meses históricos: promedio de promedios (no tenemos vta/inv histórico por mes)
     const monthAvgs = {};
-    ROT_MONTHS.forEach((m, i) => { monthAvgs[m.key] = rotVals[i]; });
+    ROT_MONTHS.forEach(m => {
+      monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
+    });
     return { ...d, ...monthAvgs, rot_prom, dias };
   });
 
@@ -1330,9 +1573,10 @@ function exportProvCSV() {
   const map = {};
   rows.forEach(r => {
     const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, inv_prom: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
     map[key].skus++;
     map[key].vta_mes += r.vta_mes || 0;
+    map[key].inv_prom += r.inv_prom || 0;
     ROT_MONTHS.forEach(m => {
       if (r[m.key] != null) {
         if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
@@ -1342,12 +1586,13 @@ function exportProvCSV() {
     });
   });
   const data = Object.values(map).map(d => {
-    const rotVals = ROT_MONTHS.map(m => d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null);
-    const validVals = rotVals.filter(v => v != null);
-    const rot_prom = validVals.length ? validVals.reduce((a,b) => a+b, 0) / validVals.length : null;
+    // rot_prom: Vta/Inv ponderado (consistente con KPI)
+    const rot_prom = d.inv_prom > 0 ? d.vta_mes / d.inv_prom : null;
     const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     const monthAvgs = {};
-    ROT_MONTHS.forEach((m, i) => { monthAvgs[m.key] = rotVals[i]; });
+    ROT_MONTHS.forEach(m => {
+      monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
+    });
     return { ...d, ...monthAvgs, rot_prom, dias };
   }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
 
