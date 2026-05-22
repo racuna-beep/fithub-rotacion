@@ -470,7 +470,7 @@ function normalizeRow(raw, months) {
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
   r.category = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || '';
   r.vta_mes  = parseNum(raw['Vta. Mes'] ?? raw['vta_mes'] ?? raw['Ventas'] ?? 0);
-  r.inv_prom = parseNum(raw['Inv. prom'] ?? raw['inv_prom'] ?? raw['Inv. Prom'] ?? raw['Inventario Promedio'] ?? 0);
+  r.inv_prom = parseNum(raw['Inv. prom'] ?? raw['inv_prom'] ?? raw['Inv. Prom'] ?? raw['Inv. inicial'] ?? raw['Inventario Promedio'] ?? 0);
   r.obs      = raw['Obs'] || raw['obs'] || raw['Estado'] || '';
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
 
@@ -760,10 +760,8 @@ const PALETTE = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4
 // ─── INSIGHTS ──────────────────────────────────────────────────────────────
 function renderInsights(rows) {
   const rotVals = ROT_MONTHS.map(m => avgBy(rows, m.key));
-  const _vtaCur = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
-  const _invCur = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
-  const curRot = _invCur > 0 ? _vtaCur / _invCur : rotVals[rotVals.length - 1];
-  // prevRot: usar avgBy del mes anterior (excluyendo ceros), mismo criterio consistente
+  // Usar columna de rotación del Sheet para todos los meses (misma metodología)
+  const curRot = rotVals[rotVals.length - 1];
   const prevRotAvg = PREV_MONTH_KEY ? avgBy(rows, PREV_MONTH_KEY) : 0;
   const prevRot = prevRotAvg || (rotVals.length >= 2 ? rotVals[rotVals.length - 2] : 0);
   const delta = prevRot > 0 ? ((curRot - prevRot) / prevRot * 100) : 0;
@@ -857,7 +855,8 @@ function renderKPIs(rows) {
   const totalInv = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const cumple = rows.filter(r => r.obs === 'Cumple').length;
   const noCumple = rows.filter(r => r.obs === 'No cumple').length;
-  const rotProm = totalInv > 0 ? totalVta / totalInv : 0;
+  // Usar la columna de rotación del Sheet directamente (igual metodología que meses anteriores)
+  const rotProm = avgBy(rows, CURRENT_MONTH_KEY);
   const diasProm = rotProm > 0 ? 30 / rotProm : null;
   const mejorando = rows.filter(r => r.trend === 'mejorando').length;
   const declinando = rows.filter(r => r.trend === 'declinando').length;
@@ -952,20 +951,21 @@ function renderAlerts(rows) {
 // ─── CHARTS ────────────────────────────────────────────────────────────────
 const groupSum = (rows, key, valKey) => { const m = {}; rows.forEach(r => { const k = r[key]; m[k] = (m[k] || 0) + (r[valKey] || 0); }); return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
 const ROT_CAP = 30; // Cap para promedios de gráficas (SKUs con inv~0 distorsionan)
-// groupAvgRot: usa Vta/Inv ponderado (igual que el KPI) para consistencia entre gráficas y tarjetas
+// groupAvgRot: promedio de la columna de rotación del Sheet (misma fuente para todos los meses)
 const groupAvgRot = (rows, key, monthKey) => {
   const m = {};
   rows.forEach(r => {
     const k = r[key];
-    if (!m[k]) m[k] = { vta: 0, inv: 0, n: 0 };
-    m[k].vta += r.vta_mes || 0;
-    m[k].inv += r.inv_prom || 0;
-    if (r[monthKey] != null) m[k].n++;
+    const v = r[monthKey];
+    if (v == null || v <= 0) return;
+    if (!m[k]) m[k] = { sum: 0, n: 0 };
+    m[k].sum += v;
+    m[k].n++;
   });
   return Object.entries(m)
     .map(([label, x]) => ({
       label,
-      value: x.inv > 0 ? x.vta / x.inv : 0,
+      value: x.n ? x.sum / x.n : 0,
       n: x.n
     }))
     .sort((a, b) => b.value - a.value);
@@ -1450,15 +1450,8 @@ function render() {
   renderDonut('chart-obs', ['Cumple', 'No cumple', 'Nuevo'].map(k => ({ label: k, value: rows.filter(r => r.obs === k).length, color: COLORS[k] })).filter(d => d.value > 0));
   renderDonut('chart-trend', [{ label: 'Mejorando', value: rows.filter(r => r.trend === 'mejorando').length, color: TREND_COLORS.mejorando }, { label: 'Estable', value: rows.filter(r => r.trend === 'estable').length, color: TREND_COLORS.estable }, { label: 'Declinando', value: rows.filter(r => r.trend === 'declinando').length, color: TREND_COLORS.declinando }, { label: 'Sin datos', value: rows.filter(r => r.trend === 'sin_datos').length, color: TREND_COLORS.sin_datos }].filter(d => d.value > 0));
 
-  // Line chart: mes actual usa Vta/Inv ponderado (igual que KPI), meses anteriores usan avgBy
-  const totalVtaLine = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
-  const totalInvLine = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
-  const rotLine = ROT_MONTHS.map((m, idx) => {
-    if (idx === ROT_MONTHS.length - 1) {
-      return { label: m.label, value: totalInvLine > 0 ? totalVtaLine / totalInvLine : avgBy(rows, m.key) };
-    }
-    return { label: m.label, value: avgBy(rows, m.key) };
-  });
+  // Line chart: todos los meses usan la columna de rotación del Sheet directamente
+  const rotLine = ROT_MONTHS.map(m => ({ label: m.label, value: avgBy(rows, m.key) }));
   renderLine('chart-rot', rotLine, '#10b981');
 
   const storeRot = groupAvgRot(rows, 'Store', CURRENT_MONTH_KEY);
@@ -1477,9 +1470,8 @@ function render() {
     const stores = [...new Set(rows.map(r => r.Store))].sort();
     const deltaData = stores.map(s => {
       const sub = rows.filter(r => r.Store === s);
-      const vta = sub.reduce((a, r) => a + (r.vta_mes || 0), 0);
-      const inv = sub.reduce((a, r) => a + (r.inv_prom || 0), 0);
-      const rotCur = inv > 0 ? vta / inv : avgBy(sub, CURRENT_MONTH_KEY);
+      // Ambos meses usan la columna de rotación del Sheet directamente
+      const rotCur = avgBy(sub, CURRENT_MONTH_KEY);
       const rotPrev = avgBy(sub, PREV_MONTH_KEY);
       return { label: s, value: rotCur - rotPrev };
     });
@@ -1639,8 +1631,10 @@ function exportProvCSV() {
     });
   });
   const data = Object.values(map).map(d => {
-    // rot_prom: Vta/Inv ponderado (consistente con KPI)
-    const rot_prom = d.inv_prom > 0 ? d.vta_mes / d.inv_prom : null;
+    // rot_prom: promedio de la columna de rotación del Sheet (misma fuente)
+    const rotVals = ROT_MONTHS.map(m => d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null);
+    const validVals = rotVals.filter(v => v != null && v > 0);
+    const rot_prom = validVals.length ? validVals[validVals.length - 1] : null; // último mes disponible
     const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     const monthAvgs = {};
     ROT_MONTHS.forEach(m => {
