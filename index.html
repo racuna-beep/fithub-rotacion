@@ -786,12 +786,15 @@ const PALETTE = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4
 
 // ─── INSIGHTS ──────────────────────────────────────────────────────────────
 function renderInsights(rows) {
-  // rotVals: Vta/Inv agrupado por mes — misma fuente que la gráfica
+  // rotVals: solo filas con inv > 0 para evitar distorsión
   const rotVals = ROT_MONTHS.map(m => {
     const vtaK = m.vtaKey || 'vta_mes';
     const invK = m.invKey || 'inv_prom';
-    const vta = rows.reduce((a, r) => a + (r[vtaK] || 0), 0);
-    const inv = rows.reduce((a, r) => a + (r[invK] || 0), 0);
+    let vta = 0, inv = 0;
+    rows.forEach(r => {
+      const i = r[invK] || 0;
+      if (i > 0) { vta += r[vtaK] || 0; inv += i; }
+    });
     return inv > 0 ? vta / inv : 0;
   });
   // Vta/Inv total para el mes actual — evita distorsión de SKUs con inv~0
@@ -987,17 +990,16 @@ function renderAlerts(rows) {
 // ─── CHARTS ────────────────────────────────────────────────────────────────
 const groupSum = (rows, key, valKey) => { const m = {}; rows.forEach(r => { const k = r[key]; m[k] = (m[k] || 0) + (r[valKey] || 0); }); return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
 const ROT_CAP = 30; // Cap para promedios de gráficas (SKUs con inv~0 distorsionan)
-// groupAvgRot: Vta/Inv agrupado por dimensión usando los pares del mes correcto
+// groupAvgRot: Vta/Inv agrupado — solo filas con inv > 0
 const groupAvgRot = (rows, key, monthDef) => {
-  // monthDef puede ser string (key) o el objeto mes completo con vtaKey/invKey
   const vtaKey = (monthDef && monthDef.vtaKey) ? monthDef.vtaKey : 'vta_mes';
   const invKey = (monthDef && monthDef.invKey) ? monthDef.invKey : 'inv_prom';
   const m = {};
   rows.forEach(r => {
     const k = r[key];
+    const inv = r[invKey] || 0;
     if (!m[k]) m[k] = { vta: 0, inv: 0, n: 0 };
-    m[k].vta += r[vtaKey] || 0;
-    m[k].inv += r[invKey] || 0;
+    if (inv > 0) { m[k].vta += r[vtaKey] || 0; m[k].inv += inv; }
     m[k].n++;
   });
   return Object.entries(m)
@@ -1488,12 +1490,15 @@ function render() {
   renderDonut('chart-obs', ['Cumple', 'No cumple', 'Nuevo'].map(k => ({ label: k, value: rows.filter(r => r.obs === k).length, color: COLORS[k] })).filter(d => d.value > 0));
   renderDonut('chart-trend', [{ label: 'Mejorando', value: rows.filter(r => r.trend === 'mejorando').length, color: TREND_COLORS.mejorando }, { label: 'Estable', value: rows.filter(r => r.trend === 'estable').length, color: TREND_COLORS.estable }, { label: 'Declinando', value: rows.filter(r => r.trend === 'declinando').length, color: TREND_COLORS.declinando }, { label: 'Sin datos', value: rows.filter(r => r.trend === 'sin_datos').length, color: TREND_COLORS.sin_datos }].filter(d => d.value > 0));
 
-  // Line chart: Vta/Inv agrupado para TODOS los meses — misma lógica que KPI
+  // Line chart: solo filas con inv > 0 para evitar distorsión de celdas vacías
   const rotLine = ROT_MONTHS.map(m => {
     const vtaK = m.vtaKey || 'vta_mes';
     const invK = m.invKey || 'inv_prom';
-    const vta = rows.reduce((a, r) => a + (r[vtaK] || 0), 0);
-    const inv = rows.reduce((a, r) => a + (r[invK] || 0), 0);
+    let vta = 0, inv = 0;
+    rows.forEach(r => {
+      const i = r[invK] || 0;
+      if (i > 0) { vta += r[vtaK] || 0; inv += i; }
+    });
     return { label: m.label, value: inv > 0 ? vta / inv : 0 };
   });
   renderLine('chart-rot', rotLine, '#10b981');
