@@ -2019,6 +2019,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click
   const tab = btn.getAttribute('data-tab');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  // Re-render atacar panel on click to ensure content is populated
+  if (tab === 'atacar' && lastRows.length) renderAtaque(lastRows);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }));
 document.querySelectorAll('.show-more').forEach(btn => btn.addEventListener('click', () => {
   const tier = btn.getAttribute('data-list');
