@@ -802,8 +802,8 @@ function renderInsights(rows) {
   const _vtaCur = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
   const _invCur = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const curRot = _invCur > 0 ? _vtaCur / _invCur : rotVals[rotVals.length - 1];
-  const prevRotAvg = PREV_MONTH_KEY ? avgBy(rows, PREV_MONTH_KEY) : 0;
-  const prevRot = prevRotAvg || (rotVals.length >= 2 ? rotVals[rotVals.length - 2] : 0);
+  // prevRot: usa el mismo cálculo Vta/Inv ponderado que curRot — evita distorsión por promedio simple
+  const prevRot = rotVals.length >= 2 ? rotVals[rotVals.length - 2] : 0;
   const delta = prevRot > 0 ? ((curRot - prevRot) / prevRot * 100) : 0;
   const deltaClass = delta < 0 ? 'delta-down' : 'delta-up';
   const deltaSign = delta >= 0 ? '+' : '';
