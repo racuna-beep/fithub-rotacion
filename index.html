@@ -1794,171 +1794,156 @@ function respBadge(cat) {
 
 // ─── PLAN DE ATAQUE ─────────────────────────────────────────────────────────
 function renderAtaque(rows) {
-  // Populate store filter
   const atkStore = document.getElementById('atk-store');
+  const atkSummary = document.getElementById('atk-summary');
+  const atkTbody = document.getElementById('atk-tbody');
+  const atkCnt = document.getElementById('tab-cnt-atacar');
+  if (!atkStore || !atkSummary || !atkTbody) return;
+
+  // Populate store filter
   const curAtkStore = atkStore.value;
   const stores = [...new Set(rows.map(r => r.Store))].filter(Boolean).sort();
   atkStore.innerHTML = '<option value="">Todas las tiendas</option>' +
     stores.map(s => `<option value="${s}" ${s === curAtkStore ? 'selected' : ''}>${s}</option>`).join('');
 
-  // Filter by store if selected
   const storeFilter = atkStore.value;
   const base = storeFilter ? rows.filter(r => r.Store === storeFilter) : rows;
-
-  // All SKUs atacar
   const atacar = base.filter(r => r.tier === 'crit');
-  const totalSkus = base.length;
+  const totalSkus = base.length || 1;
 
-  // Summary KPIs
+  // ── Summary KPIs ───────────────────────────────────────────────────────────
   const totalVtaAtacar = atacar.reduce((a, r) => a + (r.vta_mes || 0), 0);
   const totalInvAtacar = atacar.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const rotAtacar = totalInvAtacar > 0 ? totalVtaAtacar / totalInvAtacar : 0;
-  const cats = new Set(atacar.map(r => r.category)).size;
+  const catsAfectadas = new Set(atacar.map(r => r.category)).size;
   const mejAtacar = atacar.filter(r => r.trend === 'mejorando').length;
   const decAtacar = atacar.filter(r => r.trend === 'declinando').length;
+  const maxAtacar = Math.max(atacar.length, 1);
 
-  document.getElementById('atk-summary').innerHTML = [
-    { label: 'SKUs Atacar', val: atacar.length.toLocaleString('es-CO'), sub: `${((atacar.length/totalSkus)*100).toFixed(1)}% del total`, color: '#ef4444' },
+  atkSummary.innerHTML = [
+    { label: 'SKUs Atacar',            val: atacar.length.toLocaleString('es-CO'),  sub: ((atacar.length/totalSkus)*100).toFixed(1) + '% del total', color: '#ef4444' },
     { label: 'Inventario Inmovilizado', val: '$' + totalInvAtacar.toLocaleString('es-CO',{maximumFractionDigits:0}), sub: 'Capital en SKUs críticos', color: '#f59e0b' },
-    { label: 'Rot. Prom Atacar', val: rotAtacar.toFixed(2), sub: rotAtacar > 0 ? `${(30/rotAtacar).toFixed(0)} días promedio` : '— días', color: '#ef4444' },
-    { label: 'Categorías Afectadas', val: cats, sub: 'Con al menos 1 SKU crítico', color: '#8b5cf6' },
-    { label: 'Mejorando ↑', val: mejAtacar, sub: `${((mejAtacar/Math.max(atacar.length,1))*100).toFixed(0)}% de los críticos`, color: '#10b981' },
-    { label: 'Declinando ↓', val: decAtacar, sub: `${((decAtacar/Math.max(atacar.length,1))*100).toFixed(0)}% de los críticos`, color: '#ef4444' },
-  ].map(k => `
-    <div style="background:#111827;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px">${k.label}</div>
-      <div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div>
-      <div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div>
-    </div>`).join('');
+    { label: 'Rot. Prom Atacar',        val: rotAtacar > 0 ? rotAtacar.toFixed(2) : '—', sub: rotAtacar > 0 ? (30/rotAtacar).toFixed(0) + ' días promedio' : '— días', color: '#ef4444' },
+    { label: 'Categorías Afectadas',    val: catsAfectadas, sub: 'Con al menos 1 SKU crítico', color: '#8b5cf6' },
+    { label: 'Mejorando ↑',             val: mejAtacar, sub: ((mejAtacar/maxAtacar)*100).toFixed(0) + '% de los críticos', color: '#10b981' },
+    { label: 'Declinando ↓',            val: decAtacar, sub: ((decAtacar/maxAtacar)*100).toFixed(0) + '% de los críticos', color: '#ef4444' },
+  ].map(k => `<div style="background:#111827;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px">${k.label}</div>
+    <div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div>
+    <div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div>
+  </div>`).join('');
 
-  // Group by category → subcategory
+  // ── Group by category → subcategory ───────────────────────────────────────
   const catMap = {};
   base.forEach(r => {
     const cat = r.category || '(Sin categoría)';
     const sub = r.sub_category || '(Sin subcategoría)';
-    if (!catMap[cat]) catMap[cat] = { skusTotal: 0, skusAtacar: 0, vta: 0, inv: 0, mejorando: 0, declinando: 0, estable: 0, subs: {} };
-    catMap[cat].skusTotal++;
-    if (r.tier === 'crit') catMap[cat].skusAtacar++;
-    catMap[cat].vta += r.vta_mes || 0;
-    catMap[cat].inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') catMap[cat].mejorando++;
-    else if (r.trend === 'declinando') catMap[cat].declinando++;
-    else catMap[cat].estable++;
-
-    if (!catMap[cat].subs[sub]) catMap[cat].subs[sub] = { skusTotal: 0, skusAtacar: 0, vta: 0, inv: 0, mejorando: 0, declinando: 0, estable: 0 };
-    catMap[cat].subs[sub].skusTotal++;
-    if (r.tier === 'crit') catMap[cat].subs[sub].skusAtacar++;
-    catMap[cat].subs[sub].vta += r.vta_mes || 0;
-    catMap[cat].subs[sub].inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') catMap[cat].subs[sub].mejorando++;
-    else if (r.trend === 'declinando') catMap[cat].subs[sub].declinando++;
-    else catMap[cat].subs[sub].estable++;
+    if (!catMap[cat]) catMap[cat] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, mej:0, dec:0, est:0, subs:{} };
+    const c = catMap[cat];
+    c.skusTotal++;
+    if (r.tier === 'crit') c.skusAtacar++;
+    c.vta += r.vta_mes || 0;
+    c.inv += r.inv_prom || 0;
+    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
+    if (!c.subs[sub]) c.subs[sub] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, mej:0, dec:0, est:0 };
+    const s = c.subs[sub];
+    s.skusTotal++;
+    if (r.tier === 'crit') s.skusAtacar++;
+    s.vta += r.vta_mes || 0;
+    s.inv += r.inv_prom || 0;
+    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
   });
 
-  // Only cats with at least 1 SKU atacar, sorted by worst rotation
   const catRows = Object.entries(catMap)
     .filter(([, g]) => g.skusAtacar > 0)
-    .map(([cat, g]) => {
-      const rot = g.inv > 0 ? g.vta / g.inv : 0;
-      const pctCrit = g.skusTotal > 0 ? (g.skusAtacar / g.skusTotal * 100) : 0;
-      return { cat, ...g, rot, pctCrit };
-    })
-    .sort((a, b) => a.rot - b.rot); // worst first
+    .map(([cat, g]) => ({ cat, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0 }))
+    .sort((a, b) => a.rot - b.rot);
 
+  if (atkCnt) atkCnt.textContent = catRows.length;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const trendHtml = (mej, dec, est) => {
-    const tot = mej + dec + est || 1;
     const parts = [];
-    if (mej > 0) parts.push(`<span style="color:#10b981;font-weight:700">▲${mej}</span>`);
-    if (dec > 0) parts.push(`<span style="color:#ef4444;font-weight:700">▼${dec}</span>`);
-    if (est > 0) parts.push(`<span style="color:#94a3b8">→${est}</span>`);
-    return parts.join(' ');
+    if (mej > 0) parts.push('<span style="color:#10b981;font-weight:700">▲' + mej + '</span>');
+    if (dec > 0) parts.push('<span style="color:#ef4444;font-weight:700">▼' + dec + '</span>');
+    if (est > 0) parts.push('<span style="color:#94a3b8">→' + est + '</span>');
+    return parts.join(' ') || '—';
   };
-
-  const critBar = (pct) => {
+  const critBar = pct => {
     const color = pct >= 60 ? '#ef4444' : pct >= 30 ? '#f59e0b' : '#10b981';
-    return `<div style="display:flex;align-items:center;gap:6px">
-      <div style="flex:1;height:8px;background:#1a2332;border-radius:4px;overflow:hidden;min-width:80px">
-        <div style="height:100%;width:${Math.min(pct,100).toFixed(1)}%;background:${color};border-radius:4px;transition:width 0.4s"></div>
-      </div>
-      <span style="font-size:11px;color:${color};font-weight:700;min-width:36px">${pct.toFixed(0)}%</span>
-    </div>`;
+    return '<div style="display:flex;align-items:center;gap:6px">' +
+      '<div style="flex:1;height:8px;background:#1a2332;border-radius:4px;overflow:hidden;min-width:80px">' +
+      '<div style="height:100%;width:' + Math.min(pct,100).toFixed(1) + '%;background:' + color + ';border-radius:4px"></div></div>' +
+      '<span style="font-size:11px;color:' + color + ';font-weight:700;min-width:36px">' + pct.toFixed(0) + '%</span></div>';
   };
 
+  // ── Build rows ─────────────────────────────────────────────────────────────
   let html = '';
-  catRows.forEach(({ cat, skusAtacar, skusTotal, rot, pctCrit, mejorando, declinando, estable, subs }) => {
+  catRows.forEach(({ cat, skusAtacar, skusTotal, rot, pctCrit, mej, dec, est, subs }) => {
     const dias = rot > 0 ? (30 / rot).toFixed(1) : '—';
     const rotColor = rot >= 1.3 ? '#10b981' : rot >= 0.5 ? '#f59e0b' : '#ef4444';
     const rowId = 'cat-' + cat.replace(/[^a-zA-Z0-9]/g, '_');
+    const resp = RESPONSABLES[cat] || '—';
+    const respColor = RESP_COLORS[resp] || '#64748b';
+    const respHtml = '<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;background:' + respColor + '22;color:' + respColor + ';border:1px solid ' + respColor + '44">' + resp + '</span>';
 
     // Sub rows
     const subRows = Object.entries(subs)
       .filter(([, g]) => g.skusAtacar > 0)
-      .map(([sub, g]) => {
-        const r2 = g.inv > 0 ? g.vta / g.inv : 0;
-        const p2 = g.skusTotal > 0 ? (g.skusAtacar / g.skusTotal * 100) : 0;
-        return { sub, ...g, rot: r2, pctCrit: p2 };
-      })
+      .map(([sub, g]) => ({ sub, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0 }))
       .sort((a, b) => a.rot - b.rot);
 
     const subHtml = subRows.map(s => {
       const sr = s.rot, sd = sr > 0 ? (30 / sr).toFixed(1) : '—';
       const sc = sr >= 1.3 ? '#10b981' : sr >= 0.5 ? '#f59e0b' : '#ef4444';
-      return `<tr style="background:#0d1420">
-        <td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px">
-          <span style="color:#475569;margin-right:6px">└</span>${escapeHtml(s.sub)}
-        </td>
-        <td style="padding:7px 12px;text-align:center">${respBadge(cat + '|' + s.sub) !== respBadge('__none__') ? respBadge(cat + '|' + s.sub) : respBadge(cat)}</td>
-        <td style="padding:7px 12px;text-align:right;color:#ef4444;font-weight:700">${s.skusAtacar}</td>
-        <td style="padding:7px 12px;text-align:right;color:#64748b">${s.skusTotal}</td>
-        <td style="padding:7px 12px">${critBar(s.pctCrit)}</td>
-        <td style="padding:7px 12px;text-align:right;color:${sc};font-weight:700">${sr > 0 ? sr.toFixed(2) : '—'}</td>
-        <td style="padding:7px 12px;text-align:right;color:#64748b">${sd}</td>
-        <td style="padding:7px 12px;text-align:center;font-size:12px">${trendHtml(s.mejorando, s.declinando, s.estable)}</td>
-        <td style="padding:7px 12px"></td>
-      </tr>`;
+      const subKey = cat + '|' + s.sub;
+      const sresp = RESPONSABLES[subKey] || resp;
+      const src = RESP_COLORS[sresp] || '#64748b';
+      const srespHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + src + '22;color:' + src + ';border:1px solid ' + src + '44">' + sresp + '</span>';
+      return '<tr style="background:#0d1420">' +
+        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span style="color:#475569;margin-right:6px">└</span>' + escapeHtml(s.sub) + '</td>' +
+        '<td style="padding:7px 12px;text-align:center">' + srespHtml + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;color:#ef4444;font-weight:700">' + s.skusAtacar + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;color:#64748b">' + s.skusTotal + '</td>' +
+        '<td style="padding:7px 12px">' + critBar(s.pctCrit) + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;color:' + sc + ';font-weight:700">' + (sr > 0 ? sr.toFixed(2) : '—') + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;color:#64748b">' + sd + '</td>' +
+        '<td style="padding:7px 12px;text-align:center;font-size:12px">' + trendHtml(s.mej, s.dec, s.est) + '</td>' +
+        '</tr>';
     }).join('');
 
-    html += `
-      <tr style="cursor:pointer;border-top:2px solid #1e2d3d" onclick="toggleAtacarRow('${rowId}')">
-        <td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px">
-          <span id="icon-${rowId}" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>
-          ${escapeHtml(cat)}
-        </td>
-        <td style="padding:11px 12px;text-align:center">${respBadge(cat)}</td>
-        <td style="padding:11px 12px;text-align:right;color:#ef4444;font-weight:800;font-size:15px">${skusAtacar}</td>
-        <td style="padding:11px 12px;text-align:right;color:#94a3b8">${skusTotal}</td>
-        <td style="padding:11px 12px">${critBar(pctCrit)}</td>
-        <td style="padding:11px 12px;text-align:right;color:${rotColor};font-weight:700;font-size:15px">${rot > 0 ? rot.toFixed(2) : '—'}</td>
-        <td style="padding:11px 12px;text-align:right;color:#94a3b8">${dias}</td>
-        <td style="padding:11px 12px;text-align:center">${trendHtml(mejorando, declinando, estable)}</td>
-        <td style="padding:11px 12px"></td>
-      </tr>
-      <tr id="${rowId}" style="display:none">
-        <td colspan="9" style="padding:0">
-          <table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead>
-              <tr style="background:#0a0f1a">
-                <th style="padding:6px 12px 6px 36px;text-align:left;color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Subcategoría</th>
-                <th style="padding:6px 12px;text-align:center;color:#475569;font-size:10px;text-transform:uppercase">Resp.</th>
-                <th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Atacar</th>
-                <th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Total</th>
-                <th style="padding:6px 12px;color:#475569;font-size:10px;text-transform:uppercase">% Crítico</th>
-                <th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Rot.</th>
-                <th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Días</th>
-                <th style="padding:6px 12px;text-align:center;color:#475569;font-size:10px;text-transform:uppercase">Tendencia</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>${subHtml}</tbody>
-          </table>
-        </td>
-      </tr>`;
+    html +=
+      '<tr style="cursor:pointer;border-top:2px solid #1e2d3d" onclick="toggleAtacarRow('' + rowId + '')">' +
+        '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px">' +
+          '<span id="icon-' + rowId + '" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>' + escapeHtml(cat) +
+        '</td>' +
+        '<td style="padding:11px 12px;text-align:center">' + respHtml + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#ef4444;font-weight:800;font-size:15px">' + skusAtacar + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + skusTotal + '</td>' +
+        '<td style="padding:11px 12px">' + critBar(pctCrit) + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:' + rotColor + ';font-weight:700;font-size:15px">' + (rot > 0 ? rot.toFixed(2) : '—') + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + dias + '</td>' +
+        '<td style="padding:11px 12px;text-align:center">' + trendHtml(mej, dec, est) + '</td>' +
+      '</tr>' +
+      '<tr id="' + rowId + '" style="display:none"><td colspan="9" style="padding:0">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<thead><tr style="background:#0a0f1a">' +
+            '<th style="padding:6px 12px 6px 36px;text-align:left;color:#475569;font-size:10px;text-transform:uppercase">Subcategoría</th>' +
+            '<th style="padding:6px 12px;text-align:center;color:#475569;font-size:10px;text-transform:uppercase">Resp.</th>' +
+            '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Atacar</th>' +
+            '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Total</th>' +
+            '<th style="padding:6px 12px;color:#475569;font-size:10px;text-transform:uppercase">% Crítico</th>' +
+            '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Rot.</th>' +
+            '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Días</th>' +
+            '<th style="padding:6px 12px;text-align:center;color:#475569;font-size:10px;text-transform:uppercase">Tendencia</th>' +
+          '</tr></thead>' +
+          '<tbody>' + subHtml + '</tbody>' +
+        '</table>' +
+      '</td></tr>';
   });
 
-  document.getElementById('atk-tbody').innerHTML = html || '<tr><td colspan="8" class="empty">Sin SKUs críticos con los filtros actuales</td></tr>';
-  document.getElementById('tab-cnt-atacar').textContent = catRows.length;
+  atkTbody.innerHTML = html || '<tr><td colspan="9" class="empty">Sin SKUs críticos con los filtros actuales</td></tr>';
 
-  // Store filter listener (only bind once)
   if (!atkStore._bound) {
     atkStore._bound = true;
     atkStore.addEventListener('change', () => renderAtaque(lastRows));
@@ -1984,7 +1969,7 @@ function exportAtacarCSV() {
   const headers = ['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Rot. Mayo','Días','Tendencia','Tipo de Pago'];
   const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [headers.join(',')];
-  atacar.sort((a, b) => (a.rot || 0) - (b.rot || 0)).forEach(r => {
+  atacar.sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0)).forEach(r => {
     const rot = r[CURRENT_MONTH_KEY];
     const dias = rot && rot > 0 ? (30 / rot).toFixed(1) : '';
     lines.push([r.category, r.sub_category, RESPONSABLES[r.category] || '—', r.Store, r.supplier, r.brand, r.sku, r.product,
