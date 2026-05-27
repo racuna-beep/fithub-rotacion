@@ -1794,6 +1794,7 @@ function respBadge(cat) {
 
 // ─── PLAN DE ATAQUE ─────────────────────────────────────────────────────────
 function renderAtaque(rows) {
+  console.log('[ATK] renderAtaque called, rows:', rows ? rows.length : 'null');
   const atkStore = document.getElementById('atk-store');
   const atkSummary = document.getElementById('atk-summary');
   const atkTbody = document.getElementById('atk-tbody');
@@ -1859,6 +1860,7 @@ function renderAtaque(rows) {
     .map(([cat, g]) => ({ cat, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0 }))
     .sort((a, b) => a.rot - b.rot);
 
+  console.log('[ATK] catRows:', catRows.length, 'atacar SKUs:', atacar.length);
   if (atkCnt) atkCnt.textContent = catRows.length;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1942,7 +1944,9 @@ function renderAtaque(rows) {
       '</td></tr>';
   });
 
+  console.log('[ATK] html length:', html.length);
   atkTbody.innerHTML = html || '<tr><td colspan="9" class="empty">Sin SKUs críticos con los filtros actuales</td></tr>';
+  console.log('[ATK] atkTbody children:', atkTbody.children.length);
 
   if (!atkStore._bound) {
     atkStore._bound = true;
