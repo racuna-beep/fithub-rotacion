@@ -483,17 +483,18 @@ function normalizeRow(raw, months) {
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
   r.category    = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || '';
   r.sub_category = raw['Sub_Category'] || raw['sub_category'] || raw['SubCategoria'] || raw['Subcategoria'] || '';
-  r.vta_mes  = parseNum(raw['Vta. Mayo'] ?? raw['Vta. Mes'] ?? raw['vta_mes'] ?? raw['Ventas'] ?? 0);
+  r.vta_mes  = parseNum(raw['Vta. Mayo'] ?? raw['Venta Mayo'] ?? raw['Vta. Mes'] ?? raw['vta_mes'] ?? raw['Ventas'] ?? 0);
   r.inv_prom = parseNum(raw['Inv. prom Mayo'] ?? raw['Inv. prom'] ?? raw['inv_prom'] ?? raw['Inv. Prom'] ?? raw['Inventario Promedio'] ?? 0);
   // Pares históricos Vta/Inv por mes para cálculo preciso
-  r.vta_enero    = parseNum(raw['Vta. Enero'] ?? 0);
-  r.inv_enero    = parseNum(raw['Inv. prom Enero'] ?? 0);
-  r.vta_febrero  = parseNum(raw['Vta. Febrero'] ?? 0);
+  // Soporta ambos formatos: "Venta Enero" (Sheet actual) y "Vta. Enero" (formato anterior)
+  r.vta_enero    = parseNum(raw['Venta Enero']   ?? raw['Vta. Enero']   ?? 0);
+  r.inv_enero    = parseNum(raw['Inv. prom Enero']   ?? 0);
+  r.vta_febrero  = parseNum(raw['Venta Febrero'] ?? raw['Vta. Febrero'] ?? 0);
   r.inv_febrero  = parseNum(raw['Inv. prom Febrero'] ?? 0);
-  r.vta_marzo    = parseNum(raw['Vta. Marzo'] ?? 0);
-  r.inv_marzo    = parseNum(raw['Inv. prom Marzo'] ?? 0);
-  r.vta_abril    = parseNum(raw['Vta. Abril'] ?? 0);
-  r.inv_abril    = parseNum(raw['Inv. prom Abril'] ?? 0);
+  r.vta_marzo    = parseNum(raw['Venta Marzo']   ?? raw['Vta. Marzo']   ?? 0);
+  r.inv_marzo    = parseNum(raw['Inv. prom Marzo']   ?? 0);
+  r.vta_abril    = parseNum(raw['Venta Abril']   ?? raw['Vta. Abril']   ?? 0);
+  r.inv_abril    = parseNum(raw['Inv. prom Abril']   ?? 0);
   r.obs      = raw['Obs'] || raw['obs'] || raw['Estado'] || '';
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
 
