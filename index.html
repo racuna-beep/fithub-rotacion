@@ -402,12 +402,31 @@
         <select id="atk-store" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px">
           <option value="">Todas las tiendas</option>
         </select>
+        <select id="atk-resp" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px">
+          <option value="">Todos los responsables</option>
+          <option value="Edwin">Edwin</option>
+          <option value="Lore">Lore</option>
+          <option value="Jorge">Jorge</option>
+          <option value="Angie">Angie</option>
+        </select>
         <button id="btn-export-atacar" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
       </div>
     </div>
 
     <!-- Resumen rápido -->
     <div id="atk-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+
+    <!-- Gráficas por Responsable y Proveedor -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
+        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">🎯 SKUs Atacar por Responsable</h3>
+        <div id="atk-chart-resp" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+      <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
+        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">📦 Top 10 Proveedores con más SKUs Críticos</h3>
+        <div id="atk-chart-prov" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
 
     <!-- Tabla expandible -->
     <div class="table-card">
@@ -1805,7 +1824,11 @@ function renderAtaque(rows) {
     stores.map(s => `<option value="${s}" ${s === curAtkStore ? 'selected' : ''}>${s}</option>`).join('');
 
   const storeFilter = atkStore.value;
-  const base = storeFilter ? rows.filter(r => r.Store === storeFilter) : rows;
+  const atkResp = document.getElementById('atk-resp');
+  const respFilter = atkResp ? atkResp.value : '';
+  const base = rows
+    .filter(r => !storeFilter || r.Store === storeFilter)
+    .filter(r => !respFilter || RESPONSABLES[r.category] === respFilter);
   const atacar = base.filter(r => r.tier === 'crit');
   const totalSkus = base.length || 1;
 
@@ -1858,6 +1881,58 @@ function renderAtaque(rows) {
     .sort((a, b) => b.skusAtacar - a.skusAtacar);
 
   if (atkCnt) atkCnt.textContent = catRows.length;
+
+  // ── Gráfica por Responsable ────────────────────────────────────────────────
+  const respMap = {};
+  atacar.forEach(r => {
+    const resp = RESPONSABLES[r.category] || '—';
+    respMap[resp] = (respMap[resp] || 0) + 1;
+  });
+  const respEntries = Object.entries(respMap).sort((a, b) => b[1] - a[1]);
+  const maxResp = respEntries[0]?.[1] || 1;
+  const respChartEl = document.getElementById('atk-chart-resp');
+  if (respChartEl) {
+    respChartEl.innerHTML = respEntries.map(([resp, cnt]) => {
+      const color = RESP_COLORS[resp] || '#64748b';
+      const pct = (cnt / maxResp * 100).toFixed(1);
+      const pctTotal = (cnt / Math.max(atacar.length, 1) * 100).toFixed(0);
+      return '<div style="display:flex;align-items:center;gap:10px">' +
+        '<span style="min-width:50px;font-size:12px;font-weight:700;color:' + color + '">' + resp + '</span>' +
+        '<div style="flex:1;height:22px;background:#1a2332;border-radius:4px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:4px;display:flex;align-items:center;padding-left:8px;transition:width 0.4s">' +
+            '<span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">' + cnt.toLocaleString('es-CO') + ' SKUs</span>' +
+          '</div>' +
+        '</div>' +
+        '<span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">' + pctTotal + '%</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Gráfica Top 10 Proveedores ─────────────────────────────────────────────
+  const provMap = {};
+  atacar.forEach(r => {
+    const prov = r.supplier || '(Sin proveedor)';
+    provMap[prov] = (provMap[prov] || 0) + 1;
+  });
+  const provEntries = Object.entries(provMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const maxProv = provEntries[0]?.[1] || 1;
+  const provChartEl = document.getElementById('atk-chart-prov');
+  if (provChartEl) {
+    provChartEl.innerHTML = provEntries.map(([prov, cnt], i) => {
+      const colors = ['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+      const color = colors[i] || '#64748b';
+      const pct = (cnt / maxProv * 100).toFixed(1);
+      const shortProv = prov.length > 28 ? prov.substring(0, 26) + '…' : prov;
+      return '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="min-width:160px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + escapeHtml(prov) + '">' + escapeHtml(shortProv) + '</span>' +
+        '<div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;display:flex;align-items:center;padding-left:6px;transition:width 0.4s">' +
+            '<span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">' + cnt + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const trendHtml = (mej, dec, est) => {
@@ -1912,7 +1987,8 @@ function renderAtaque(rows) {
           '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>' + escapeHtml(r.sku || '') + '</td>' +
           '<td style="padding:5px 12px;color:#94a3b8;font-size:11px">' + escapeHtml(r.product || '') + '</td>' +
           '<td style="padding:5px 12px;font-size:11px"><span style="display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;background:' + storeColor + '22;color:' + storeColor + ';border:1px solid ' + storeColor + '44">' + (r.Store || '') + '</span></td>' +
-          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + (r.brand || '') + '</td>' +
+          '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.supplier || '') + '</td>' +
+          '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.brand || '') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:' + rc + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
           '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
@@ -1940,7 +2016,8 @@ function renderAtaque(rows) {
               '<th style="padding:5px 12px 5px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase;letter-spacing:0.5px">SKU</th>' +
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Producto</th>' +
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Tienda</th>' +
-              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Marca</th>' +
+              '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
+              '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Marca</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
               '<th style="padding:5px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
@@ -1986,6 +2063,8 @@ function renderAtaque(rows) {
   if (!atkStore._bound) {
     atkStore._bound = true;
     atkStore.addEventListener('change', () => renderAtaque(lastRows));
+    const ar = document.getElementById('atk-resp');
+    if (ar) ar.addEventListener('change', () => renderAtaque(lastRows));
   }
 }
 
