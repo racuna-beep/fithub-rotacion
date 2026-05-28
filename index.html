@@ -1075,7 +1075,7 @@ const groupAvgRot = (rows, key, monthDef) => {
 };
 
 function renderDonut(svgId, data) {
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   const cx = 140, cy = 140, r = 90, ir = 55;
   const total = data.reduce((a, d) => a + d.value, 0);
   if (!total) { svg.innerHTML = '<text x="200" y="140" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
@@ -1108,7 +1108,7 @@ function renderBarsCustom(svgId, data, color, formatter, showMeta, allowNeg, W, 
   return renderBars(svgId, data, color, formatter, showMeta, allowNeg, W, H);
 }
 function renderBars(svgId, data, color, formatter, showMeta, allowNeg, W, H) {
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   W = W || 400; H = H || 280;
   const pl = 60, pr = 16, pt = 16, pb = 70;
   const cw = W - pl - pr, ch = H - pt - pb;
@@ -1153,7 +1153,7 @@ function renderBars(svgId, data, color, formatter, showMeta, allowNeg, W, H) {
 }
 
 function renderLine(svgId, data, color) {
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   const W = 400, H = 280, pl = 50, pr = 16, pt = 20, pb = 40;
   const cw = W - pl - pr, ch = H - pt - pb;
   if (!data.length) return;
@@ -1220,7 +1220,7 @@ function renderLine(svgId, data, color) {
 }
 
 function renderHBars(svgId, data) {
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   const W = 700, H = 450, pl = 280, pr = 90, pt = 10, pb = 20;
   const cw = W - pl - pr, ch = H - pt - pb;
   if (!data.length) { svg.innerHTML = '<text x="350" y="225" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
@@ -1237,7 +1237,7 @@ function renderHBars(svgId, data) {
 
 // ─── HBARS ROTACION ────────────────────────────────────────────────────────
 function renderHBarsRot(svgId, data) {
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   if (!data.length) { svg.innerHTML = '<text x="450" y="340" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
   const ROW_H = 38;
   const W = 900, H = data.length * ROW_H + 40, pl = 170, pr = 80, pt = 20, pb = 20;
