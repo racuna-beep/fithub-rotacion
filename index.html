@@ -620,6 +620,7 @@ function normalizeRow(raw, months) {
   const _obsMap = { 'cumple': 'Cumple', 'no cumple': 'No cumple', 'nuevo': 'Nuevo', 'atacar': 'No cumple' };
   r.obs = _obsMap[_obsRaw.toLowerCase()] || _obsRaw;
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
+  r.inv_actual = raw['Inventario Actual'] != null ? raw['Inventario Actual'] : null;
 
   // Map rotation months
   months.forEach(m => {
@@ -2050,6 +2051,7 @@ function renderAtaque(rows) {
           '<td style="padding:5px 12px;font-size:11px"><span style="display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;background:' + storeColor + '22;color:' + storeColor + ';border:1px solid ' + storeColor + '44">' + (r.Store || '') + '</span></td>' +
           '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.supplier || '') + '</td>' +
           '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.brand || '') + '</td>' +
+          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">' + (r.inv_actual != null ? Number(r.inv_actual).toLocaleString('es-CO',{maximumFractionDigits:0}) : '—') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:' + rc + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
           '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
@@ -2079,6 +2081,7 @@ function renderAtaque(rows) {
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Tienda</th>' +
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Marca</th>' +
+              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
               '<th style="padding:5px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
