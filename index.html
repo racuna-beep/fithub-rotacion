@@ -832,20 +832,15 @@ const PALETTE = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4
 // ─── INSIGHTS ──────────────────────────────────────────────────────────────
 function renderInsights(rows) {
   // rotVals: solo filas con inv > 0 para evitar distorsión
+  // rotVals: Vta total / Inv total por mes (sin filtrar) — igual que tabla pivot Excel
   const rotVals = ROT_MONTHS.map(m => {
     const vtaK = m.vtaKey || 'vta_mes';
     const invK = m.invKey || 'inv_prom';
-    let vta = 0, inv = 0;
-    rows.forEach(r => {
-      const i = r[invK] || 0;
-      if (i > 0) { vta += r[vtaK] || 0; inv += i; }
-    });
+    const vta = rows.reduce((a, r) => a + (r[vtaK] || 0), 0);
+    const inv = rows.reduce((a, r) => a + (r[invK] || 0), 0);
     return inv > 0 ? vta / inv : 0;
   });
-  // Vta/Inv total para el mes actual — evita distorsión de SKUs con inv~0
-  const _vtaCur = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
-  const _invCur = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
-  const curRot = _invCur > 0 ? _vtaCur / _invCur : rotVals[rotVals.length - 1];
+  const curRot = rotVals[rotVals.length - 1];
   // prevRot: usa el mismo cálculo Vta/Inv ponderado que curRot — evita distorsión por promedio simple
   const prevRot = rotVals.length >= 2 ? rotVals[rotVals.length - 2] : 0;
   const delta = prevRot > 0 ? ((curRot - prevRot) / prevRot * 100) : 0;
@@ -935,11 +930,11 @@ function renderInsights(rows) {
 // ─── KPIs ──────────────────────────────────────────────────────────────────
 function renderKPIs(rows) {
   const totalSku = rows.length;
+  // rotProm: Vta total / Inv total — igual que tabla pivot Excel (Total general)
   const totalVta = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
   const totalInv = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
   const cumple = rows.filter(r => r.obs === 'Cumple').length;
   const noCumple = rows.filter(r => r.obs === 'No cumple').length;
-  // Vta/Inv total — evita que SKUs con inv~0 exploten el promedio
   const rotProm = totalInv > 0 ? totalVta / totalInv : 0;
   const diasProm = rotProm > 0 ? 30 / rotProm : null;
   const mejorando = rows.filter(r => r.trend === 'mejorando').length;
