@@ -555,7 +555,9 @@ function normalizeRow(raw, months) {
   r.inv_marzo    = parseNum(raw['Inv. prom Marzo']   ?? 0);
   r.vta_abril    = parseNum(raw['Venta Abril']   ?? raw['Vta. Abril']   ?? 0);
   r.inv_abril    = parseNum(raw['Inv. prom Abril']   ?? 0);
-  r.obs      = raw['Obs'] || raw['obs'] || raw['Estado'] || '';
+  const _obsRaw = String(raw['Obs'] || raw['obs'] || raw['Estado'] || '').trim();
+  const _obsMap = { 'cumple': 'Cumple', 'no cumple': 'No cumple', 'nuevo': 'Nuevo', 'atacar': 'No cumple' };
+  r.obs = _obsMap[_obsRaw.toLowerCase()] || _obsRaw;
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
 
   // Map rotation months
