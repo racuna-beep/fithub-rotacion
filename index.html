@@ -1901,8 +1901,31 @@ function renderAtaque(rows) {
       const sresp = RESPONSABLES[subKey] || resp;
       const src = RESP_COLORS[sresp] || '#64748b';
       const srespHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + src + '22;color:' + src + ';border:1px solid ' + src + '44">' + sresp + '</span>';
-      return '<tr style="background:#0d1420">' +
-        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span style="color:#475569;margin-right:6px">└</span>' + escapeHtml(s.sub) + '</td>' +
+      const subRowId = rowId + '_' + s.sub.replace(/[^a-zA-Z0-9]/g, '_');
+      // SKUs for this subcategory (only atacar)
+      const skuRows = base.filter(r => r.tier === 'crit' && (r.category||'') === cat && (r.sub_category||'') === s.sub);
+      const skuHtml = skuRows.map(r => {
+        const rr = r[CURRENT_MONTH_KEY] || 0;
+        const rd = rr > 0 ? (30/rr).toFixed(1) : '—';
+        const rc = rr >= 1.3 ? '#10b981' : rr >= 0.5 ? '#f59e0b' : '#ef4444';
+        const tIcon = r.trend === 'mejorando' ? '<span style="color:#10b981">▲</span>' : r.trend === 'declinando' ? '<span style="color:#ef4444">▼</span>' : '<span style="color:#94a3b8">→</span>';
+        return '<tr style="background:#070c14">' +
+          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>' + escapeHtml(r.sku || '') + '</td>' +
+          '<td style="padding:5px 12px;color:#94a3b8;font-size:11px" colspan="2">' + escapeHtml(r.product || '') + '</td>' +
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + (r.brand || '') + '</td>' +
+          '<td style="padding:5px 12px;text-align:right;color:' + rc + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
+          '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
+          '<td style="padding:5px 12px;color:#475569;font-size:10px">' + (r.obs || '') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow('' + subRowId + '')">' +
+        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px">' +
+          '<span id="icon-' + subRowId + '" style="color:#475569;margin-right:6px;font-size:10px">▶</span>' +
+          '<span style="color:#475569;margin-right:6px">└</span>' + escapeHtml(s.sub) +
+          '<span style="color:#475569;font-size:10px;margin-left:6px">(' + s.skusAtacar + ' SKUs)</span>' +
+        '</td>' +
         '<td style="padding:7px 12px;text-align:center">' + srespHtml + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:#ef4444;font-weight:700">' + s.skusAtacar + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:#64748b">' + s.skusTotal + '</td>' +
@@ -1910,7 +1933,21 @@ function renderAtaque(rows) {
         '<td style="padding:7px 12px;text-align:right;color:' + sc + ';font-weight:700">' + (sr > 0 ? sr.toFixed(2) : '—') + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:#64748b">' + sd + '</td>' +
         '<td style="padding:7px 12px;text-align:center;font-size:12px">' + trendHtml(s.mej, s.dec, s.est) + '</td>' +
-        '</tr>';
+        '</tr>' +
+        '<tr id="' + subRowId + '" style="display:none"><td colspan="9" style="padding:0">' +
+          '<table style="width:100%;border-collapse:collapse">' +
+            '<thead><tr style="background:#040810">' +
+              '<th style="padding:5px 12px 5px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase;letter-spacing:0.5px">SKU</th>' +
+              '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase" colspan="2">Producto</th>' +
+              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Marca</th>' +
+              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
+              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
+              '<th style="padding:5px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
+              '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Obs</th>' +
+            '</tr></thead>' +
+            '<tbody>' + skuHtml + '</tbody>' +
+          '</table>' +
+        '</td></tr>';
     }).join('');
 
     html +=
