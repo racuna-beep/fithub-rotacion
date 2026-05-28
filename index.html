@@ -1858,7 +1858,7 @@ function renderAtaque(rows) {
   const catRows = Object.entries(catMap)
     .filter(([, g]) => g.skusAtacar > 0)
     .map(([cat, g]) => ({ cat, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0 }))
-    .sort((a, b) => a.rot - b.rot);
+    .sort((a, b) => b.skusAtacar - a.skusAtacar);
 
   if (atkCnt) atkCnt.textContent = catRows.length;
 
@@ -1903,7 +1903,7 @@ function renderAtaque(rows) {
       const srespHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + src + '22;color:' + src + ';border:1px solid ' + src + '44">' + sresp + '</span>';
       const subRowId = rowId + '_' + s.sub.replace(/[^a-zA-Z0-9]/g, '_');
       // SKUs for this subcategory (only atacar)
-      const skuRows = base.filter(r => r.tier === 'crit' && (r.category||'') === cat && (r.sub_category||'') === s.sub)
+      const skuRows = base.filter(r => r.tier === 'crit' && (r.category||'') === cat && (r.sub_category || '(Sin subcategoría)') === s.sub)
         .sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0));
       const skuHtml = skuRows.map(r => {
         const rr = r[CURRENT_MONTH_KEY] || 0;
