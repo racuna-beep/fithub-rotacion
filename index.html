@@ -1535,15 +1535,12 @@ function render() {
   renderDonut('chart-obs', ['Cumple', 'No cumple', 'Nuevo'].map(k => ({ label: k, value: rows.filter(r => r.obs === k).length, color: COLORS[k] })).filter(d => d.value > 0));
   renderDonut('chart-trend', [{ label: 'Mejorando', value: rows.filter(r => r.trend === 'mejorando').length, color: TREND_COLORS.mejorando }, { label: 'Estable', value: rows.filter(r => r.trend === 'estable').length, color: TREND_COLORS.estable }, { label: 'Declinando', value: rows.filter(r => r.trend === 'declinando').length, color: TREND_COLORS.declinando }, { label: 'Sin datos', value: rows.filter(r => r.trend === 'sin_datos').length, color: TREND_COLORS.sin_datos }].filter(d => d.value > 0));
 
-  // Line chart: solo filas con inv > 0 para evitar distorsión de celdas vacías
+  // Line chart: Vta total / Inv total sin filtrar — igual que KPI y tabla pivot Excel
   const rotLine = ROT_MONTHS.map(m => {
     const vtaK = m.vtaKey || 'vta_mes';
     const invK = m.invKey || 'inv_prom';
-    let vta = 0, inv = 0;
-    rows.forEach(r => {
-      const i = r[invK] || 0;
-      if (i > 0) { vta += r[vtaK] || 0; inv += i; }
-    });
+    const vta = rows.reduce((a, r) => a + (r[vtaK] || 0), 0);
+    const inv = rows.reduce((a, r) => a + (r[invK] || 0), 0);
     return { label: m.label, value: inv > 0 ? vta / inv : 0 };
   });
   renderLine('chart-rot', rotLine, '#10b981');
