@@ -703,7 +703,6 @@ async function loadData() {
 
     // Update meta
     document.getElementById('meta-registros').textContent = DATA.length.toLocaleString('es-CO');
-    document.getElementById('meta-tiendas').textContent = new Set(DATA.map(r => r.Store)).size;
     document.getElementById('meta-skus').textContent = new Set(DATA.map(r => r.sku)).size.toLocaleString('es-CO');
     document.getElementById('meta-mes').textContent = ROT_LABELS[ROT_LABELS.length - 1];
     const now = new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
