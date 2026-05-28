@@ -1583,8 +1583,8 @@ function render() {
     const prevMonthDef = ROT_MONTHS[ROT_MONTHS.length - 2];
     const rotCurByStore  = Object.fromEntries(groupAvgRot(rows, 'Store', curMonthDef).map(d => [d.label, d.value]));
     const rotPrevByStore = Object.fromEntries(groupAvgRot(rows, 'Store', prevMonthDef).map(d => [d.label, d.value]));
-    const stores = [...new Set(rows.map(r => r.Store))].filter(Boolean).sort();
-    const deltaData = stores.map(s => ({
+    const deltaStores = [...new Set(rows.map(r => r.Store))].filter(Boolean).sort();
+    const deltaData = deltaStores.map(s => ({
       label: s,
       value: (rotCurByStore[s] || 0) - (rotPrevByStore[s] || 0)
     }));
