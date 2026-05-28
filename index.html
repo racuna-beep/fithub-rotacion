@@ -38,6 +38,48 @@
   header { margin-bottom: 20px; }
   header h1 { font-size: 26px; font-weight: 800; color: var(--text); }
   header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .header-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left { display:flex; align-items:center; gap:20px; }
+  .header-logo .logo-brand { font-size:26px; font-weight:900; letter-spacing:-1.5px; line-height:1; color:#fff; }
+  .header-logo .logo-brand span { color:#FF6B00; }
+  .header-logo .logo-sub { font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
+  .header-divider { width:1px; height:36px; background:#1e2d3d; flex-shrink:0; }
+  .header-meta { display:flex; flex-direction:column; gap:6px; }
+  .header-title { font-size:13px; font-weight:700; color:#e2e8f0; }
+  .header-badges { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .store-badge { display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; background:#1a2332; color:#64748b; border:1px solid #1e2d3d; }
+  .tier-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; }
+  .tier-ok   { background:rgba(16,185,129,0.10); color:#10b981; border:1px solid rgba(16,185,129,0.20); }
+  .tier-warn { background:rgba(245,158,11,0.10); color:#f59e0b; border:1px solid rgba(245,158,11,0.20); }
+  .tier-crit { background:rgba(239,68,68,0.10);  color:#ef4444; border:1px solid rgba(239,68,68,0.20); }
+  .tier-sep  { color:#1e2d3d; margin:0 3px; font-size:12px; }
+  .header-stats { display:flex; align-items:center; gap:16px; }
+  .stat-item { text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; color:#f1f5f9; line-height:1; }
+  .stat-val.orange { color:#FF6B00; }
+  .stat-lbl { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
+  .stat-sep { width:1px; height:28px; background:#1e2d3d; align-self:center; flex-shrink:0; }
+  .header-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left { display:flex; align-items:center; gap:20px; }
+  .header-logo .logo-brand { font-size:26px; font-weight:900; letter-spacing:-1.5px; line-height:1; color:#fff; }
+  .header-logo .logo-brand span { color:#FF6B00; }
+  .header-logo .logo-sub { font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
+  .header-divider { width:1px; height:36px; background:#1e2d3d; flex-shrink:0; }
+  .header-meta { display:flex; flex-direction:column; gap:6px; }
+  .header-title { font-size:13px; font-weight:700; color:#e2e8f0; }
+  .header-badges { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .store-badge { display:inline-block; padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; background:#1a2332; color:#64748b; border:1px solid #1e2d3d; }
+  .tier-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; }
+  .tier-ok   { background:rgba(16,185,129,0.10); color:#10b981; border:1px solid rgba(16,185,129,0.20); }
+  .tier-warn { background:rgba(245,158,11,0.10); color:#f59e0b; border:1px solid rgba(245,158,11,0.20); }
+  .tier-crit { background:rgba(239,68,68,0.10);  color:#ef4444; border:1px solid rgba(239,68,68,0.20); }
+  .tier-sep  { color:#1e2d3d; margin:0 3px; font-size:12px; }
+  .header-stats { display:flex; align-items:center; gap:16px; }
+  .stat-item { text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; color:#f1f5f9; line-height:1; }
+  .stat-val.orange { color:#FF6B00; }
+  .stat-lbl { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
+  .stat-sep { width:1px; height:28px; background:#1e2d3d; align-self:center; flex-shrink:0; }
 
   /* ── META BAR ── */
   .meta-info { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2);
@@ -214,21 +256,53 @@
 
 <div class="container" id="app" style="display:none">
   <header>
-    <h1>📦 Dashboard Rotación Fithub 2026</h1>
-    <p>Análisis de rotación de inventario · STF 15 · STF 30 · STF 51 · STF 82 · STF 93
-      <span style="color:#10b981">· OK (≥ 1.30)</span> ·
-      <span style="color:#f59e0b">Vigilar (0.50–1.30)</span> ·
-      <span style="color:#ef4444">Atacar (< 0.50)</span>
-    </p>
-    <div class="meta-info">
-      <div><b id="meta-registros">—</b> registros · <b id="meta-tiendas">—</b> tiendas · <b id="meta-skus">—</b> SKUs únicos · Mes actual: <b id="meta-mes">—</b></div>
-      <div class="meta-right">
-        <span class="last-update" id="last-update"></span>
-        <button class="btn-update" id="btn-update" onclick="loadData()">
-          <span class="icon">🔄</span>
-          <span class="spin">⏳</span>
-          Actualizar datos
-        </button>
+    <div class="header-wrap">
+      <div class="header-left">
+        <div class="header-logo">
+          <div class="logo-brand">fit<span>hub</span></div>
+          <div class="logo-sub">Super Tiendas</div>
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-meta">
+          <div class="header-title">Dashboard de Rotación 2026</div>
+          <div class="header-badges">
+            <span class="store-badge">STF 15</span>
+            <span class="store-badge">STF 30</span>
+            <span class="store-badge">STF 51</span>
+            <span class="store-badge">STF 82</span>
+            <span class="store-badge">STF 93</span>
+            <span class="tier-sep">|</span>
+            <span class="tier-badge tier-ok">OK ≥ 1.30</span>
+            <span class="tier-badge tier-warn">Vigilar 0.50–1.30</span>
+            <span class="tier-badge tier-crit">Atacar &lt; 0.50</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div class="header-stats">
+          <div class="stat-item">
+            <div class="stat-val" id="meta-registros">—</div>
+            <div class="stat-lbl">Registros</div>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <div class="stat-val" id="meta-skus">—</div>
+            <div class="stat-lbl">SKUs únicos</div>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-item">
+            <div class="stat-val orange" id="meta-mes">—</div>
+            <div class="stat-lbl">Mes actual</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span id="last-update" style="font-size:10px;color:#3b4f65"></span>
+          <button class="btn-update" id="btn-update" onclick="loadData()">
+            <span class="icon">🔄</span>
+            <span class="spin">⏳</span>
+            Actualizar datos
+          </button>
+        </div>
       </div>
     </div>
   </header>
