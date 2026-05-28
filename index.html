@@ -1578,14 +1578,16 @@ function render() {
 
   if (PREV_MONTH_KEY) {
     const stores = [...new Set(rows.map(r => r.Store))].sort();
-    const deltaData = stores.map(s => {
-      const sub = rows.filter(r => r.Store === s);
-      const vta = sub.reduce((a, r) => a + (r.vta_mes || 0), 0);
-      const inv = sub.reduce((a, r) => a + (r.inv_prom || 0), 0);
-      const rotCur = inv > 0 ? vta / inv : 0;
-      const rotPrev = avgBy(sub, PREV_MONTH_KEY);
-      return { label: s, value: rotCur - rotPrev };
-    });
+    // Delta: usa groupAvgRot (Vta/Inv con inv>0) para ambos meses — consistente con barra de tiendas
+    const curMonthDef  = ROT_MONTHS[ROT_MONTHS.length - 1];
+    const prevMonthDef = ROT_MONTHS[ROT_MONTHS.length - 2];
+    const rotCurByStore  = Object.fromEntries(groupAvgRot(rows, 'Store', curMonthDef).map(d => [d.label, d.value]));
+    const rotPrevByStore = Object.fromEntries(groupAvgRot(rows, 'Store', prevMonthDef).map(d => [d.label, d.value]));
+    const stores = [...new Set(rows.map(r => r.Store))].filter(Boolean).sort();
+    const deltaData = stores.map(s => ({
+      label: s,
+      value: (rotCurByStore[s] || 0) - (rotPrevByStore[s] || 0)
+    }));
     renderBars('chart-delta', deltaData, '#3b82f6', v => (v >= 0 ? '+' : '') + v.toFixed(2), false, true);
   }
 
