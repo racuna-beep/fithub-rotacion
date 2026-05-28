@@ -1054,16 +1054,16 @@ function renderAlerts(rows) {
 // ─── CHARTS ────────────────────────────────────────────────────────────────
 const groupSum = (rows, key, valKey) => { const m = {}; rows.forEach(r => { const k = r[key]; m[k] = (m[k] || 0) + (r[valKey] || 0); }); return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
 const ROT_CAP = 30; // Cap para promedios de gráficas (SKUs con inv~0 distorsionan)
-// groupAvgRot: Vta/Inv agrupado — solo filas con inv > 0
+// groupAvgRot: Vta total / Inv total — igual que tabla pivot Excel (sin filtrar inv>0)
 const groupAvgRot = (rows, key, monthDef) => {
   const vtaKey = (monthDef && monthDef.vtaKey) ? monthDef.vtaKey : 'vta_mes';
   const invKey = (monthDef && monthDef.invKey) ? monthDef.invKey : 'inv_prom';
   const m = {};
   rows.forEach(r => {
     const k = r[key];
-    const inv = r[invKey] || 0;
     if (!m[k]) m[k] = { vta: 0, inv: 0, n: 0 };
-    if (inv > 0) { m[k].vta += r[vtaKey] || 0; m[k].inv += inv; }
+    m[k].vta += r[vtaKey] || 0;
+    m[k].inv += r[invKey] || 0;
     m[k].n++;
   });
   return Object.entries(m)
