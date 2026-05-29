@@ -427,25 +427,33 @@
   </div>
 
   <div class="tab-panel" id="panel-detalle" role="tabpanel">
-    <div class="table-card">
-      <div class="table-header">
-        <h3>Detalle de SKUs <span id="row-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:8px;"></span></h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-export" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
-          <input class="search-box" id="search2" type="text" placeholder="Buscar producto, SKU, marca…"/>
-        </div>
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin:0">📋 Detalle por Categoría</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs · <span id="row-count" style="color:#94a3b8"></span></p>
       </div>
-      <div class="table-wrap">
-        <table>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="search-box" id="search2" type="text" placeholder="Buscar producto, SKU, marca…" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px;width:200px"/>
+        <button id="btn-export" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+      </div>
+    </div>
+    <div class="table-card">
+      <div style="overflow-x:auto">
+        <table id="det-table" style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
-            <tr id="table-headers">
-              <!-- Headers rendered dynamically -->
+            <tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+              <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría / SKU</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">SKUs</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">Rot. Prom</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">Días</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b">Tendencia</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
             </tr>
           </thead>
-          <tbody id="tbody"></tbody>
+          <tbody id="det-tbody"></tbody>
         </table>
       </div>
-      <div class="pagination" id="pagination"></div>
     </div>
   </div>
 
@@ -1544,60 +1552,135 @@ function renderTablaEstado(rows) {
 
 // ─── TABLE ─────────────────────────────────────────────────────────────────
 function renderTable(rows) {
-  const sorted = rows.slice().sort((a, b) => {
-    const va = a[sortCol], vb = b[sortCol];
-    if (va == null) return 1; if (vb == null) return -1;
-    if (typeof va === 'number') return (va - vb) * sortDir;
-    return String(va).localeCompare(String(vb)) * sortDir;
+  const tbody = document.getElementById('det-tbody');
+  const rowCount = document.getElementById('row-count');
+  if (!tbody) return;
+
+  const tierColor = t => t === 'ok' ? '#10b981' : t === 'warn' ? '#f59e0b' : t === 'crit' ? '#ef4444' : '#64748b';
+  const tierLabel = t => t === 'ok' ? 'OK' : t === 'warn' ? 'Vigilar' : t === 'crit' ? 'Atacar' : 'Nuevo';
+  const trendHtml = (mej, dec, est) => {
+    const p = [];
+    if (mej > 0) p.push('<span style="color:#10b981;font-weight:700">▲' + mej + '</span>');
+    if (dec > 0) p.push('<span style="color:#ef4444;font-weight:700">▼' + dec + '</span>');
+    if (est > 0) p.push('<span style="color:#94a3b8">→' + est + '</span>');
+    return p.join(' ') || '—';
+  };
+
+  if (rowCount) rowCount.textContent = rows.length.toLocaleString('es-CO') + ' SKUs';
+
+  // Group by category → subcategory
+  const catMap = {};
+  rows.forEach(r => {
+    const cat = r.category || '(Sin categoría)';
+    const sub = r.sub_category || '(Sin subcategoría)';
+    if (!catMap[cat]) catMap[cat] = { skus: 0, vta: 0, inv: 0, mej: 0, dec: 0, est: 0, subs: {} };
+    const c = catMap[cat];
+    c.skus++; c.vta += r.vta_mes || 0; c.inv += r.inv_prom || 0;
+    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
+    if (!c.subs[sub]) c.subs[sub] = { skus: 0, vta: 0, inv: 0, mej: 0, dec: 0, est: 0, rows: [] };
+    const s = c.subs[sub];
+    s.skus++; s.vta += r.vta_mes || 0; s.inv += r.inv_prom || 0;
+    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
+    s.rows.push(r);
   });
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  if (currentPage > totalPages) currentPage = totalPages;
-  const start = (currentPage - 1) * pageSize;
-  const slice = sorted.slice(start, start + pageSize);
-  document.getElementById('row-count').textContent = `${total.toLocaleString()} de ${DATA.length.toLocaleString()} registros · página ${currentPage}/${totalPages}`;
-  const tbody = document.getElementById('tbody');
-  if (!total) { tbody.innerHTML = '<tr><td colspan="20" class="empty">No hay registros que coincidan.</td></tr>'; document.getElementById('pagination').innerHTML = ''; return; }
-  const badgeFor = obs => { const cls = obs === 'Cumple' ? 'badge-green' : obs === 'No cumple' ? 'badge-red' : 'badge-yellow'; return `<span class="badge ${cls}">${obs}</span>`; };
-  const alertFor = tier => { if (tier === 'ok') return '<span class="badge badge-green">OK</span>'; if (tier === 'warn') return '<span class="badge badge-yellow">Vigilar</span>'; if (tier === 'crit') return '<span class="badge badge-red">Atacar</span>'; return '<span class="badge badge-yellow">Nuevo</span>'; };
-  const trendBadge = t => { if (t === 'mejorando') return '<span class="badge badge-green">▲ Mejor.</span>'; if (t === 'declinando') return '<span class="badge badge-red">▼ Decl.</span>'; if (t === 'estable') return '<span class="badge badge-blue">→ Est.</span>'; return '<span class="badge badge-yellow">— S/D</span>'; };
-  tbody.innerHTML = slice.map(r => {
-    const rotCols = ROT_MONTHS.map(m => `<td class="num">${m.key === CURRENT_MONTH_KEY ? '<b>' : ''}${fmtDec(r[m.key])}${m.key === CURRENT_MONTH_KEY ? '</b>' : ''}</td>`).join('');
-    return `<tr>
-      <td>${escapeHtml(r.Store)}</td>
-      <td>${escapeHtml(r.sku)}</td>
-      <td>${escapeHtml(r.brand)}</td>
-      <td title="${escapeHtml(r.supplier)}">${escapeHtml(r.supplier.length > 20 ? r.supplier.slice(0, 18) + '…' : r.supplier)}</td>
-      <td title="${escapeHtml(r.product)}">${escapeHtml(r.product.length > 36 ? r.product.slice(0, 34) + '…' : r.product)}${sparkline(r)}</td>
-      ${rotCols}
-      <td class="num">${r.dias_calc != null ? fmtDec(r.dias_calc) : '—'}</td>
-      <td>${trendBadge(r.trend)}</td>
-      <td>${alertFor(r.tier)}</td>
-      <td>${badgeFor(r.obs)}</td>
-      <td>${escapeHtml(r['Tipo de Pago'] || '—')}</td>
-    </tr>`;
-  }).join('');
-  const pag = document.getElementById('pagination');
-  let html = `<button data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>◀ Anterior</button>`;
-  const pagesToShow = new Set([1, totalPages, currentPage, currentPage - 1, currentPage + 1, currentPage - 2, currentPage + 2]);
-  let prev = 0;
-  [...pagesToShow].filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b).forEach(p => {
-    if (p - prev > 1) html += `<span class="page-info">…</span>`;
-    html += `<button data-page="${p}" class="${p === currentPage ? 'active' : ''}">${p}</button>`;
-    prev = p;
+
+  const catRows = Object.entries(catMap).sort((a, b) => b[1].skus - a[1].skus);
+  let html = '';
+
+  catRows.forEach(([cat, cg]) => {
+    const rot = cg.inv > 0 ? cg.vta / cg.inv : 0;
+    const rc = rot >= 1.3 ? '#10b981' : rot >= 0.5 ? '#f59e0b' : '#ef4444';
+    const rowId = 'det-' + cat.replace(/[^a-zA-Z0-9]/g, '_');
+    const resp = RESPONSABLES[cat] || '—';
+    const rcolor = RESP_COLORS[resp] || '#64748b';
+    const respHtml = '<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:' + rcolor + '22;color:' + rcolor + ';border:1px solid ' + rcolor + '44">' + resp + '</span>';
+
+    // Sub rows
+    const subEntries = Object.entries(cg.subs).sort((a, b) => b[1].skus - a[1].skus);
+    const subHtml = subEntries.map(([sub, sg]) => {
+      const srot = sg.inv > 0 ? sg.vta / sg.inv : 0;
+      const src = srot >= 1.3 ? '#10b981' : srot >= 0.5 ? '#f59e0b' : '#ef4444';
+      const subId = rowId + '_' + sub.replace(/[^a-zA-Z0-9]/g, '_');
+      const subKey = cat + '|' + sub;
+      const sresp = RESPONSABLES[subKey] || resp;
+      const srcolor = RESP_COLORS[sresp] || '#64748b';
+      const srespHtml = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + srcolor + '22;color:' + srcolor + ';border:1px solid ' + srcolor + '44">' + sresp + '</span>';
+
+      // SKU rows
+      const skuHtml = sg.rows
+        .sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0))
+        .map(r => {
+          const rr = r[CURRENT_MONTH_KEY] || 0;
+          const rd = rr > 0 ? (30/rr).toFixed(1) : '—';
+          const rrC = rr >= 1.3 ? '#10b981' : rr >= 0.5 ? '#f59e0b' : '#ef4444';
+          const tIcon = r.trend === 'mejorando' ? '<span style="color:#10b981">▲</span>' : r.trend === 'declinando' ? '<span style="color:#ef4444">▼</span>' : '<span style="color:#94a3b8">→</span>';
+          const storeColor = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.Store] || '#64748b';
+          const tierC = tierColor(r.tier);
+          const invAct = r.inv_actual != null ? Number(r.inv_actual).toLocaleString('es-CO', {maximumFractionDigits:0}) : '—';
+          return '<tr style="background:#070c14">' +
+            '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px">' +
+              '<span style="color:#334155;margin-right:5px">⤷</span>' + escapeHtml(r.sku || '') +
+              ' <span style="color:#475569;font-size:10px">' + escapeHtml(r.product || '') + '</span>' +
+              ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:' + storeColor + '22;color:' + storeColor + ';border:1px solid ' + storeColor + '44;margin-left:4px">' + (r.Store || '') + '</span>' +
+            '</td>' +
+            '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">' + escapeHtml(r.supplier || '') + '</td>' +
+            '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:10px">' + invAct + '</td>' +
+            '<td style="padding:5px 12px;text-align:right;color:' + rrC + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
+            '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
+            '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
+            '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + tierC + '22;color:' + tierC + '">' + tierLabel(r.tier) + '</span></td>' +
+          '</tr>';
+        }).join('');
+
+      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">' +
+          '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px">' +
+            '<span id="icon-' + subId + '" style="color:#475569;margin-right:6px;font-size:10px">▶</span>' +
+            '<span style="color:#475569;margin-right:6px">└</span>' + escapeHtml(sub) +
+            ' <span style="color:#475569;font-size:10px">(' + sg.skus + ' SKUs)</span>' +
+          '</td>' +
+          '<td style="padding:7px 12px;text-align:center">' + srespHtml + '</td>' +
+          '<td style="padding:7px 12px;text-align:right;color:#94a3b8">' + sg.skus + '</td>' +
+          '<td style="padding:7px 12px;text-align:right;color:' + src + ';font-weight:700">' + (srot > 0 ? srot.toFixed(2) : '—') + '</td>' +
+          '<td style="padding:7px 12px;text-align:right;color:#64748b">' + (srot > 0 ? (30/srot).toFixed(1) : '—') + '</td>' +
+          '<td style="padding:7px 12px;text-align:center;font-size:12px">' + trendHtml(sg.mej, sg.dec, sg.est) + '</td>' +
+          '<td></td>' +
+        '</tr>' +
+        '<tr id="' + subId + '" style="display:none"><td colspan="7" style="padding:0">' +
+          '<table style="width:100%;border-collapse:collapse">' +
+            '<thead><tr style="background:#040810">' +
+              '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>' +
+              '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
+              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>' +
+              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
+              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
+              '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
+              '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>' +
+            '</tr></thead>' +
+            '<tbody>' + skuHtml + '</tbody>' +
+          '</table>' +
+        '</td></tr>';
+    }).join('');
+
+    html +=
+      '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">' +
+        '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px">' +
+          '<span id="icon-' + rowId + '" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>' + escapeHtml(cat) +
+        '</td>' +
+        '<td style="padding:11px 12px;text-align:center">' + respHtml + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#94a3b8;font-weight:700">' + cg.skus + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:' + rc + ';font-weight:700;font-size:15px">' + (rot > 0 ? rot.toFixed(2) : '—') + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + (rot > 0 ? (30/rot).toFixed(1) : '—') + '</td>' +
+        '<td style="padding:11px 12px;text-align:center">' + trendHtml(cg.mej, cg.dec, cg.est) + '</td>' +
+        '<td></td>' +
+      '</tr>' +
+      '<tr id="' + rowId + '" style="display:none"><td colspan="7" style="padding:0">' +
+        '<table style="width:100%;border-collapse:collapse">' +
+          '<tbody>' + subHtml + '</tbody>' +
+        '</table>' +
+      '</td></tr>';
   });
-  html += `<button data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente ▶</button>`;
-  html += `<span class="page-info">Mostrando ${start + 1}–${Math.min(start + pageSize, total)} de ${total.toLocaleString()}</span>`;
-  html += `<select id="page-size">${[50, 100, 250, 500].map(s => `<option value="${s}" ${s === pageSize ? 'selected' : ''}>${s}/pág</option>`).join('')}</select>`;
-  pag.innerHTML = html;
-  pag.querySelectorAll('button[data-page]').forEach(b => b.addEventListener('click', () => {
-    const v = b.getAttribute('data-page');
-    if (v === 'prev') currentPage = Math.max(1, currentPage - 1);
-    else if (v === 'next') currentPage = Math.min(totalPages, currentPage + 1);
-    else currentPage = parseInt(v, 10);
-    renderTable(lastRows);
-  }));
-  document.getElementById('page-size').addEventListener('change', e => { pageSize = parseInt(e.target.value, 10); currentPage = 1; renderTable(lastRows); });
+
+  tbody.innerHTML = html || '<tr><td colspan="7" class="empty">Sin registros</td></tr>';
 }
 
 // ─── MAIN RENDER ───────────────────────────────────────────────────────────
