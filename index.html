@@ -776,7 +776,7 @@ function trendOf(r) {
 
 // ─── TABLE HEADERS ─────────────────────────────────────────────────────────
 function buildTableHeaders() {
-  const tr = document.getElementById('table-headers');
+  const tr = document.getElementById('table-headers'); if (!tr) return;
   const cols = [
     { key: 'Store', label: 'Tienda' },
     { key: 'sku', label: 'SKU' },
