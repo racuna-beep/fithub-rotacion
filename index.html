@@ -441,12 +441,12 @@
       <div style="overflow-x:auto">
         <table id="det-table" style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
-            <tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+            <tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px" id="det-headers">
               <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría / SKU</th>
               <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">SKUs</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">Rot. Prom</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">Días</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDetalle('skus')" id="deth-skus">SKUs ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDetalle('rot')" id="deth-rot">Rot. Prom ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDetalle('dias')" id="deth-dias">Días ↕</th>
               <th style="padding:10px 12px;text-align:center;color:#64748b">Tendencia</th>
               <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
             </tr>
@@ -489,8 +489,8 @@
         <div id="atk-chart-resp" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
       <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
-        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">📦 Top 10 Proveedores con más SKUs Críticos</h3>
-        <div id="atk-chart-prov" style="display:flex;flex-direction:column;gap:6px"></div>
+        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">📦 Top 30 Proveedores con más SKUs Críticos</h3>
+        <div id="atk-chart-prov" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding-right:4px"></div>
       </div>
     </div>
 
@@ -532,6 +532,8 @@ let CURRENT_MONTH_KEY = '';
 let PREV_MONTH_KEY = '';
 let sortCol = '';
 let sortDir = -1;
+let detSortCol = 'skus';
+let detSortDir = -1;
 // Bar chart sort directions: 1 = asc (peor a mejor), -1 = desc (mejor a peor)
 const barSortDirs = { 'chart-store-rot': -1, 'chart-cat-rot': -1 };
 let searchTerm = '';
@@ -1551,6 +1553,19 @@ function renderTablaEstado(rows) {
 }
 
 // ─── TABLE ─────────────────────────────────────────────────────────────────
+function sortDetalle(col) {
+  if (detSortCol === col) { detSortDir *= -1; } else { detSortCol = col; detSortDir = -1; }
+  // Update header indicators
+  ['skus','rot','dias'].forEach(c => {
+    const el = document.getElementById('deth-' + c);
+    if (!el) return;
+    const arrow = detSortCol === c ? (detSortDir === -1 ? ' ↓' : ' ↑') : ' ↕';
+    el.innerHTML = el.innerHTML.replace(/ [↕↓↑]$/, '') + arrow;
+    el.style.color = detSortCol === c ? '#FF6B00' : '#64748b';
+  });
+  renderTable(lastRows);
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('det-tbody');
   const rowCount = document.getElementById('row-count');
@@ -1584,7 +1599,15 @@ function renderTable(rows) {
     s.rows.push(r);
   });
 
-  const catRows = Object.entries(catMap).sort((a, b) => b[1].skus - a[1].skus);
+  // Sort categories by selected column
+  const catRows = Object.entries(catMap).sort((a, b) => {
+    const ag = a[1], bg = b[1];
+    const aRot = ag.inv > 0 ? ag.vta / ag.inv : 0;
+    const bRot = bg.inv > 0 ? bg.vta / bg.inv : 0;
+    if (detSortCol === 'rot')  return detSortDir * (bRot - aRot);
+    if (detSortCol === 'dias') return detSortDir * ((aRot > 0 ? 30/aRot : 999) - (bRot > 0 ? 30/bRot : 999));
+    return detSortDir * (bg.skus - ag.skus); // default: skus
+  });
   let html = '';
 
   catRows.forEach(([cat, cg]) => {
@@ -2059,7 +2082,7 @@ function renderAtaque(rows) {
     const prov = r.supplier || '(Sin proveedor)';
     provMap[prov] = (provMap[prov] || 0) + 1;
   });
-  const provEntries = Object.entries(provMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const provEntries = Object.entries(provMap).sort((a, b) => b[1] - a[1]).slice(0, 30);
   const maxProv = provEntries[0]?.[1] || 1;
   const provChartEl = document.getElementById('atk-chart-prov');
   if (provChartEl) {
