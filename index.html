@@ -502,11 +502,12 @@
             <tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
               <th style="padding:10px 12px;text-align:left;color:#64748b;white-space:nowrap">Categoría / Subcategoría</th>
               <th style="padding:10px 12px;text-align:center;color:#64748b;white-space:nowrap">Responsable</th>
-              <th style="padding:10px 12px;text-align:right;color:#ef4444;white-space:nowrap">SKUs Atacar</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap">SKUs Total</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap">% Crítico</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap">Rot. Prom</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap">Días Prom</th>
+              <th style="padding:10px 12px;text-align:right;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-skusAtacar" onclick="sortAtaque('skusAtacar')">SKUs Atacar ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-skusTotal" onclick="sortAtaque('skusTotal')">SKUs Total ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-pctCrit" onclick="sortAtaque('pctCrit')">% Crítico ↕</th>
+              <th style="padding:10px 12px;text-align:right;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-valInv" onclick="sortAtaque('valInv')">Val. Inv ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-rot" onclick="sortAtaque('rot')">Rot. Prom ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;white-space:nowrap;cursor:pointer;user-select:none" id="atkh-dias" onclick="sortAtaque('dias')">Días Prom ↕</th>
               <th style="padding:10px 12px;text-align:center;color:#64748b;white-space:nowrap">Tendencia</th>
               <th style="padding:10px 12px;text-align:left;color:#64748b;white-space:nowrap">Criticidad</th>
             </tr>
@@ -534,6 +535,8 @@ let sortCol = '';
 let sortDir = -1;
 let detSortCol = 'skus';
 let detSortDir = -1;
+let atkSortCol = 'skusAtacar';
+let atkSortDir = -1;
 // Bar chart sort directions: 1 = asc (peor a mejor), -1 = desc (mejor a peor)
 const barSortDirs = { 'chart-store-rot': -1, 'chart-cat-rot': -1 };
 let searchTerm = '';
@@ -1554,6 +1557,19 @@ function renderTablaEstado(rows) {
 }
 
 // ─── TABLE ─────────────────────────────────────────────────────────────────
+function sortAtaque(col) {
+  if (atkSortCol === col) { atkSortDir *= -1; } else { atkSortCol = col; atkSortDir = -1; }
+  const cols = ['skusAtacar','skusTotal','pctCrit','valInv','rot','dias'];
+  cols.forEach(c => {
+    const el = document.getElementById('atkh-' + c);
+    if (!el) return;
+    const isActive = atkSortCol === c;
+    el.innerHTML = el.innerHTML.replace(/ [↕↓↑]$/, '') + (isActive ? (atkSortDir === -1 ? ' ↓' : ' ↑') : ' ↕');
+    el.style.color = isActive ? '#FF6B00' : (c === 'skusAtacar' ? '#ef4444' : c === 'valInv' ? '#f59e0b' : '#64748b');
+  });
+  if (lastRows.length) renderAtaque(lastRows);
+}
+
 function sortDetalle(col) {
   if (detSortCol === col) { detSortDir *= -1; } else { detSortCol = col; detSortDir = -1; }
   // Update header indicators
@@ -2031,26 +2047,39 @@ function renderAtaque(rows) {
   base.forEach(r => {
     const cat = r.category || '(Sin categoría)';
     const sub = r.sub_category || '(Sin subcategoría)';
-    if (!catMap[cat]) catMap[cat] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, mej:0, dec:0, est:0, subs:{} };
+    if (!catMap[cat]) catMap[cat] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, valInv:0, mej:0, dec:0, est:0, subs:{} };
     const c = catMap[cat];
     c.skusTotal++;
     if (r.tier === 'crit') c.skusAtacar++;
     c.vta += r.vta_mes || 0;
     c.inv += r.inv_prom || 0;
+    c.valInv += r.val_inv || 0;
     if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
-    if (!c.subs[sub]) c.subs[sub] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, mej:0, dec:0, est:0 };
+    if (!c.subs[sub]) c.subs[sub] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, valInv:0, mej:0, dec:0, est:0 };
     const s = c.subs[sub];
     s.skusTotal++;
     if (r.tier === 'crit') s.skusAtacar++;
     s.vta += r.vta_mes || 0;
     s.inv += r.inv_prom || 0;
+    s.valInv += r.val_inv || 0;
     if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
   });
 
   const catRows = Object.entries(catMap)
     .filter(([, g]) => g.skusAtacar > 0)
-    .map(([cat, g]) => ({ cat, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0 }))
-    .sort((a, b) => b.skusAtacar - a.skusAtacar);
+    .map(([cat, g]) => ({ cat, ...g, rot: g.inv > 0 ? g.vta / g.inv : 0, pctCrit: g.skusTotal > 0 ? g.skusAtacar / g.skusTotal * 100 : 0, valInv: g.valInv || 0 }))
+    .sort((a, b) => {
+      if (atkSortCol === 'skusAtacar') return atkSortDir * (b.skusAtacar - a.skusAtacar);
+      if (atkSortCol === 'skusTotal')  return atkSortDir * (b.skusTotal  - a.skusTotal);
+      if (atkSortCol === 'pctCrit')    return atkSortDir * (b.pctCrit    - a.pctCrit);
+      if (atkSortCol === 'valInv')     return atkSortDir * (b.valInv     - a.valInv);
+      if (atkSortCol === 'rot')        return atkSortDir * (b.rot        - a.rot);
+      if (atkSortCol === 'dias') {
+        const ad = a.rot > 0 ? 30/a.rot : 999, bd = b.rot > 0 ? 30/b.rot : 999;
+        return atkSortDir * (bd - ad);
+      }
+      return atkSortDir * (b.skusAtacar - a.skusAtacar);
+    });
 
   if (atkCnt) atkCnt.textContent = catRows.length;
 
@@ -2180,6 +2209,7 @@ function renderAtaque(rows) {
         '<td style="padding:7px 12px;text-align:right;color:#ef4444;font-weight:700">' + s.skusAtacar + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:#64748b">' + s.skusTotal + '</td>' +
         '<td style="padding:7px 12px">' + critBar(s.pctCrit) + '</td>' +
+        '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600;font-size:12px">' + (s.valInv > 0 ? '$' + s.valInv.toLocaleString('es-CO',{maximumFractionDigits:0}) : '—') + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:' + sc + ';font-weight:700">' + (sr > 0 ? sr.toFixed(2) : '—') + '</td>' +
         '<td style="padding:7px 12px;text-align:right;color:#64748b">' + sd + '</td>' +
         '<td style="padding:7px 12px;text-align:center;font-size:12px">' + trendHtml(s.mej, s.dec, s.est) + '</td>' +
@@ -2213,6 +2243,7 @@ function renderAtaque(rows) {
         '<td style="padding:11px 12px;text-align:right;color:#ef4444;font-weight:800;font-size:15px">' + skusAtacar + '</td>' +
         '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + skusTotal + '</td>' +
         '<td style="padding:11px 12px">' + critBar(pctCrit) + '</td>' +
+        '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:600;font-size:13px">' + (valInv > 0 ? '$' + valInv.toLocaleString('es-CO',{maximumFractionDigits:0}) : '—') + '</td>' +
         '<td style="padding:11px 12px;text-align:right;color:' + rotColor + ';font-weight:700;font-size:15px">' + (rot > 0 ? rot.toFixed(2) : '—') + '</td>' +
         '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + dias + '</td>' +
         '<td style="padding:11px 12px;text-align:center">' + trendHtml(mej, dec, est) + '</td>' +
@@ -2225,6 +2256,7 @@ function renderAtaque(rows) {
             '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Atacar</th>' +
             '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Total</th>' +
             '<th style="padding:6px 12px;color:#475569;font-size:10px;text-transform:uppercase">% Crítico</th>' +
+            '<th style="padding:6px 12px;text-align:right;color:#f59e0b;font-size:10px;text-transform:uppercase">Val. Inv</th>' +
             '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Rot.</th>' +
             '<th style="padding:6px 12px;text-align:right;color:#475569;font-size:10px;text-transform:uppercase">Días</th>' +
             '<th style="padding:6px 12px;text-align:center;color:#475569;font-size:10px;text-transform:uppercase">Tendencia</th>' +
