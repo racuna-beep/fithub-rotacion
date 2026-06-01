@@ -631,6 +631,7 @@ function normalizeRow(raw, months) {
   r.obs = _obsMap[_obsRaw.toLowerCase()] || _obsRaw;
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
   r.inv_actual = raw['Inventario Actual'] != null ? raw['Inventario Actual'] : null;
+  r.val_inv = raw['Valorizado Inventario Actual (Costo Sin IVA)'] != null ? Number(raw['Valorizado Inventario Actual (Costo Sin IVA)']) : null;
 
   // Map rotation months
   months.forEach(m => {
@@ -1640,6 +1641,7 @@ function renderTable(rows) {
           const storeColor = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.Store] || '#64748b';
           const tierC = tierColor(r.tier);
           const invAct = r.inv_actual != null ? Number(r.inv_actual).toLocaleString('es-CO', {maximumFractionDigits:0}) : '—';
+          const valInv = r.val_inv != null ? '$' + Number(r.val_inv).toLocaleString('es-CO', {maximumFractionDigits:0}) : '—';
           return '<tr style="background:#070c14">' +
             '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px">' +
               '<span style="color:#334155;margin-right:5px">⤷</span>' + escapeHtml(r.sku || '') +
@@ -1648,6 +1650,7 @@ function renderTable(rows) {
             '</td>' +
             '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">' + escapeHtml(r.supplier || '') + '</td>' +
             '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:10px">' + invAct + '</td>' +
+            '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">' + valInv + '</td>' +
             '<td style="padding:5px 12px;text-align:right;color:' + rrC + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
             '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
             '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
@@ -1674,6 +1677,7 @@ function renderTable(rows) {
               '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>' +
               '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
               '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>' +
+              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>' +
               '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
               '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
               '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
@@ -2002,7 +2006,7 @@ function renderAtaque(rows) {
 
   // ── Summary KPIs ───────────────────────────────────────────────────────────
   const totalVtaAtacar = atacar.reduce((a, r) => a + (r.vta_mes || 0), 0);
-  const totalInvAtacar = atacar.reduce((a, r) => a + (r.inv_prom || 0), 0);
+  const totalInvAtacar = atacar.reduce((a, r) => a + (r.val_inv != null ? r.val_inv : (r.inv_prom || 0)), 0);
   const rotAtacar = totalInvAtacar > 0 ? totalVtaAtacar / totalInvAtacar : 0;
   const catsAfectadas = new Set(atacar.map(r => r.category)).size;
   const mejAtacar = atacar.filter(r => r.trend === 'mejorando').length;
@@ -2158,6 +2162,7 @@ function renderAtaque(rows) {
           '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.supplier || '') + '</td>' +
           '<td style="padding:5px 12px;color:#64748b;font-size:11px">' + escapeHtml(r.brand || '') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">' + (r.inv_actual != null ? Number(r.inv_actual).toLocaleString('es-CO',{maximumFractionDigits:0}) : '—') + '</td>' +
+          '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">' + (r.val_inv != null ? '$' + Number(r.val_inv).toLocaleString('es-CO',{maximumFractionDigits:0}) : '—') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:' + rc + ';font-weight:700;font-size:12px">' + (rr > 0 ? rr.toFixed(2) : '—') + '</td>' +
           '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">' + rd + '</td>' +
           '<td style="padding:5px 12px;text-align:center">' + tIcon + '</td>' +
@@ -2188,6 +2193,7 @@ function renderAtaque(rows) {
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
               '<th style="padding:5px 12px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">Marca</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>' +
+              '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Rot.</th>' +
               '<th style="padding:5px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>' +
               '<th style="padding:5px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Tend.</th>' +
