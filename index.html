@@ -17,21 +17,72 @@
   .container { max-width: 1600px; margin: 0 auto; }
 
   /* ── LOADING ── */
-  #loading-screen { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 20px; background: var(--bg); }
-  #loading-screen::before { content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 50% 60%, rgba(249,115,22,0.12) 0%, transparent 70%); }
+  #loading-screen {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    background: #080e17;
+    overflow: hidden;
+  }
+  #loading-screen::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(249,115,22,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 20% 20%, rgba(249,115,22,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(249,115,22,0.05) 0%, transparent 60%);
+  }
+  /* Animated grid lines */
+  #loading-screen::after {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
   #loading-screen > * { position: relative; z-index: 1; }
-  .loader-badge { background: var(--orange); color: #fff; font-size: 11px; font-weight: 700;
-    letter-spacing: 3px; text-transform: uppercase; padding: 5px 16px; border-radius: 3px;
-    box-shadow: 0 4px 20px rgba(249,115,22,0.4); }
-  .loader-logo { font-size: 48px; font-weight: 900; letter-spacing: -3px; color: var(--text); line-height: 1; }
-  .loader-logo span { color: var(--orange); }
-  .loader-subtitle { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: -6px; }
-  .loader-bar { width: 280px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
-  .loader-fill { height: 100%; background: linear-gradient(90deg, var(--orange), #fb923c);
-    width: 0%; transition: width 0.4s; border-radius: 1px; }
-  .loader-text { font-size: 12px; color: var(--muted); }
+  .loader-card {
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px;
+    padding: 48px 60px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(249,115,22,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .loader-badge {
+    background: linear-gradient(135deg, #FF6B00, #fb923c);
+    color: #fff; font-size: 10px; font-weight: 800;
+    letter-spacing: 4px; text-transform: uppercase; padding: 5px 18px;
+    border-radius: 4px; box-shadow: 0 4px 20px rgba(249,115,22,0.5);
+  }
+  .loader-logo {
+    font-size: 56px; font-weight: 900; letter-spacing: -3px;
+    color: #fff; line-height: 1;
+    text-shadow: 0 0 40px rgba(249,115,22,0.3);
+  }
+  .loader-logo span { color: #FF6B00; }
+  .loader-subtitle {
+    font-size: 11px; color: #475569; letter-spacing: 3px;
+    text-transform: uppercase; margin-top: -16px;
+  }
+  .loader-divider { width: 100%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); }
+  .loader-bar {
+    width: 240px; height: 3px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px; overflow: hidden;
+  }
+  .loader-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF6B00, #fb923c, #fcd34d);
+    background-size: 200% 100%;
+    width: 0%; transition: width 0.4s ease;
+    border-radius: 2px;
+    animation: shimmer 1.5s infinite linear;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .loader-text { font-size: 12px; color: #475569; letter-spacing: 0.5px; }
 
   /* ── APP ── */
   #app { display: none; }
@@ -240,6 +291,7 @@
   #tooltip .tt-sub { color: var(--muted); font-size: 11px; }
   [data-tip] { cursor: help; }
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="tooltip"></div>
@@ -247,11 +299,14 @@
 <!-- Loading screen -->
 <div id="tt"></div>
 <div id="loading-screen">
-  <div class="loader-badge">Super Tiendas</div>
-  <div class="loader-logo">fit<span>hub</span></div>
-  <div class="loader-subtitle">Dashboard de Rotación 2026</div>
-  <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
-  <div class="loader-text" id="loader-text">Cargando datos desde Google Sheets…</div>
+  <div class="loader-card">
+    <div class="loader-badge">Super Tiendas</div>
+    <div class="loader-logo">fit<span>hub</span></div>
+    <div class="loader-subtitle">Dashboard de Rotación 2026</div>
+    <div class="loader-divider"></div>
+    <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
+    <div class="loader-text" id="loader-text">Conectando con Google Sheets…</div>
+  </div>
 </div>
 
 <div class="container" id="app" style="display:none">
@@ -413,7 +468,7 @@
       <div class="table-header">
         <h3>Rotación por Proveedor <span id="prov-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:8px;"></span></h3>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-export-prov" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+          <button id="btn-export-prov" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
           <input class="search-box" id="search-prov" type="text" placeholder="Buscar proveedor…" style="min-width:200px;"/>
         </div>
       </div>
@@ -434,7 +489,7 @@
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input class="search-box" id="search2" type="text" placeholder="Buscar producto, SKU, marca…" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px;width:200px"/>
-        <button id="btn-export" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+        <button id="btn-export" style="background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
       </div>
     </div>
     <div class="table-card">
@@ -475,7 +530,7 @@
           <option value="Jorge">Jorge</option>
           <option value="Angie">Angie</option>
         </select>
-        <button id="btn-export-atacar" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar CSV</button>
+        <button id="btn-export-atacar" style="background:#ef4444;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
       </div>
     </div>
 
@@ -2286,24 +2341,53 @@ function toggleAtacarRow(id) {
 function exportAtacarCSV() {
   const rows = lastRows;
   const storeFilter = document.getElementById('atk-store').value;
-  const base = storeFilter ? rows.filter(r => r.Store === storeFilter) : rows;
-  const atacar = base.filter(r => r.tier === 'crit');
+  const atkResp2 = document.getElementById('atk-resp');
+  const respFilter2 = atkResp2 ? atkResp2.value : '';
+  const base = rows
+    .filter(r => !storeFilter || r.Store === storeFilter)
+    .filter(r => !respFilter2 || RESPONSABLES[r.category] === respFilter2);
+  const atacar = base.filter(r => r.tier === 'crit')
+    .sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0));
   if (!atacar.length) return;
 
-  const headers = ['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Rot. Mayo','Días','Tendencia','Tipo de Pago'];
-  const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s; };
-  const lines = [headers.join(',')];
-  atacar.sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0)).forEach(r => {
-    const rot = r[CURRENT_MONTH_KEY];
-    const dias = rot && rot > 0 ? (30 / rot).toFixed(1) : '';
-    lines.push([r.category, r.sub_category, RESPONSABLES[r.category] || '—', r.Store, r.supplier, r.brand, r.sku, r.product,
-      rot != null ? rot.toFixed(2) : '', dias, r.trend, r['Tipo de Pago']].map(esc).join(','));
+  const wsData = [
+    ['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto',
+     'Rot. Mayo','Días','Val. Inv','Inv. Actual','Tendencia','Tipo de Pago']
+  ];
+  atacar.forEach(r => {
+    const rot = r[CURRENT_MONTH_KEY] || 0;
+    wsData.push([
+      r.category || '', r.sub_category || '', RESPONSABLES[r.category] || '—',
+      r.Store || '', r.supplier || '', r.brand || '', r.sku || '', r.product || '',
+      rot > 0 ? parseFloat(rot.toFixed(2)) : '',
+      rot > 0 ? parseFloat((30/rot).toFixed(1)) : '',
+      r.val_inv != null ? r.val_inv : '',
+      r.inv_actual != null ? r.inv_actual : '',
+      r.trend || '', r['Tipo de Pago'] || ''
+    ]);
   });
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url;
-  a.download = 'plan_ataque_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click(); URL.revokeObjectURL(url);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [20,20,12,10,25,20,12,35,10,8,16,12,12,14].map(w => ({wch: w}));
+
+  // Header style (row 0)
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0, c:C})];
+    if (cell) {
+      cell.s = {
+        fill: { fgColor: { rgb: 'FF6B00' } },
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+        alignment: { horizontal: 'center' }
+      };
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Plan de Ataque');
+  XLSX.writeFile(wb, 'plan_ataque_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 
