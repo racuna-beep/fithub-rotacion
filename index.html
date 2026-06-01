@@ -2050,18 +2050,16 @@ function renderAtaque(rows) {
     if (!catMap[cat]) catMap[cat] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, valInv:0, mej:0, dec:0, est:0, subs:{} };
     const c = catMap[cat];
     c.skusTotal++;
-    if (r.tier === 'crit') c.skusAtacar++;
+    if (r.tier === 'crit') { c.skusAtacar++; c.valInv += r.val_inv || 0; }
     c.vta += r.vta_mes || 0;
     c.inv += r.inv_prom || 0;
-    c.valInv += r.val_inv || 0;
     if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
     if (!c.subs[sub]) c.subs[sub] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, valInv:0, mej:0, dec:0, est:0 };
     const s = c.subs[sub];
     s.skusTotal++;
-    if (r.tier === 'crit') s.skusAtacar++;
+    if (r.tier === 'crit') { s.skusAtacar++; s.valInv += r.val_inv || 0; }
     s.vta += r.vta_mes || 0;
     s.inv += r.inv_prom || 0;
-    s.valInv += r.val_inv || 0;
     if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
   });
 
