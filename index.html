@@ -2153,7 +2153,7 @@ function renderAtaque(rows) {
 
   // ── Build rows ─────────────────────────────────────────────────────────────
   let html = '';
-  catRows.forEach(({ cat, skusAtacar, skusTotal, rot, pctCrit, mej, dec, est, subs }) => {
+  catRows.forEach(({ cat, skusAtacar, skusTotal, rot, pctCrit, valInv, mej, dec, est, subs }) => {
     const dias = rot > 0 ? (30 / rot).toFixed(1) : '—';
     const rotColor = rot >= 1.3 ? '#10b981' : rot >= 0.5 ? '#f59e0b' : '#ef4444';
     const rowId = 'cat-' + cat.replace(/[^a-zA-Z0-9]/g, '_');
