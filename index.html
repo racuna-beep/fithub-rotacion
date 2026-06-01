@@ -2352,18 +2352,26 @@ function exportAtacarCSV() {
 
   const wsData = [
     ['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto',
-     'Rot. Mayo','Días','Val. Inv','Inv. Actual','Tendencia','Tipo de Pago']
+     'Inv. Actual','Val. Inv (Costo)','Rot. Mayo','Días','Tendencia','Estado','Obs','Tipo de Pago',
+     'Vta. Mayo','Inv. Prom Mayo','Rot. Enero','Rot. Febrero','Rot. Marzo','Rot. Abril']
   ];
   atacar.forEach(r => {
     const rot = r[CURRENT_MONTH_KEY] || 0;
     wsData.push([
       r.category || '', r.sub_category || '', RESPONSABLES[r.category] || '—',
       r.Store || '', r.supplier || '', r.brand || '', r.sku || '', r.product || '',
+      r.inv_actual != null ? r.inv_actual : '',
+      r.val_inv != null ? r.val_inv : '',
       rot > 0 ? parseFloat(rot.toFixed(2)) : '',
       rot > 0 ? parseFloat((30/rot).toFixed(1)) : '',
-      r.val_inv != null ? r.val_inv : '',
-      r.inv_actual != null ? r.inv_actual : '',
-      r.trend || '', r['Tipo de Pago'] || ''
+      r.trend || '',
+      r.tier === 'ok' ? 'OK' : r.tier === 'warn' ? 'Vigilar' : r.tier === 'crit' ? 'Atacar' : 'Nuevo',
+      r.obs || '', r['Tipo de Pago'] || '',
+      r.vta_mes || '', r.inv_prom || '',
+      r.vta_enero > 0 && r.inv_enero > 0 ? parseFloat((r.vta_enero/r.inv_enero).toFixed(2)) : '',
+      r.vta_febrero > 0 && r.inv_febrero > 0 ? parseFloat((r.vta_febrero/r.inv_febrero).toFixed(2)) : '',
+      r.vta_marzo > 0 && r.inv_marzo > 0 ? parseFloat((r.vta_marzo/r.inv_marzo).toFixed(2)) : '',
+      r.vta_abril > 0 && r.inv_abril > 0 ? parseFloat((r.vta_abril/r.inv_abril).toFixed(2)) : ''
     ]);
   });
 
@@ -2371,7 +2379,7 @@ function exportAtacarCSV() {
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Column widths
-  ws['!cols'] = [20,20,12,10,25,20,12,35,10,8,16,12,12,14].map(w => ({wch: w}));
+  ws['!cols'] = [20,20,12,10,25,18,12,35,12,16,10,8,12,10,12,14,14,14,10,10,10,10].map(w => ({wch: w}));
 
   // Header style (row 0)
   const range = XLSX.utils.decode_range(ws['!ref']);
