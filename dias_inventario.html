@@ -1887,7 +1887,7 @@ function renderPlan(rows) {
           '</tr>';
       }).join('');
 
-      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow('' + subId + '')">' +
+      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">' +
           '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px">' +
             '<span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span>' +
             '<span style="color:#475569;margin-right:6px">└</span>' + escH(sub) +
@@ -1915,7 +1915,7 @@ function renderPlan(rows) {
         '</td></tr>';
     }).join('');
 
-    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow('' + rowId + '')">' +
+    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">' +
         '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px">' +
           '<span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>' + escH(cat) +
           (gest > 0 ? ' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gest+' venc.</span>' : '') +
