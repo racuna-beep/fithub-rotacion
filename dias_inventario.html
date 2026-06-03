@@ -754,7 +754,7 @@ function normalise(raw) {
     category:  str(g('categories') || g('category') || g('Categoría') || g('Categoria')),
     sub_category: str(g('Sub_Category') || g('sub_category') || g('SubCategoria') || g('Subcategoría') || ''),
     tipo_pago:      str(g('Tipo de Pago') || g('tipo_pago') || g('TipoPago') || g('tipo de pago') || ''),
-    inv_valorizado: num(g('Inventario Actual Valorizado') || g('Inv Valorizado') || g('inv_valorizado')),
+    inv_valorizado: num(g('Total Inv a Costo') || g('Inventario Actual Valorizado') || g('Inv Valorizado') || g('inv_valorizado')),
     inv_actual: inv,
     dias_inv:  dias,
     vida_util: vidaUtil,
