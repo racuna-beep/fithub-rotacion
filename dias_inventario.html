@@ -406,20 +406,17 @@
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
     <div class="alert-cols">
-      
-      
       <div class="alert-col quiebre">
         <div class="alert-col-hdr">
-          <h4>🚨 Quiebre</h4>
+          <h4>🚨 Quiebre (0–3d)</h4>
           <span class="badge-cnt" id="cnt-q" style="background:rgba(239,68,68,0.15);color:#f87171">0</span>
         </div>
-        <div class="alert-col-desc">Tiene ventas pero 0 días de inventario. Acción inmediata.</div>
+        <div class="alert-col-desc">0 a 3 días de inventario. Acción inmediata.</div>
         <div class="alert-col-body" id="body-list-quiebre"><div id="list-quiebre"></div></div>
       </div>
-
       <div class="alert-col" style="border-top:3px solid #8b5cf6">
         <div class="alert-col-hdr">
-          <h4 style="color:#8b5cf6">🔵 Sobrestock (≥60 días)</h4>
+          <h4 style="color:#8b5cf6">🔵 Sobrestock (≥60d)</h4>
           <span class="badge-cnt" id="cnt-ss" style="background:rgba(139,92,246,0.15);color:#a78bfa">0</span>
         </div>
         <div class="alert-col-desc">Exceso de inventario. Evaluar devolución o promoción.</div>
@@ -427,11 +424,27 @@
       </div>
       <div class="alert-col exceso" style="border-top:3px solid #f43f5e">
         <div class="alert-col-hdr">
-          <h4 style="color:#f43f5e">⚠️ Gestionar (&gt; Vida Útil)</h4>
+          <h4 style="color:#f43f5e">⚠️ Gestionar (> Vida Útil)</h4>
           <span class="badge-cnt" id="cnt-e" style="background:rgba(244,63,94,0.15);color:#fb7185">0</span>
         </div>
         <div class="alert-col-desc">Inventario supera vida útil. Riesgo de vencimiento.</div>
         <div class="alert-col-body" id="body-list-gestionar"><div id="list-gestionar"></div></div>
+      </div>
+      <div class="alert-col" style="border-top:3px solid #60a5fa">
+        <div class="alert-col-hdr">
+          <h4 style="color:#60a5fa">⏸️ Sin Movimiento</h4>
+          <span class="badge-cnt" id="cnt-sm" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
+        </div>
+        <div class="alert-col-desc">Tiene inventario pero sin ventas — revisar o discontinuar.</div>
+        <div class="alert-col-body" id="body-list-sin_movimiento"><div id="list-sin_movimiento"></div></div>
+      </div>
+      <div class="alert-col" style="border-top:3px solid #94a3b8">
+        <div class="alert-col-hdr">
+          <h4 style="color:#94a3b8">✨ Nuevos</h4>
+          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#94a3b8">0</span>
+        </div>
+        <div class="alert-col-desc">Sin inventario y sin ventas — producto nuevo pendiente de entrada.</div>
+        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
       </div>
     </div>
   </div>
@@ -588,6 +601,7 @@ function detectVentaColumns(rawRows) {
 }
 
 let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '', searchMarcaTerm = '';
+let detSortCol2 = 'skus', detSortDir2 = -1;
 let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
 function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
 let sortCol = 'dias_inv', sortDir = -1;
@@ -1411,6 +1425,16 @@ function renderProveedores(rows) {
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
+function sortDet(col) {
+  if(detSortCol2===col) detSortDir2*=-1; else{detSortCol2=col;detSortDir2=-1;}
+  ['skus','inv_val','dias','inv_actual'].forEach(c=>{
+    const el=document.getElementById('deth2-'+c);if(!el)return;
+    el.innerHTML=el.innerHTML.replace(/ [↕↓↑]$/,'')+(detSortCol2===c?(detSortDir2===-1?' ↓':' ↑'):' ↕');
+    el.style.color=detSortCol2===c?'#FF6B00':(c==='inv_val'?'#f59e0b':'#64748b');
+  });
+  if(lastRows.length) renderTable(lastRows);
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('det-hier-tbody');
   const rowCount = document.getElementById('row-count');
