@@ -667,7 +667,7 @@ function normalise(raw) {
     const invNum = inv != null ? inv : 0;
     estado = invNum > 0 ? 'sin_movimiento' : 'nuevo';
   } else if (dias != null) {
-    if (dias === 0 || (r.inv_actual === 0 && r.prom_vta_ytd > 0)) estado = 'sin_stock';
+    if (dias === 0 || (inv != null && inv === 0)) estado = 'sin_stock';
     else if (dias <= 3)                         estado = 'quiebre';
     else if (vidaUtil != null && dias > vidaUtil) estado = 'gestionar';
     else if (dias >= 60)                        estado = 'sobrestock';
