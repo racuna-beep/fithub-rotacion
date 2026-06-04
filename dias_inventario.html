@@ -7,10 +7,11 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f5f3ef; --surface: #ffffff; --surface2: #f0ede8;
-    --border: #e2ddd6; --text: #1e293b; --muted: #64748b;
-    --orange: #f97316; --green: #10b981; --yellow: #f59e0b;
-    --red: #ef4444; --blue: #3b82f6; --purple: #8b5cf6;
+    --bg: #f7f5f2; --surface: #ffffff; --surface2: #f0ede8;
+    --border: #e8e4de; --text: #1e293b; --muted: #6b7280;
+    --orange: #ea6c0a; --green: #059669; --yellow: #d97706;
+    --red: #dc2626; --blue: #2563eb; --purple: #7c3aed;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   }
   body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
@@ -1513,14 +1514,14 @@ function renderTable(rows) {
         const sc2 = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         const ec = estadoColor(r.estado); const el = estadoLabel(r.estado);
         return '<tr style="background:#f8f6f2">'+
-          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
+          '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
           ' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span>'+
           ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+ec+'22;color:'+ec+'">'+el+'</span></td>'+
           '</tr>';
       }).join('');
@@ -1534,19 +1535,19 @@ function renderTable(rows) {
         '<td></td></tr>'+
         '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0">'+
           '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#ece9e3">'+
-            '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
-            '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
-            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
-            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
-            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
-            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
-            '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
+            '<th style="padding:4px 12px 4px 56px;text-align:left;color:#9ca3af;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
+            '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Proveedor</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Días</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
+            '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Estado</th>'+
           '</tr></thead><tbody>'+skuHtml+'</tbody></table>'+
         '</td></tr>';
     }).join('');
 
     html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#ffffff" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
-      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+'</td>'+
+      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#6b7280;font-size:11px">▶</span>'+escH(cat)+'</td>'+
       '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#64748b;font-weight:700;font-size:15px">'+skus+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
@@ -1802,12 +1803,12 @@ function renderPlan(rows){
       const skuHtml=sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r=>{
         const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         return'<tr style="background:#f8f6f2">'+
-          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
+          '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center">'+estBadge(r.estado)+'</td></tr>';
       }).join('');
       return'<tr style="background:#f4f1ec;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
@@ -1818,17 +1819,17 @@ function renderPlan(rows){
         '<td style="padding:7px 12px;text-align:right;color:#8b5cf6;font-weight:700">'+(sDias>0?sDias.toFixed(0)+'d':'—')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#64748b">'+(sg.inv_actual>0?fmt(sg.inv_actual):'—')+'</td><td></td></tr>'+
         '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#ece9e3">'+
-          '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
-          '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
-          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
-          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
-          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
-          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
-          '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
+          '<th style="padding:4px 12px 4px 56px;text-align:left;color:#9ca3af;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Proveedor</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Días</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Estado</th>'+
         '</tr></thead><tbody>'+skuHtml+'</tbody></table></td></tr>';
     }).join('');
     html+='<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#ffffff" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
-      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+(gstC>0?' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gstC+' venc.</span>':'')+'</td>'+
+      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#6b7280;font-size:11px">▶</span>'+escH(cat)+(gstC>0?' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gstC+' venc.</span>':'')+'</td>'+
       '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#a78bfa;font-weight:800;font-size:15px">'+skus+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
