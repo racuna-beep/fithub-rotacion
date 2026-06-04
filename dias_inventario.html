@@ -1886,10 +1886,6 @@ document.getElementById('f-search-prov').addEventListener('input',e=>{
   searchProvTerm=e.target.value; renderProveedores(lastRows);
 });
 
-// ── PAGINATION ────────────────────────────────────────────────────────────────
-document.getElementById('pg-prev').addEventListener('click',()=>{if(currentPage>1){currentPage--;renderTable(lastRows);}});
-document.getElementById('pg-next').addEventListener('click',()=>{currentPage++;renderTable(lastRows);});
-document.getElementById('pg-size').addEventListener('change',e=>{pageSize=parseInt(e.target.value);currentPage=1;renderTable(lastRows);});
 
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
 document.getElementById('btn-exp-det').addEventListener('click',()=>exportExcel(lastRows,'dias_inventario'));
