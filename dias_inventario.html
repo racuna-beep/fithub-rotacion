@@ -379,33 +379,18 @@
   <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
 
-    <!-- Fila 1: Donut + Días por tienda + Top proveedores días -->
-    <div class="grid-3" style="margin-bottom:16px">
+    <!-- Fila 1: Donut + Tiendas por días + Categorías -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
         <div class="card-header"><h3>Distribución por estado</h3></div>
         <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      
-      
-    </div>
-
-    <!-- Fila 2: Top SKUs en riesgo + Categorías -->
-    <div class="grid-2" style="margin-bottom:16px">
       <div class="card">
         <div class="card-header">
-          <h3>🔥 Top SKUs en riesgo (Quiebre + Crítico)</h3>
-          <span id="top-risk-count" style="font-size:11px;color:var(--muted)"></span>
+          <h3>Tiendas por días inv.</h3>
+          <button class="sort-toggle" id="sort-store" data-dir="-1">↕ Mejor → Peor</button>
         </div>
-        <div class="table-wrap" style="max-height:420px;overflow-y:auto">
-          <table>
-            <thead><tr>
-              <th>Producto</th><th>Tienda</th><th>Proveedor</th>
-              <th class="num" data-tip="Días de inventario">Días Inv.</th>
-              <th>Estado</th>
-            </tr></thead>
-            <tbody id="top-risk-tbody"></tbody>
-          </table>
-        </div>
+        <svg class="chart" id="chart-store" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
       <div class="card">
         <div class="card-header">
@@ -416,27 +401,21 @@
       </div>
     </div>
 
+    <!-- Fila 2: Sobrestock -->
+    <div style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header"><h3>🔵 Sobrestock por categoría (≥60d)</h3></div>
+        <div id="chart-sobre-cat" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;max-height:240px;overflow-y:auto"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
     <div class="alert-cols">
-      <div class="alert-col" style="border-top:3px solid #94a3b8">
-        <div class="alert-col-hdr">
-          <h4 style="color:#94a3b8">🆕 Nuevo</h4>
-          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#94a3b8">0</span>
-        </div>
-        <div class="alert-col-desc">Sin inventario y sin ventas — producto nuevo pendiente de entrada.</div>
-        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
-      </div>
-      <div class="alert-col" style="border-top:3px solid #60a5fa">
-        <div class="alert-col-hdr">
-          <h4 style="color:#60a5fa">😴 Sin Movimiento</h4>
-          <span class="badge-cnt" id="cnt-sm" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
-        </div>
-        <div class="alert-col-desc">Tiene inventario pero sin ventas. Revisar rotación o discontinuar.</div>
-        <div class="alert-col-body" id="body-list-sin_movimiento"><div id="list-sin_movimiento"></div></div>
-      </div>
+      
+      
       <div class="alert-col quiebre">
         <div class="alert-col-hdr">
           <h4>🚨 Quiebre</h4>
@@ -692,7 +671,7 @@ function normalise(raw) {
     if (dias <= 3)                              estado = 'quiebre';
     else if (vidaUtil != null && dias > vidaUtil) estado = 'gestionar';
     else if (dias >= 60)                        estado = 'sobrestock';
-    else if (dias >= 16)                        estado = 'bien';
+    else if (dias >= 4)                         estado = 'bien';
     else                                        estado = 'normal';
   }
 
@@ -916,8 +895,8 @@ function estadoBadge(e) {
     nuevo:          ['badge-blue',   '🆕 Nuevo'],
     sin_movimiento: ['badge-blue',   '😴 Sin Mov.'],
     quiebre:        ['badge-red',    '🚨 Quiebre'],
-    critico:        ['badge-red',    '🔴 Crítico'],
-    revisar:        ['badge-yellow', '🟡 Revisar'],
+    critico:        ['badge-red',    '🚨 Quiebre'],
+    revisar:        ['badge-green',  '🟢 Bien'],
     bien:           ['badge-green',  '🟢 Bien'],
     sobrestock:     ['badge-purple', '🔵 Sobrestock'],
     gestionar:      ['badge-orange', '⚠️ Gestionar'],
@@ -965,8 +944,7 @@ function renderExecSummary(rows) {
     { key:'nuevo',          label:'Nuevo',     color:'#60a5fa' },
     { key:'sin_movimiento', label:'Sin Mov.',   color:'#94a3b8' },
     { key:'quiebre',        label:'Quiebre',    color:'#ef4444' },
-    { key:'critico',        label:'Critico',    color:'#f97316' },
-    { key:'revisar',        label:'Revisar',    color:'#f59e0b' },
+
     { key:'bien',           label:'Bien',       color:'#10b981' },
     { key:'sobrestock',     label:'Sobrestock', color:'#8b5cf6' },
     { key:'gestionar',      label:'Gestionar',  color:'#f43f5e' },
@@ -1027,7 +1005,7 @@ function renderKPIs(rows) {
   const nuevo       = rows.filter(r=>r.estado==='nuevo').length;
   const sinMov      = rows.filter(r=>r.estado==='sin_movimiento').length;
   const quiebre     = rows.filter(r=>r.estado==='quiebre').length;
-  const revisar     = rows.filter(r=>r.estado==='revisar').length;
+  const revisar     = 0; // merged into bien (4-59d)
   const sobrestock  = rows.filter(r=>r.estado==='sobrestock').length;
   const gestionar   = rows.filter(r=>r.estado==='gestionar').length;
   const sobrestockTotal = sobrestock + gestionar;
@@ -1045,7 +1023,7 @@ function renderKPIs(rows) {
     { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                     cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada en el período.' },
     // Fila 2 — Riesgo de quiebre
     { label:'🚨 Quiebre / Crítico',     val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                   cls:'red',    tip:'SKUs sin stock o con menos de 7 días de cobertura.' },
-    { label:'🟡 Revisar',               val: fmt(revisar),             sub:`8 a 15 días cobertura`,                                                        cls:'yellow', tip:'SKUs con cobertura baja — programar reposición pronto.' },
+
     { label:'📦 Inv. Actual Total',     val: fmt(invTotal),            sub:`unidades en stock`,                                                            cls:'green',  tip:'Suma de unidades en inventario para los SKUs filtrados.' },
     { label:'💵 Inv. Valorizado',       val: fmtM(invVal),             sub:`capital en inventario`,                                                        cls:'orange', tip:'Valor total del inventario a precio de costo o venta.' },
     { label:'📅 Días Inv. Prom.',       val: fmtD(diasProm),           sub:`días promedio cobertura`,                                                      cls:'blue',   tip:'Promedio de días de inventario de todos los SKUs activos filtrados.' },
@@ -1067,7 +1045,7 @@ function renderKPIs(rows) {
   const luBar = document.getElementById('last-update-bar');
   if (luEl) luEl.textContent = new Date().toLocaleString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
   if (luBar) luBar.style.display = 'flex';
-  document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','critico','revisar','sin_movimiento'].includes(r.estado)).length;
+  document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','sin_movimiento'].includes(r.estado)).length;
   document.getElementById('cnt-detalle').textContent = fmt(rows.length);
 }
 
@@ -1082,7 +1060,7 @@ function renderBars(svgId, data, color, W, H) {
   const max = Math.max(...data.map(d=>d.value), 0.01);
   const bw = Math.max(8, Math.floor(cW/data.length) - 4);
   const gap = (cW - bw*data.length) / (data.length+1);
-  const COLOR_FN = v => v <= 0 ? '#ef4444' : v <= 7 ? '#ef4444' : v <= 15 ? '#f59e0b' : '#10b981';
+  const COLOR_FN = v => v <= 3 ? '#ef4444' : v >= 60 ? '#8b5cf6' : '#10b981';
 
   // Y axis
   [0, max*0.25, max*0.5, max*0.75, max].forEach(v => {
@@ -1120,14 +1098,13 @@ function renderBars(svgId, data, color, W, H) {
 // ── RENDER DONUT ──────────────────────────────────────────────────────────────
 function renderDonut(rows) {
   const svg = document.getElementById('chart-donut'); svg.innerHTML = '';
-  const counts = { nuevo:0, sin_movimiento:0, quiebre:0, critico:0, revisar:0, bien:0, sobrestock:0, gestionar:0 };
+  const counts = { nuevo:0, sin_movimiento:0, quiebre:0, bien:0, sobrestock:0, gestionar:0 };
   rows.forEach(r => { if(counts[r.estado]!=null) counts[r.estado]++; });
   const total = rows.length || 1;
   const items = [
     { label:'Nuevo',      val:counts.nuevo,      color:'#60a5fa' },
     { label:'Quiebre',    val:counts.quiebre,    color:'#ef4444' },
-    { label:'Crítico',    val:counts.critico,    color:'#f97316' },
-    { label:'Revisar',    val:counts.revisar,    color:'#f59e0b' },
+
     { label:'Bien',       val:counts.bien,       color:'#10b981' },
     { label:'Sobrestock', val:counts.sobrestock, color:'#8b5cf6' },
     { label:'Gestionar',  val:counts.gestionar,  color:'#f43f5e' },
@@ -1260,10 +1237,10 @@ function toggleAlertCol(btn) {
 }
 
 function expandAlert(btn, id, rows) {
-  const map = { 'list-nuevo':'nuevo','list-sin_movimiento':'sin_movimiento','list-quiebre':'quiebre','list-critico':'critico','list-revisar':'revisar','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
+  const map = { 'list-nuevo':'nuevo','list-sin_movimiento':'sin_movimiento','list-quiebre':'quiebre','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
   const estado = map[id];
   const full = rows.filter(r=>r.estado===estado).sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const colorMap = { nuevo:'#94a3b8', sin_movimiento:'#60a5fa', quiebre:'var(--red)', critico:'#f97316', revisar:'var(--yellow)', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
+  const colorMap = { nuevo:'#94a3b8', sin_movimiento:'#60a5fa', quiebre:'#ef4444', critico:'#ef4444', revisar:'#10b981', bien:'#10b981', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
   renderAlertCards(id, full, colorMap[estado], r=>`${fmtD(r.dias_inv)} días`,
     r=>r.vida_util!=null?`Vida: ${fmtD(r.vida_util)} días`:`Inv: ${fmt(r.inv_actual)}`, null, 999);
   btn.remove();
@@ -1271,13 +1248,13 @@ function expandAlert(btn, id, rows) {
 
 function renderAlerts(rows) {
   const quiebre = rows.filter(r=>r.estado==='quiebre').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const critico  = rows.filter(r=>r.estado==='critico').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
+
   const bajo     = rows.filter(r=>r.estado==='bajo').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
   const exceso   = rows.filter(r=>r.estado==='exceso').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
 
   const quiebre_l   = rows.filter(r=>r.estado==='quiebre').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const critico_l   = rows.filter(r=>r.estado==='critico').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const revisar_l   = rows.filter(r=>r.estado==='revisar').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
+
+
   const sobrestock_l= rows.filter(r=>r.estado==='sobrestock').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   const gestionar_l = rows.filter(r=>r.estado==='gestionar').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   const nuevo_l2      = rows.filter(r=>r.estado==='nuevo').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
@@ -1286,8 +1263,8 @@ function renderAlerts(rows) {
   renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`,  r=>'Sin ventas ni stock',         'cnt-nv');
   renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>fmtM(r.inv_valorizado||0),    subInv,                           'cnt-sm');
   renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-q');
-  renderAlertCards('list-critico',    critico_l,    '#f97316',       r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-c');
-  renderAlertCards('list-revisar',    revisar_l,    'var(--yellow)', r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-b');
+
+
   renderAlertCards('list-sobrestock', sobrestock_l, '#8b5cf6',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-ss');
   renderAlertCards('list-gestionar',  gestionar_l,  '#f43f5e',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-e');
 }
@@ -1301,8 +1278,7 @@ function renderStackedByStore(rows) {
   const cW=W-pl-pr, cH=H-pt-pb;
   const estadosCfg = [
     { key:'quiebre',        color:'#ef4444', label:'Quiebre' },
-    { key:'critico',        color:'#f97316', label:'Crítico' },
-    { key:'revisar',        color:'#f59e0b', label:'Revisar' },
+
     { key:'bien',           color:'#10b981', label:'Bien' },
     { key:'sobrestock',     color:'#8b5cf6', label:'Sobrestock' },
     { key:'gestionar',      color:'#f43f5e', label:'Gestionar' },
@@ -1363,11 +1339,12 @@ function renderStackedByStore(rows) {
 
 // ── RENDER TOP SKUs EN RIESGO ─────────────────────────────────────────────────
 function renderTopRisk(rows) {
+  if(!document.getElementById('top-risk-tbody')) return;
   const tbody = document.getElementById('top-risk-tbody');
   const countEl = document.getElementById('top-risk-count');
   if (!tbody) return;
   const risk = rows
-    .filter(r=>r.estado==='quiebre'||r.estado==='critico')
+    .filter(r=>r.estado==='quiebre')
     .sort((a,b)=>(a.dias_inv??-1)-(b.dias_inv??-1));
   if (countEl) countEl.textContent = risk.length ? `${risk.length} SKUs` : '';
   if (!risk.length) { tbody.innerHTML='<tr><td colspan="5" class="empty">✅ Sin SKUs en quiebre o crítico</td></tr>'; return; }
@@ -1391,7 +1368,7 @@ function renderProveedores(rows) {
     map[k].skus++;
     map[k].inv     += r.inv_actual    || 0;
     map[k].inv_val += r.inv_valorizado|| 0;
-    const validEstados = ['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    const validEstados = ['bien','sobrestock','gestionar','quiebre'];
     if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
       map[k].diasSum += r.dias_inv; map[k].diasN++;
     }
@@ -1427,7 +1404,7 @@ function renderProveedores(rows) {
     });
   });
 
-  const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':v>=60?'#8b5cf6':'#10b981';
+  const diasColor = v => v==null?'#64748b':v<=3?'#ef4444':v>=60?'#8b5cf6':'#10b981';
   const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
   const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
 
@@ -1457,45 +1434,105 @@ function renderProveedores(rows) {
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
 function renderTable(rows) {
-  const term2 = search2Term.toLowerCase();
-  let filtered = term2 ? rows.filter(r=>(r.product+' '+r.sku+' '+r.brand+' '+r.supplier).toLowerCase().includes(term2)) : rows;
-  filtered = [...filtered].sort((a,b)=>{
-    const va=a[sortCol], vb=b[sortCol];
-    if (va==null) return 1; if (vb==null) return -1;
-    return (typeof va==='number'?va-vb:String(va).localeCompare(String(vb)))*sortDir;
+  const tbody = document.getElementById('det-hier-tbody');
+  const rowCount = document.getElementById('row-count');
+  if (!tbody) return;
+
+  const term = (document.getElementById('f-search2')?.value || '').toLowerCase();
+  const filtered = term ? rows.filter(r =>
+    (r.product||'').toLowerCase().includes(term) ||
+    (r.sku||'').toLowerCase().includes(term) ||
+    (r.brand||'').toLowerCase().includes(term) ||
+    (r.category||'').toLowerCase().includes(term)
+  ) : rows;
+
+  if (rowCount) rowCount.textContent = filtered.length.toLocaleString('es-CO') + ' SKUs';
+  const cntDet = document.getElementById('cnt-detalle'); if(cntDet) cntDet.textContent = filtered.length.toLocaleString('es-CO');
+
+  const diasColor = v => v==null?'#64748b':v<=3?'#ef4444':v>=60?'#8b5cf6':'#10b981';
+  const estadoColor = s => ({'quiebre':'#ef4444','critico':'#ef4444','bien':'#10b981','revisar':'#10b981','sobrestock':'#8b5cf6','gestionar':'#fb7185','nuevo':'#64748b','sin_movimiento':'#94a3b8'}[s]||'#64748b');
+  const estadoLabel = s => ({'quiebre':'🚨 Quiebre','critico':'🚨 Quiebre','bien':'🟢 Bien','revisar':'🟢 Bien','sobrestock':'🔵 Sobrestock','gestionar':'⚠️ Gestionar','nuevo':'✨ Nuevo','sin_movimiento':'⏸️ Sin Mov.'}[s]||s);
+
+  const catMap = {};
+  filtered.forEach(r => {
+    const cat = r.category || '(Sin categoría)';
+    const sub = r.sub_category || '(Sin subcategoría)';
+    if (!catMap[cat]) catMap[cat] = { skus:0, inv_val:0, inv_actual:0, diasSum:0, diasN:0, subs:{} };
+    const c = catMap[cat];
+    c.skus++; c.inv_val += r.inv_valorizado||0; c.inv_actual += r.inv_actual||0;
+    if (r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){c.diasSum+=r.dias_inv;c.diasN++;}
+    if (!c.subs[sub]) c.subs[sub] = { skus:0, inv_val:0, inv_actual:0, diasSum:0, diasN:0, rows:[] };
+    const s = c.subs[sub];
+    s.skus++; s.inv_val+=r.inv_valorizado||0; s.inv_actual+=r.inv_actual||0;
+    if (r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){s.diasSum+=r.dias_inv;s.diasN++;}
+    s.rows.push(r);
   });
-  document.getElementById('row-count').textContent = fmt(filtered.length) + ' registros';
-  const start=(currentPage-1)*pageSize, slice=filtered.slice(start,start+pageSize);
-  const fmtDias = v => v==null?'—':v===Infinity||v>999?'∞':fmtD(v);
-  const diasTip = v => v==null?'Sin dato':v<=0?'🚨 Sin stock':v===Infinity||v>999?'Sin ventas — días infinitos':v<=7?`🔴 Crítico — ${fmtD(v)} días`:v<=15?`🟡 Bajo — ${fmtD(v)} días`:`🟢 ${fmtD(v)} días de cobertura`;
-  document.getElementById('det-tbody').innerHTML = slice.length ? slice.map(r=>`
-    <tr>
-      <td>${escH(r.store)}</td>
-      <td style="color:var(--muted)">${escH(r.sku)}</td>
-      <td>${escH(r.brand)}</td>
-      <td>${escH(r.supplier)}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${escH(r.product)}</td>
-      <td style="color:var(--muted)">${escH(r.category)}</td>
-      <td class="num">${fmt(r.inv_actual)}</td>
-      <td class="num" data-tip="${diasTip(r.dias_inv)}"><b style="color:${r.dias_inv!=null?r.dias_inv<=7?'var(--red)':r.dias_inv<=15?'var(--yellow)':'var(--green)':'var(--muted)'}">${fmtDias(r.dias_inv)}</b></td>
-      <td class="num" data-tip="Vida útil del producto: ${fmtD(r.vida_util)} días">${fmtD(r.vida_util)}</td>
-      <td class="num">${fmtD(r.prom_vta)}</td>
-      <td style="color:var(--muted);font-size:11px">${escH(r.tipo_pago||'—')}</td>
-      <td>${estadoBadge(r.estado)}</td>
-      <td>
-        <input type="text" value="${escH(NOTAS[r.store+'|'+r.sku]||'')}"
-          placeholder="agregar nota…"
-          style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:11px;width:130px;outline:none"
-          data-key="${escH(r.store+'|'+r.sku)}"
-          onfocus="this.style.borderColor='var(--orange)'"
-          onblur="this.style.borderColor='var(--border)';NOTAS[this.dataset.key]=this.value.trim();saveNotas()"
-        />
-      </td>
-    </tr>`).join('') : '<tr><td colspan="12" class="empty">Sin resultados</td></tr>';
-  const pages = Math.ceil(filtered.length/pageSize)||1;
-  document.getElementById('pg-info').textContent = `Pág. ${currentPage} / ${pages}`;
-  document.getElementById('pg-prev').disabled = currentPage<=1;
-  document.getElementById('pg-next').disabled = currentPage>=pages;
+
+  const catRows = Object.entries(catMap)
+    .map(([cat,g]) => ({cat,...g, dias:g.diasN?g.diasSum/g.diasN:0}))
+    .sort((a,b) => {
+      if(detSortCol2==='inv_val') return detSortDir2*(b.inv_val-a.inv_val);
+      if(detSortCol2==='dias') return detSortDir2*(b.dias-a.dias);
+      if(detSortCol2==='inv_actual') return detSortDir2*(b.inv_actual-a.inv_actual);
+      return detSortDir2*(b.skus-a.skus);
+    });
+
+  let html = '';
+  catRows.forEach(({cat, skus, inv_val, inv_actual, dias, subs}) => {
+    const resp = RESPONSABLES[cat]||'—';
+    const rcolor = RESP_COLORS[resp]||'#64748b';
+    const respH = `<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${rcolor}22;color:${rcolor};border:1px solid ${rcolor}44">${resp}</span>`;
+    const rowId = 'det2-'+cat.replace(/[^a-zA-Z0-9]/g,'_');
+
+    const subHtml = Object.entries(subs).sort((a,b)=>b[1].skus-a[1].skus).map(([sub,sg]) => {
+      const sDias = sg.diasN?sg.diasSum/sg.diasN:0;
+      const subId = rowId+'_'+sub.replace(/[^a-zA-Z0-9]/g,'_');
+      const skuHtml = sg.rows.sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0)).map(r => {
+        const sc2 = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
+        const ec = estadoColor(r.estado); const el = estadoLabel(r.estado);
+        return '<tr style="background:#070c14">'+
+          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
+          ' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span>'+
+          ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
+          '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+ec+'22;color:'+ec+'">'+el+'</span></td>'+
+          '</tr>';
+      }).join('');
+      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
+        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
+        '<td style="padding:7px 12px;text-align:center">'+respH+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#94a3b8;font-weight:700">'+sg.skus+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600">'+(sg.inv_val>0?'$'+Math.round(sg.inv_val).toLocaleString('es-CO'):'—')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:'+diasColor(sDias)+';font-weight:700">'+(sDias>0?sDias.toFixed(0)+'d':'—')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#64748b">'+(sg.inv_actual>0?fmt(sg.inv_actual):'—')+'</td>'+
+        '<td></td></tr>'+
+        '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0">'+
+          '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#040810">'+
+            '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
+            '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
+            '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
+          '</tr></thead><tbody>'+skuHtml+'</tbody></table>'+
+        '</td></tr>';
+    }).join('');
+
+    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
+      '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+'</td>'+
+      '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#94a3b8;font-weight:700;font-size:15px">'+skus+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:'+diasColor(dias)+';font-weight:700;font-size:14px">'+(dias>0?dias.toFixed(0)+'d':'—')+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#94a3b8">'+(inv_actual>0?fmt(inv_actual):'—')+'</td>'+
+      '<td></td></tr>'+
+      '<tr id="'+rowId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><tbody>'+subHtml+'</tbody></table></td></tr>';
+  });
+
+  tbody.innerHTML = html || '<tr><td colspan="7" class="empty">Sin registros</td></tr>';
 }
 
 // ── EXPORT CSV ────────────────────────────────────────────────────────────────
@@ -1514,7 +1551,7 @@ function exportProvCSV() {
     const k=r.supplier||'(Sin proveedor)';
     if(!map[k]) map[k]={supplier:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
     map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
-    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    const valid=['bien','sobrestock','gestionar','quiebre'];
     if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
   });
   const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null}));
@@ -1538,7 +1575,7 @@ function renderMarcas(rows) {
     map[k].skus++;
     map[k].inv     += r.inv_actual    || 0;
     map[k].inv_val += r.inv_valorizado|| 0;
-    const validEstados = ['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    const validEstados = ['bien','sobrestock','gestionar','quiebre'];
     if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
       map[k].diasSum += r.dias_inv; map[k].diasN++;
     }
@@ -1570,7 +1607,7 @@ function renderMarcas(rows) {
       renderMarcas(lastRows);
     });
   });
-  const diasColor = v => v==null?'#64748b':v<=7?'#ef4444':v<=15?'#f59e0b':v>=60?'#8b5cf6':'#10b981';
+  const diasColor = v => v==null?'#64748b':v<=3?'#ef4444':v>=60?'#8b5cf6':'#10b981';
   const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
   const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
   document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d=>`
@@ -1626,7 +1663,7 @@ function exportProvExcel() {
     const k=r.supplier||'(Sin proveedor)';
     if(!map[k]) map[k]={supplier:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
     map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
-    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    const valid=['bien','sobrestock','gestionar','quiebre'];
     if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
   });
   const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null})).sort((a,b)=>(b.inv||0)-(a.inv||0));
@@ -1645,7 +1682,7 @@ function exportMarcaExcel() {
     const k=r.brand||'(Sin marca)';
     if(!map[k]) map[k]={brand:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
     map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
-    const valid=['critico','revisar','bien','sobrestock','gestionar','quiebre'];
+    const valid=['bien','sobrestock','gestionar','quiebre'];
     if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
   });
   const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null})).sort((a,b)=>(b.inv||0)-(a.inv||0));
@@ -1814,18 +1851,39 @@ function render() {
 
   const catW = Math.max(400, catData.length*50);
   const catSvg = document.getElementById('chart-cat');
-  catSvg.setAttribute('viewBox',`0 0 ${catW} 280`);
+  if(catSvg) catSvg.setAttribute('viewBox',`0 0 ${catW} 280`);
   const catD = sortDirs.cat === -1 ? catData : [...catData].reverse();
   renderBars('chart-cat', catD, '#8b5cf6', catW, 280);
 
   renderDonut(rows);
-  renderTopRisk(rows);
+
+  // Sobrestock por categoría
+  const sobreMap={};
+  rows.forEach(r=>{
+    if(r.estado==='sobrestock'||r.estado==='gestionar') sobreMap[r.category]=(sobreMap[r.category]||0)+1;
+    });
+  const sobreEl=document.getElementById('chart-sobre-cat');
+  const barChart=(el,map,color)=>{
+    if(!el) return;
+    const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const max=entries[0]?.[1]||1;
+    el.innerHTML=entries.map(([cat,cnt])=>`<div style="display:flex;align-items:center;gap:8px">
+      <span style="min-width:140px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(cat)}">${escH(cat.length>22?cat.substring(0,20)+'…':cat)}</span>
+      <div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(cnt/max*100).toFixed(1)}%;background:${color};border-radius:3px;display:flex;align-items:center;padding-left:6px">
+          <span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span>
+        </div>
+      </div>
+    </div>`).join('');
+  };
+  barChart(sobreEl, sobreMap, '#8b5cf6');
 
   renderAlerts(rows);
   renderProveedores(rows);
   renderMarcas(rows);
   currentPage = 1;
   renderTable(rows);
+  renderPlan(rows);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
