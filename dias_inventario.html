@@ -7,8 +7,8 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0f1a; --surface: #111827; --surface2: #1a2332;
-    --border: #1e2d3d; --text: #e2e8f0; --muted: #64748b;
+    --bg: #f5f3ef; --surface: #ffffff; --surface2: #f0ede8;
+    --border: #e2ddd6; --text: #1e293b; --muted: #64748b;
     --orange: #f97316; --green: #10b981; --yellow: #f59e0b;
     --red: #ef4444; --blue: #3b82f6; --purple: #8b5cf6;
   }
@@ -16,7 +16,7 @@
 
   /* ── LOADING ── */
   #loading-screen { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; background: #080e17; overflow: hidden; }
+    align-items: center; justify-content: center; background: #f0ede8; overflow: hidden; }
   #loading-screen::before { content: ''; position: absolute; inset: 0;
     background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(249,115,22,0.18) 0%, transparent 70%),
                 radial-gradient(ellipse 40% 30% at 20% 20%, rgba(249,115,22,0.06) 0%, transparent 60%); }
@@ -51,12 +51,12 @@
   header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
   .header-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
   .header-left { display:flex; align-items:center; gap:20px; }
-  .header-logo .logo-brand { font-size:26px; font-weight:900; letter-spacing:-1.5px; line-height:1; color:#fff; }
+  .header-logo .logo-brand { font-size:26px; font-weight:900; letter-spacing:-1.5px; line-height:1; color:#1e293b; }
   .header-logo .logo-brand span { color:#FF6B00; }
-  .header-logo .logo-sub { font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
-  .header-divider { width:1px; height:36px; background:#1e2d3d; flex-shrink:0; }
+  .header-logo .logo-sub { font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#94a3b8; margin-top:1px; }
+  .header-divider { width:1px; height:36px; background:#e2ddd6; flex-shrink:0; }
   .header-meta { display:flex; flex-direction:column; gap:6px; }
-  .header-title { font-size:13px; font-weight:700; color:#e2e8f0; }
+  .header-title { font-size:13px; font-weight:700; color:#334155; }
   .header-badges { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
   .estado-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; }
   .eb-quiebre { background:rgba(239,68,68,0.10); color:#ef4444; border:1px solid rgba(239,68,68,0.20); }
@@ -64,9 +64,9 @@
   .eb-sobre    { background:rgba(139,92,246,0.10); color:#8b5cf6; border:1px solid rgba(139,92,246,0.20); }
   .header-stats { display:flex; align-items:center; gap:16px; }
   .stat-item { text-align:center; }
-  .stat-val { font-size:18px; font-weight:800; color:#f1f5f9; line-height:1; }
+  .stat-val { font-size:18px; font-weight:800; color:#1e293b; line-height:1; }
   .stat-lbl { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
-  .stat-sep { width:1px; height:28px; background:#1e2d3d; align-self:center; flex-shrink:0; }
+  .stat-sep { width:1px; height:28px; background:#e2ddd6; align-self:center; flex-shrink:0; }
 
   /* ── EXEC SUMMARY ── */
   .exec-summary { background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(249,115,22,0.06));
@@ -306,7 +306,7 @@
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span id="last-update-hdr" style="font-size:10px;color:#3b4f65"></span>
+          <span id="last-update-hdr" style="font-size:10px;color:#94a3b8"></span>
           <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
         </div>
       </div>
@@ -393,11 +393,15 @@
       </div>
     </div>
 
-    <!-- Fila 2: Sobrestock -->
-    <div style="margin-bottom:16px">
+    <!-- Fila 2: Sobrestock + Evolución -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="card">
         <div class="card-header"><h3>🔵 Sobrestock por categoría (≥60d)</h3></div>
-        <div id="chart-sobre-cat" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;max-height:240px;overflow-y:auto"></div>
+        <div id="chart-sobre-cat" style="padding:12px;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📈 Evolución días de inventario promedio</h3></div>
+        <svg id="chart-evol-dias" class="chart" viewBox="0 0 400 220" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
     </div>
 
@@ -448,8 +452,8 @@
       </div>
       <div class="alert-col" style="border-top:3px solid #94a3b8">
         <div class="alert-col-hdr">
-          <h4 style="color:#94a3b8">✨ Nuevos</h4>
-          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#94a3b8">0</span>
+          <h4 style="color:#64748b">✨ Nuevos</h4>
+          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#64748b">0</span>
         </div>
         <div class="alert-col-desc">Sin inventario y sin ventas — producto nuevo pendiente de entrada.</div>
         <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
@@ -499,18 +503,18 @@
   <div class="tab-panel" id="panel-detalle">
     <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin:0">📋 Detalle por Categoría</h2>
+        <h2 style="font-size:18px;font-weight:800;color:#1e293b;margin:0">📋 Detalle por Categoría</h2>
         <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs · <span id="row-count"></span></p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px"/>
+        <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px"/>
         <button id="btn-exp-det" style="background:var(--green);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Excel</button>
       </div>
     </div>
     <div class="table-card">
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+          <thead><tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
             <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría / SKU</th>
             <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
             <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDet('skus')" id="deth2-skus">SKUs ↕</th>
@@ -535,8 +539,8 @@
         <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs con inventario excesivo</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="plan-store" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px"><option value="">Todas las tiendas</option></select>
-        <select id="plan-resp" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px">
+        <select id="plan-store" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px"><option value="">Todas las tiendas</option></select>
+        <select id="plan-resp" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px">
           <option value="">Todos los responsables</option>
           <option value="Edwin">Edwin</option><option value="Lore">Lore</option>
           <option value="Jorge">Jorge</option><option value="Angie">Angie</option>
@@ -546,19 +550,19 @@
     </div>
     <div id="plan-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
-        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">📦 SKUs Sobrestock por Responsable</h3>
+      <div style="background:#ffffff;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 14px 0">📦 SKUs Sobrestock por Responsable</h3>
         <div id="plan-chart-resp" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
-      <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
-        <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">🏢 Top 20 Proveedores con más Sobrestock</h3>
+      <div style="background:#ffffff;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 14px 0">🏢 Top 20 Proveedores con más Sobrestock</h3>
         <div id="plan-chart-prov" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:4px"></div>
       </div>
     </div>
     <div class="table-card">
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+          <thead><tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
             <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría</th>
             <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
             <th style="padding:10px 12px;text-align:right;color:#a78bfa;cursor:pointer;user-select:none" onclick="sortPlan('skus')" id="planh-skus">SKUs ↕</th>
@@ -954,7 +958,7 @@ function renderExecSummary(rows) {
     ? `<div class="exec-bar-seg" style="width:${(counts[i]/total*100).toFixed(1)}%;background:${e.color}" data-tip="${e.label}: ${counts[i]} SKUs (${(counts[i]/total*100).toFixed(1)}%)"></div>`
     : '').join('');
   const legend = estadosCfg.map((e,i)=>counts[i]
-    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#94a3b8;white-space:nowrap"><span style="width:7px;height:7px;border-radius:2px;background:${e.color};display:inline-block;flex-shrink:0"></span>${e.label} <b style="color:#e2e8f0">${counts[i]}</b></span>`
+    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#64748b;white-space:nowrap"><span style="width:7px;height:7px;border-radius:2px;background:${e.color};display:inline-block;flex-shrink:0"></span>${e.label} <b style="color:#334155">${counts[i]}</b></span>`
     : '').filter(Boolean).join('');
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -974,7 +978,7 @@ function renderExecSummary(rows) {
           </div>
           <div>
             <div style="font-size:10px;color:#64748b;margin-bottom:2px">Sin Movimiento</div>
-            <div style="font-size:13px;font-weight:700;color:#94a3b8">${fmtM(valSM)}</div>
+            <div style="font-size:13px;font-weight:700;color:#64748b">${fmtM(valSM)}</div>
             <div style="font-size:10px;color:#475569">${sinMov} SKUs</div>
           </div>
         </div>
@@ -992,7 +996,7 @@ function renderExecSummary(rows) {
       <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:10px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span style="font-size:11px;color:#64748b;font-weight:600">Distribucion por estado</span>
-          <span style="font-size:13px;font-weight:700;color:#e2e8f0">${fmt(total)} SKUs</span>
+          <span style="font-size:13px;font-weight:700;color:#334155">${fmt(total)} SKUs</span>
         </div>
         <div class="exec-bar-track" style="height:14px;border-radius:7px">${segs}</div>
       </div>
@@ -1015,18 +1019,23 @@ function renderKPIs(rows) {
   const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
   const n = rows.length || 1;
 
-  const kpis = [
-    // Fila 1 — Capital inmovilizado protagonista
-    { label:'💰 Capital Inmovilizado',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/invVal||0)*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil — capital atrapado sin rotación.' },
-    { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                           cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
-    { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                             cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
-    { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                     cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada en el período.' },
-    // Fila 2 — Riesgo de quiebre
-    { label:'🚨 Quiebre / Crítico',     val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                   cls:'red',    tip:'SKUs sin stock o con menos de 7 días de cobertura.' },
+  // Ventas del mes más reciente (último VENTA_MONTHS)
+  const lastVentaKey = VENTA_MONTHS.length ? VENTA_MONTHS[VENTA_MONTHS.length - 1] : null;
+  const totalVentasMes = lastVentaKey ? rows.reduce((a,r) => a + (r.ventas[VENTA_MONTHS.length-1]||0), 0) : 0;
+  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(1) : '—';
+  const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
 
-    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),            sub:`unidades en stock`,                                                            cls:'green',  tip:'Suma de unidades en inventario para los SKUs filtrados.' },
-    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),             sub:`capital en inventario`,                                                        cls:'orange', tip:'Valor total del inventario a precio de costo o venta.' },
-    { label:'📅 Días Inv. Prom.',       val: fmtD(diasProm),           sub:`días promedio cobertura`,                                                      cls:'blue',   tip:'Promedio de días de inventario de todos los SKUs activos filtrados.' },
+  const kpis = [
+    { label:'💰 Capital Inmovilizado',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/(invVal||1))*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil.' },
+    { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                             cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
+    { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                               cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
+    { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                       cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada.' },
+    { label:'💀 Sin Stock',             val: fmt(sinStock),            sub:`0 días — quiebre total`,                                                         cls:'red',    tip:'SKUs con ventas activas pero sin inventario.' },
+    { label:'🚨 Quiebre (1–3d)',        val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                     cls:'red',    tip:'SKUs con 1 a 3 días de inventario.' },
+    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),            sub:`unidades en stock`,                                                              cls:'green',  tip:'Suma de unidades en inventario.' },
+    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),             sub:`capital en inventario`,                                                          cls:'orange', tip:'Valor total del inventario a costo.' },
+    { label:'📅 Días Inv. Prom.',       val: fmtD(diasProm),           sub:`días promedio cobertura`,                                                        cls:'blue',   tip:'Promedio de días de inventario de todos los SKUs activos.' },
+    { label:'⚡ Eficiencia Stock',      val: mesesStock === '—' ? '—' : mesesStock + ' meses', sub:`Inv. valorizado / ventas mes`,                           cls:'orange', tip:'Cuántos meses de ventas cubre el inventario actual a costo.' },
   ];
 
   document.getElementById('kpis').innerHTML = kpis.map(k=>`
@@ -1068,7 +1077,7 @@ function renderBars(svgId, data, color, W, H) {
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1',pl); line.setAttribute('x2',W-pr);
     line.setAttribute('y1',y); line.setAttribute('y2',y);
-    line.setAttribute('stroke','#1e2d3d'); line.setAttribute('stroke-width','1'); svg.appendChild(line);
+    line.setAttribute('stroke','#d1ccc4'); line.setAttribute('stroke-width','1'); svg.appendChild(line);
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x',pl-4); t.setAttribute('y',y+4); t.setAttribute('text-anchor','end');
     t.setAttribute('fill','#475569'); t.setAttribute('font-size','10'); t.textContent = v.toFixed(0); svg.appendChild(t);
@@ -1303,7 +1312,7 @@ function renderStackedByStore(rows) {
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1',pl); line.setAttribute('x2',W-pr);
     line.setAttribute('y1',y); line.setAttribute('y2',y);
-    line.setAttribute('stroke','#1e2d3d'); line.setAttribute('stroke-width','1'); svg.appendChild(line);
+    line.setAttribute('stroke','#d1ccc4'); line.setAttribute('stroke-width','1'); svg.appendChild(line);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x',pl-4); t.setAttribute('y',y+4); t.setAttribute('text-anchor','end');
     t.setAttribute('fill','#475569'); t.setAttribute('font-size','9'); t.textContent=Math.round(f*maxT); svg.appendChild(t);
@@ -1503,7 +1512,7 @@ function renderTable(rows) {
       const skuHtml = sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r => {
         const sc2 = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         const ec = estadoColor(r.estado); const el = estadoLabel(r.estado);
-        return '<tr style="background:#070c14">'+
+        return '<tr style="background:#f8f6f2">'+
           '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
           ' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span>'+
           ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
@@ -1511,20 +1520,20 @@ function renderTable(rows) {
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+ec+'22;color:'+ec+'">'+el+'</span></td>'+
           '</tr>';
       }).join('');
-      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
-        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
+      return '<tr style="background:#f4f1ec;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
+        '<td style="padding:7px 12px 7px 36px;color:#64748b;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
         '<td style="padding:7px 12px;text-align:center">'+respH+'</td>'+
-        '<td style="padding:7px 12px;text-align:right;color:#94a3b8;font-weight:700">'+sg.skus+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#64748b;font-weight:700">'+sg.skus+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600">'+(sg.inv_val>0?'$'+Math.round(sg.inv_val).toLocaleString('es-CO'):'—')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:'+diasColor(sDias)+';font-weight:700">'+(sDias>0?sDias.toFixed(0)+'d':'—')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#64748b">'+(sg.inv_actual>0?fmt(sg.inv_actual):'—')+'</td>'+
         '<td></td></tr>'+
         '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0">'+
-          '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#040810">'+
+          '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#ece9e3">'+
             '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
             '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
             '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
@@ -1536,13 +1545,13 @@ function renderTable(rows) {
         '</td></tr>';
     }).join('');
 
-    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
-      '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+'</td>'+
+    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#ffffff" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
+      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+'</td>'+
       '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
-      '<td style="padding:11px 12px;text-align:right;color:#94a3b8;font-weight:700;font-size:15px">'+skus+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#64748b;font-weight:700;font-size:15px">'+skus+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:'+diasColor(dias)+';font-weight:700;font-size:14px">'+(dias>0?dias.toFixed(0)+'d':'—')+'</td>'+
-      '<td style="padding:11px 12px;text-align:right;color:#94a3b8">'+(inv_actual>0?fmt(inv_actual):'—')+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#64748b">'+(inv_actual>0?fmt(inv_actual):'—')+'</td>'+
       '<td></td></tr>'+
       '<tr id="'+rowId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><tbody>'+subHtml+'</tbody></table></td></tr>';
   });
@@ -1753,19 +1762,19 @@ function renderPlan(rows){
     {label:'⚠️ Riesgo Vencimiento',val:gst,sub:'supera vida útil',color:'#ef4444'},
     {label:'Categorías Afectadas',val:new Set(sobre.map(r=>r.category)).size,sub:'con al menos 1 SKU',color:'#8b5cf6'},
     {label:'Unidades en Exceso',val:Math.round(totalInv).toLocaleString('es-CO'),sub:'unidades sobrestock',color:'#64748b'},
-  ].map(k=>`<div style="background:#111827;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
+  ].map(k=>`<div style="background:#ffffff;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
   const respMap={};sobre.forEach(r=>{const resp=RESPONSABLES[r.category]||'—';respMap[resp]=(respMap[resp]||0)+1;});
   const respEl=document.getElementById('plan-chart-resp');
   if(respEl){const ent=Object.entries(respMap).sort((a,b)=>b[1]-a[1]);const max=ent[0]?.[1]||1;
     respEl.innerHTML=ent.map(([resp,cnt])=>{const color=RESP_COLORS[resp]||'#64748b';const pct=(cnt/max*100).toFixed(1);
-      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span><div style="flex:1;height:22px;background:#1a2332;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span></div></div><span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(sobre.length,1))*100).toFixed(0)}%</span></div>`;
+      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span><div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span></div></div><span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(sobre.length,1))*100).toFixed(0)}%</span></div>`;
     }).join('');}
   const provMap={};sobre.forEach(r=>{const p=r.supplier||'(Sin prov.)';provMap[p]=(provMap[p]||0)+1;});
   const provEl=document.getElementById('plan-chart-prov');
   if(provEl){const ent=Object.entries(provMap).sort((a,b)=>b[1]-a[1]).slice(0,20);const max=ent[0]?.[1]||1;
     const colors=['#8b5cf6','#a78bfa','#c4b5fd','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#7c3aed','#8b5cf6','#9333ea','#a855f7','#b366f5','#c084fc','#d8b4fe','#8b5cf6','#7c3aed','#6d28d9','#a78bfa','#c4b5fd','#8b5cf6'];
     provEl.innerHTML=ent.map(([prov,cnt],i)=>{const pct=(cnt/max*100).toFixed(1);const short=prov.length>28?prov.substring(0,26)+'…':prov;
-      return`<div style="display:flex;align-items:center;gap:8px"><span style="min-width:160px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(prov)}">${escH(short)}</span><div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:3px;display:flex;align-items:center;padding-left:6px"><span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span></div></div></div>`;
+      return`<div style="display:flex;align-items:center;gap:8px"><span style="min-width:160px;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(prov)}">${escH(short)}</span><div style="flex:1;height:18px;background:#f0ede8;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:3px;display:flex;align-items:center;padding-left:6px"><span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span></div></div></div>`;
     }).join('');}
   const catMap={};sobre.forEach(r=>{
     const cat=r.category||'(Sin categoría)';const sub=r.sub_category||'(Sin subcategoría)';
@@ -1792,23 +1801,23 @@ function renderPlan(rows){
       const sDias=sg.diasN?sg.diasSum/sg.diasN:0;const subId=rowId+'_'+sub.replace(/[^a-zA-Z0-9]/g,'_');
       const skuHtml=sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r=>{
         const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
-        return'<tr style="background:#070c14">'+
+        return'<tr style="background:#f8f6f2">'+
           '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center">'+estBadge(r.estado)+'</td></tr>';
       }).join('');
-      return'<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
-        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
+      return'<tr style="background:#f4f1ec;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">'+
+        '<td style="padding:7px 12px 7px 36px;color:#64748b;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
         '<td style="padding:7px 12px;text-align:center">'+respH+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#a78bfa;font-weight:700">'+sg.skus+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600">'+(sg.inv_val>0?'$'+Math.round(sg.inv_val).toLocaleString('es-CO'):'—')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#8b5cf6;font-weight:700">'+(sDias>0?sDias.toFixed(0)+'d':'—')+'</td>'+
         '<td style="padding:7px 12px;text-align:right;color:#64748b">'+(sg.inv_actual>0?fmt(sg.inv_actual):'—')+'</td><td></td></tr>'+
-        '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#040810">'+
+        '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#ece9e3">'+
           '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
           '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
           '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
@@ -1818,13 +1827,13 @@ function renderPlan(rows){
           '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
         '</tr></thead><tbody>'+skuHtml+'</tbody></table></td></tr>';
     }).join('');
-    html+='<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
-      '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+(gstC>0?' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gstC+' venc.</span>':'')+'</td>'+
+    html+='<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#ffffff" onclick="toggleAtacarRow(\'' + rowId + '\')">'+
+      '<td style="padding:11px 12px;font-weight:700;color:#1e293b;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+(gstC>0?' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gstC+' venc.</span>':'')+'</td>'+
       '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#a78bfa;font-weight:800;font-size:15px">'+skus+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
       '<td style="padding:11px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:14px">'+(dias>0?dias.toFixed(0)+'d':'—')+'</td>'+
-      '<td style="padding:11px 12px;text-align:right;color:#94a3b8">'+(inv_actual>0?fmt(inv_actual):'—')+'</td><td></td></tr>'+
+      '<td style="padding:11px 12px;text-align:right;color:#64748b">'+(inv_actual>0?fmt(inv_actual):'—')+'</td><td></td></tr>'+
       '<tr id="'+rowId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><tbody>'+subHtml+'</tbody></table></td></tr>';
   });
   planTbody.innerHTML=html||'<tr><td colspan="7" class="empty">Sin SKUs en sobrestock</td></tr>';
@@ -1841,6 +1850,129 @@ function exportPlanXLSX(){
   ws['!cols']=[20,20,12,10,25,18,12,35,10,12,16,12].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws,'Plan de Ataque');
   XLSX.writeFile(wb,'plan_ataque_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+
+// ── EVOLUCIÓN DÍAS DE INVENTARIO ─────────────────────────────────────────────
+function renderEvolDias(rows) {
+  const svg = document.getElementById('chart-evol-dias');
+  if (!svg) return;
+  svg.innerHTML = '';
+
+  // Build monthly avg dias from VENTA_MONTHS order (use dias_inv for current month)
+  // For historical: use Promedio de Venta YTD as proxy — but we only have current dias_inv
+  // So build from available monthly data if any, otherwise show current month only
+  const pts = [];
+
+  // Use VENTA_LABELS for month names if available
+  if (VENTA_MONTHS.length > 0) {
+    VENTA_MONTHS.forEach((m, i) => {
+      const label = VENTA_LABELS[i] || m;
+      // For past months: estimate dias from inv_actual / prom_vta
+      const validRows = rows.filter(r => {
+        const venta = r.ventas[i];
+        return r.inv_actual != null && venta != null && venta > 0;
+      });
+      if (validRows.length > 0) {
+        // dias = inv_actual / (prom_vta/30) — approximate
+        const avgDias = validRows.reduce((a, r) => {
+          const ventaMes = r.ventas[i] || 0;
+          const diasEst = ventaMes > 0 ? (r.inv_actual / (ventaMes / 30)) : null;
+          return diasEst != null ? a + diasEst : a;
+        }, 0) / validRows.length;
+        pts.push({ label, value: avgDias });
+      }
+    });
+  }
+
+  // Always add current month actual
+  const validCur = rows.filter(r => r.dias_inv != null && isFinite(r.dias_inv) && r.dias_inv >= 0 && r.dias_inv < 9999);
+  if (validCur.length) {
+    const avgCur = validCur.reduce((a, r) => a + r.dias_inv, 0) / validCur.length;
+    const curLabel = VENTA_LABELS.length ? VENTA_LABELS[VENTA_LABELS.length - 1] : 'Actual';
+    // Replace last point if same label
+    if (pts.length && pts[pts.length - 1].label === curLabel) {
+      pts[pts.length - 1].value = avgCur;
+    } else {
+      pts.push({ label: curLabel, value: avgCur });
+    }
+  }
+
+  if (pts.length < 1) { svg.innerHTML = '<text x="200" y="110" fill="#94a3b8" text-anchor="middle" font-size="12">Sin datos históricos suficientes</text>'; return; }
+
+  const W = 400, H = 220, pl = 50, pr = 16, pt2 = 20, pb = 40;
+  const cW = W - pl - pr, cH = H - pt2 - pb;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const vals = pts.map(p => p.value);
+  const maxV = Math.max(...vals, 1);
+  const minV = 0;
+  const range = maxV - minV || 1;
+
+  // Grid lines
+  [0, maxV * 0.25, maxV * 0.5, maxV * 0.75, maxV].forEach(v => {
+    const y = pt2 + cH - ((v - minV) / range) * cH;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', pl); line.setAttribute('x2', W - pr);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#e2ddd6'); line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', pl - 4); t.setAttribute('y', y + 4);
+    t.setAttribute('text-anchor', 'end'); t.setAttribute('fill', '#94a3b8'); t.setAttribute('font-size', '9');
+    t.textContent = v.toFixed(0) + 'd'; svg.appendChild(t);
+  });
+
+  // Reference line 60d (sobrestock threshold)
+  const y60 = pt2 + cH - (60 / range) * cH;
+  if (y60 >= pt2 && y60 <= pt2 + cH) {
+    const refLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    refLine.setAttribute('x1', pl); refLine.setAttribute('x2', W - pr);
+    refLine.setAttribute('y1', y60); refLine.setAttribute('y2', y60);
+    refLine.setAttribute('stroke', '#8b5cf6'); refLine.setAttribute('stroke-width', '1.5');
+    refLine.setAttribute('stroke-dasharray', '4 3'); svg.appendChild(refLine);
+    const rt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    rt.setAttribute('x', W - pr + 2); rt.setAttribute('y', y60 + 4);
+    rt.setAttribute('fill', '#8b5cf6'); rt.setAttribute('font-size', '9');
+    rt.textContent = '60d'; svg.appendChild(rt);
+  }
+
+  // Coords
+  const coords = pts.map((p, i) => {
+    const x = pl + (pts.length === 1 ? cW / 2 : (i / (pts.length - 1)) * cW);
+    const y = pt2 + cH - ((p.value - minV) / range) * cH;
+    return [x, y];
+  });
+
+  // Area fill
+  if (coords.length > 1) {
+    const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const d = `M${coords[0][0]},${coords[0][1]} ` + coords.slice(1).map(c => `L${c[0]},${c[1]}`).join(' ') +
+      ` L${coords[coords.length-1][0]},${pt2+cH} L${coords[0][0]},${pt2+cH} Z`;
+    area.setAttribute('d', d); area.setAttribute('fill', 'rgba(249,115,22,0.08)'); svg.appendChild(area);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', `M${coords[0][0]},${coords[0][1]} ` + coords.slice(1).map(c => `L${c[0]},${c[1]}`).join(' '));
+    line.setAttribute('stroke', '#f97316'); line.setAttribute('stroke-width', '2.5');
+    line.setAttribute('fill', 'none'); line.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(line);
+  }
+
+  // Points + labels
+  coords.forEach((c, i) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', c[0]); circle.setAttribute('cy', c[1]); circle.setAttribute('r', '4');
+    circle.setAttribute('fill', '#f97316'); circle.setAttribute('data-tip', `${pts[i].label}: ${pts[i].value.toFixed(1)}d`);
+    svg.appendChild(circle);
+    const vt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    vt.setAttribute('x', c[0]); vt.setAttribute('y', c[1] - 8);
+    vt.setAttribute('text-anchor', 'middle'); vt.setAttribute('fill', '#f97316');
+    vt.setAttribute('font-size', '10'); vt.setAttribute('font-weight', '700');
+    vt.textContent = pts[i].value.toFixed(0) + 'd'; svg.appendChild(vt);
+    const lt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lt.setAttribute('x', c[0]); lt.setAttribute('y', H - pb + 14);
+    lt.setAttribute('text-anchor', 'middle'); lt.setAttribute('fill', '#64748b');
+    lt.setAttribute('font-size', '10'); lt.textContent = pts[i].label.slice(0, 6); svg.appendChild(lt);
+  });
 }
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
@@ -1873,6 +2005,7 @@ function render() {
   renderBars('chart-cat', catD, '#8b5cf6', catW, 280);
 
   renderDonut(rows);
+  renderEvolDias(rows);
 
   // Sobrestock por categoría
   const sobreMap={};
@@ -1885,8 +2018,8 @@ function render() {
     const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,12);
     const max=entries[0]?.[1]||1;
     el.innerHTML=entries.map(([cat,cnt])=>`<div style="display:flex;align-items:center;gap:8px">
-      <span style="min-width:140px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(cat)}">${escH(cat.length>22?cat.substring(0,20)+'…':cat)}</span>
-      <div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden">
+      <span style="min-width:140px;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(cat)}">${escH(cat.length>22?cat.substring(0,20)+'…':cat)}</span>
+      <div style="flex:1;height:18px;background:#f0ede8;border-radius:3px;overflow:hidden">
         <div style="height:100%;width:${(cnt/max*100).toFixed(1)}%;background:${color};border-radius:3px;display:flex;align-items:center;padding-left:6px">
           <span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span>
         </div>
