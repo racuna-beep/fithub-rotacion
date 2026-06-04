@@ -385,13 +385,7 @@
         <div class="card-header"><h3>Distribución por estado</h3></div>
         <svg class="chart" id="chart-donut" viewBox="0 0 300 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <h3>Días inv. promedio por tienda</h3>
-          <button class="sort-toggle" id="sort-store" data-dir="-1">↕ Mayor → Menor</button>
-        </div>
-        <svg class="chart" id="chart-store" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
+      
       
     </div>
 
@@ -1080,7 +1074,7 @@ function renderKPIs(rows) {
 // ── RENDER BARS ───────────────────────────────────────────────────────────────
 function renderBars(svgId, data, color, W, H) {
   W = W||400; H = H||260;
-  const svg = document.getElementById(svgId); svg.innerHTML = '';
+  const svg = document.getElementById(svgId); if (!svg) return; svg.innerHTML = '';
   if (!data.length) return;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const pl=52, pr=12, pt=16, pb=72;
