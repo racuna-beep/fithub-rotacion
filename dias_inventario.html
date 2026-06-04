@@ -1181,6 +1181,7 @@ function renderAlertCards(id, list, color, valFn, subFn, cntId, limit) {
   const el = document.getElementById(id);
   const cntEl = document.getElementById(cntId);
   if (cntEl) cntEl.textContent = list.length;
+  if (!el) return;
   if (!list.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px 0;text-align:center">Sin registros ✓</div>';
     return;
