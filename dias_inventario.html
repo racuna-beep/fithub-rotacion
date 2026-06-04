@@ -60,14 +60,11 @@
   .header-badges { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
   .estado-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; }
   .eb-quiebre { background:rgba(239,68,68,0.10); color:#ef4444; border:1px solid rgba(239,68,68,0.20); }
-  .eb-critico  { background:rgba(249,115,22,0.10); color:#f97316; border:1px solid rgba(249,115,22,0.20); }
-  .eb-revisar  { background:rgba(245,158,11,0.10); color:#f59e0b; border:1px solid rgba(245,158,11,0.20); }
   .eb-bien     { background:rgba(16,185,129,0.10); color:#10b981; border:1px solid rgba(16,185,129,0.20); }
   .eb-sobre    { background:rgba(139,92,246,0.10); color:#8b5cf6; border:1px solid rgba(139,92,246,0.20); }
   .header-stats { display:flex; align-items:center; gap:16px; }
   .stat-item { text-align:center; }
   .stat-val { font-size:18px; font-weight:800; color:#f1f5f9; line-height:1; }
-  .stat-val.orange { color:#FF6B00; }
   .stat-lbl { font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:#3b4f65; margin-top:1px; }
   .stat-sep { width:1px; height:28px; background:#1e2d3d; align-self:center; flex-shrink:0; }
 
@@ -258,6 +255,7 @@
   #tooltip strong { color: var(--text); display: block; margin-bottom: 2px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -284,10 +282,8 @@
         <div class="header-meta">
           <div class="header-title">📦 Dashboard Días de Inventario 2026</div>
           <div class="header-badges">
-            <span class="estado-badge eb-quiebre">🚨 Quiebre 0d</span>
-            <span class="estado-badge eb-critico">🔴 Crítico 1–7d</span>
-            <span class="estado-badge eb-revisar">🟡 Revisar 8–15d</span>
-            <span class="estado-badge eb-bien">🟢 Bien 16–59d</span>
+            <span class="estado-badge eb-quiebre">🚨 Quiebre 0–3d</span>
+            <span class="estado-badge eb-bien">🟢 Bien 4–59d</span>
             <span class="estado-badge eb-sobre">🔵 Sobrestock ≥60d</span>
           </div>
         </div>
@@ -396,13 +392,7 @@
         </div>
         <svg class="chart" id="chart-store" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <h3>Top 10 proveedores por días inv.</h3>
-          <button class="sort-toggle" id="sort-sup" data-dir="-1">↕ Mayor → Menor</button>
-        </div>
-        <svg class="chart" id="chart-sup" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
-      </div>
+      
     </div>
 
     <!-- Fila 2: Top SKUs en riesgo + Categorías -->
@@ -536,71 +526,54 @@
 
   <!-- DETALLE -->
   <div class="tab-panel" id="panel-detalle">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin:0">📋 Detalle por Categoría</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs · <span id="row-count"></span></p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px"/>
+        <button id="btn-exp-det" style="background:var(--green);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Excel</button>
+      </div>
+    </div>
     <div class="table-card">
-      <div class="table-header">
-        <h3>Detalle SKUs <span id="row-count" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-exp-det" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
-          <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;"/>
-        </div>
-      </div>
-      <div class="table-wrap" style="max-height:600px;overflow-y:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th data-col="store">Tienda</th>
-              <th data-col="sku">SKU</th>
-              <th data-col="brand">Marca</th>
-              <th data-col="supplier">Proveedor</th>
-              <th data-col="product">Producto</th>
-              <th data-col="sub_category">Subcategoría</th>
-              <th data-col="category">Categoría</th>
-              <th data-col="inv_actual" class="num" data-tip="Unidades actuales en inventario">Inv. Actual</th>
-              <th data-col="dias_inv" class="num" data-tip="Días de inventario = Inv. Actual / (Promedio Venta YTD / 30)">Días Inv.</th>
-              <th data-col="vida_util" class="num" data-tip="Días estimados antes del vencimiento o deterioro del producto">Vida Útil</th>
-              <th data-col="prom_vta" class="num" data-tip="Promedio de ventas diarias (YTD)">Prom. Vta YTD</th>
-              <th data-col="tipo_pago">Tipo Pago</th>
-              <th data-col="estado">Estado</th>
-              <th style="min-width:140px">Nota</th>
-            </tr>
-          </thead>
-          <tbody id="det-tbody"></tbody>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría / SKU</th>
+            <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
+            <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDet('skus')" id="deth2-skus">SKUs ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortDet('inv_val')" id="deth2-inv_val">Val. Inv ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDet('dias')" id="deth2-dias">Días Prom ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDet('inv_actual')" id="deth2-inv_actual">Inv. Actual ↕</th>
+            <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
+          </tr></thead>
+          <tbody id="det-hier-tbody"></tbody>
         </table>
-      </div>
-      <div class="page-ctrl">
-        <button id="pg-prev">‹ Anterior</button>
-        <span class="page-info" id="pg-info"></span>
-        <button id="pg-next">Siguiente ›</button>
-        <select id="pg-size"><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
       </div>
     </div>
   </div>
+</div>
+
+
   <!-- PLAN DE ATAQUE -->
   <div class="tab-panel" id="panel-plan">
     <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <h2 style="font-size:18px;font-weight:800;color:#a78bfa;margin:0">🎯 Plan de Ataque — Sobrestock ≥60 días</h2>
-        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs con inventario excesivo · Capital inmovilizado en riesgo</p>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs con inventario excesivo</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="plan-store" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px">
-          <option value="">Todas las tiendas</option>
-        </select>
+        <select id="plan-store" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px"><option value="">Todas las tiendas</option></select>
         <select id="plan-resp" style="background:#1a2332;border:1px solid #1e2d3d;color:#e2e8f0;padding:7px 10px;border-radius:6px;font-size:13px">
           <option value="">Todos los responsables</option>
-          <option value="Edwin">Edwin</option>
-          <option value="Lore">Lore</option>
-          <option value="Jorge">Jorge</option>
-          <option value="Angie">Angie</option>
+          <option value="Edwin">Edwin</option><option value="Lore">Lore</option>
+          <option value="Jorge">Jorge</option><option value="Angie">Angie</option>
         </select>
         <button id="btn-plan-export" style="background:#8b5cf6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
       </div>
     </div>
-
-    <!-- KPIs Plan -->
     <div id="plan-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-
-    <!-- Charts -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
         <h3 style="font-size:13px;font-weight:700;color:#f1f5f9;margin:0 0 14px 0">📦 SKUs Sobrestock por Responsable</h3>
@@ -611,31 +584,23 @@
         <div id="plan-chart-prov" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:4px"></div>
       </div>
     </div>
-
-    <!-- Table -->
     <div class="table-card">
       <div style="overflow-x:auto">
-        <table id="plan-table" style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
-              <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría</th>
-              <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
-              <th style="padding:10px 12px;text-align:right;color:#a78bfa;cursor:pointer;user-select:none" onclick="sortPlan('skus')" id="planh-skus">SKUs ↕</th>
-              <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortPlan('inv_val')" id="planh-inv_val">Val. Inv ↕</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('dias')" id="planh-dias">Días Prom ↕</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('inv_actual')" id="planh-inv_actual">Inv. Actual ↕</th>
-              <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
-            </tr>
-          </thead>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#1a2332;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría</th>
+            <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
+            <th style="padding:10px 12px;text-align:right;color:#a78bfa;cursor:pointer;user-select:none" onclick="sortPlan('skus')" id="planh-skus">SKUs ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortPlan('inv_val')" id="planh-inv_val">Val. Inv ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('dias')" id="planh-dias">Días Prom ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('inv_actual')" id="planh-inv_actual">Inv. Actual ↕</th>
+            <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
+          </tr></thead>
           <tbody id="plan-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
-
-
-</div>
-
 <div id="tooltip"></div>
 
 <script>
@@ -657,11 +622,6 @@ const RESPONSABLES = {
   'Bebés & Niños|Pasabocas': 'Lore', 'Medicamentos': 'Angie', 'Insumos': 'Angie',
 };
 const RESP_COLORS = { 'Edwin':'#3b82f6', 'Lore':'#ec4899', 'Jorge':'#8b5cf6', 'Angie':'#10b981' };
-function respBadge(cat) {
-  const resp = RESPONSABLES[cat] || '—';
-  const color = RESP_COLORS[resp] || '#64748b';
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${color}22;color:${color};border:1px solid ${color}44">${resp}</span>`;
-}
 
 function detectVentaColumns(rawRows) {
   if (!rawRows.length) return;
@@ -735,9 +695,7 @@ function normalise(raw) {
     const invNum = inv != null ? inv : 0;
     estado = invNum > 0 ? 'sin_movimiento' : 'nuevo';
   } else if (dias != null) {
-    if (dias <= 0)                              estado = 'quiebre';
-    else if (dias <= 7)                         estado = 'critico';
-    else if (dias <= 15)                        estado = 'revisar';
+    if (dias <= 3)                              estado = 'quiebre';
     else if (vidaUtil != null && dias > vidaUtil) estado = 'gestionar';
     else if (dias >= 60)                        estado = 'sobrestock';
     else if (dias >= 16)                        estado = 'bien';
@@ -906,7 +864,7 @@ function repopulateFilters() {
   msSetOptions('ms-brand',    DATA.map(r=>r.brand));
   msSetOptions('ms-cat',      DATA.map(r=>r.category));
   msSetOptions('ms-subcat',   DATA.map(r=>r.sub_category));
-  msSetOptions('ms-estado',   ['nuevo','quiebre','critico','revisar','bien','sobrestock','gestionar']);
+  msSetOptions('ms-estado',   ['nuevo','quiebre','bien','sobrestock','gestionar']);
   msSetOptions('ms-pago',     DATA.map(r=>r.tipo_pago));
 }
 
@@ -974,8 +932,7 @@ function estadoBadge(e) {
     nuevo:          'Sin inventario ni ventas — producto pendiente de entrada',
     sin_movimiento: 'Tiene inventario pero sin ventas — revisar o discontinuar',
     quiebre:        'Tiene ventas pero 0 días de inventario — acción inmediata',
-    critico:        '1 a 7 días de cobertura — reponer urgente',
-    revisar:        '8 a 15 días de cobertura — programar reposición',
+
     bien:           '16 a 59 días de cobertura — nivel adecuado',
     sobrestock:     '60+ días de cobertura — exceso de inventario',
     gestionar:      'Días de inventario supera vida útil — riesgo de vencimiento',
@@ -999,7 +956,7 @@ function renderExecSummary(rows) {
   if (!rows.length) { el.style.display='none'; return; }
   el.style.display = 'block';
   const total = rows.length;
-  const quiebre    = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const quiebre    = rows.filter(r=>r.estado==='quiebre').length;
   const sobrestock = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
   const sinMov     = rows.filter(r=>r.estado==='sin_movimiento').length;
   const bien       = rows.filter(r=>r.estado==='bien').length;
@@ -1075,7 +1032,7 @@ function renderKPIs(rows) {
   const diasProm    = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
   const nuevo       = rows.filter(r=>r.estado==='nuevo').length;
   const sinMov      = rows.filter(r=>r.estado==='sin_movimiento').length;
-  const quiebre     = rows.filter(r=>r.estado==='quiebre'||r.estado==='critico').length;
+  const quiebre     = rows.filter(r=>r.estado==='quiebre').length;
   const revisar     = rows.filter(r=>r.estado==='revisar').length;
   const sobrestock  = rows.filter(r=>r.estado==='sobrestock').length;
   const gestionar   = rows.filter(r=>r.estado==='gestionar').length;
@@ -1108,15 +1065,14 @@ function renderKPIs(rows) {
     </div>`).join('');
 
   document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos`;
+  const hdrR=document.getElementById('hdr-registros');if(hdrR)hdrR.textContent=fmt(rows.length);
+  const hdrS=document.getElementById('hdr-skus');if(hdrS)hdrS.textContent=fmt(uniqueSkus);
+  const hdrT=document.getElementById('hdr-tiendas');if(hdrT)hdrT.textContent=new Set(rows.map(r=>r.store)).size;
+  const hdrU=document.getElementById('last-update-hdr');if(hdrU)hdrU.textContent='Cargado: '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   const luEl = document.getElementById('last-update');
   const luBar = document.getElementById('last-update-bar');
   if (luEl) luEl.textContent = new Date().toLocaleString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
   if (luBar) luBar.style.display = 'flex';
-  // Update new header stats
-  const hdrR = document.getElementById('hdr-registros'); if(hdrR) hdrR.textContent = fmt(rows.length);
-  const hdrS = document.getElementById('hdr-skus'); if(hdrS) hdrS.textContent = fmt(uniqueSkus);
-  const hdrT = document.getElementById('hdr-tiendas'); if(hdrT) hdrT.textContent = new Set(rows.map(r=>r.store)).size;
-  const hdrU = document.getElementById('last-update-hdr'); if(hdrU) hdrU.textContent = 'Cargado: ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','critico','revisar','sin_movimiento'].includes(r.estado)).length;
   document.getElementById('cnt-detalle').textContent = fmt(rows.length);
 }
@@ -1525,7 +1481,6 @@ function renderTable(rows) {
       <td>${escH(r.brand)}</td>
       <td>${escH(r.supplier)}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${escH(r.product)}</td>
-      <td style="color:var(--muted);font-size:11px">${escH(r.sub_category||'—')}</td>
       <td style="color:var(--muted)">${escH(r.category)}</td>
       <td class="num">${fmt(r.inv_actual)}</td>
       <td class="num" data-tip="${diasTip(r.dias_inv)}"><b style="color:${r.dias_inv!=null?r.dias_inv<=7?'var(--red)':r.dias_inv<=15?'var(--yellow)':'var(--green)':'var(--muted)'}">${fmtDias(r.dias_inv)}</b></td>
@@ -1660,7 +1615,7 @@ function exportExcel(rows, filename) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   // Column widths
-  ws['!cols'] = [10,14,18,22,30,18,16,12,10,10,14,12,20].map(w=>({wch:w}));
+  ws['!cols'] = [10,14,18,22,30,18,12,10,10,14,12,20].map(w=>({wch:w}));
   // Header style via cell refs
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
@@ -1712,263 +1667,132 @@ function exportMarcaExcel() {
 // ── NOTAS CSS ─────────────────────────────────────────────────────────────────
 
 
-// ─── PLAN DE ATAQUE (Sobrestock ≥60 días) ──────────────────────────────────
-let planSortCol = 'inv_val', planSortDir = -1;
-
-
 function toggleAtacarRow(id) {
-  const row = document.getElementById(id);
-  const icon = document.getElementById('icon-' + id);
-  if (!row) return;
-  const visible = row.style.display !== 'none';
-  row.style.display = visible ? 'none' : 'table-row';
-  if (icon) icon.textContent = visible ? '▶' : '▼';
+  const row=document.getElementById(id);const icon=document.getElementById('icon-'+id);
+  if(!row) return;const visible=row.style.display!=='none';
+  row.style.display=visible?'none':'table-row';
+  if(icon) icon.textContent=visible?'▶':'▼';
 }
 
-function sortPlan(col) {
-  if (planSortCol === col) planSortDir *= -1; else { planSortCol = col; planSortDir = -1; }
-  ['skus','inv_val','dias','inv_actual'].forEach(c => {
-    const el = document.getElementById('planh-' + c); if (!el) return;
-    el.innerHTML = el.innerHTML.replace(/ [↕↓↑]$/, '') + (planSortCol === c ? (planSortDir === -1 ? ' ↓' : ' ↑') : ' ↕');
-    el.style.color = planSortCol === c ? '#FF6B00' : (c === 'inv_val' ? '#f59e0b' : c === 'skus' ? '#a78bfa' : '#64748b');
+let planSortCol='inv_val', planSortDir=-1;
+function sortPlan(col){
+  if(planSortCol===col) planSortDir*=-1; else{planSortCol=col;planSortDir=-1;}
+  ['skus','inv_val','dias','inv_actual'].forEach(c=>{
+    const el=document.getElementById('planh-'+c);if(!el)return;
+    el.innerHTML=el.innerHTML.replace(/ [↕↓↑]$/,'')+(planSortCol===c?(planSortDir===-1?' ↓':' ↑'):' ↕');
+    el.style.color=planSortCol===c?'#FF6B00':(c==='inv_val'?'#f59e0b':c==='skus'?'#a78bfa':'#64748b');
   });
-  if (lastRows.length) renderPlan(lastRows);
+  if(lastRows.length) renderPlan(lastRows);
 }
 
-function renderPlan(rows) {
-  const planStore = document.getElementById('plan-store');
-  const planResp  = document.getElementById('plan-resp');
-  const planSumEl = document.getElementById('plan-summary');
-  const planTbody = document.getElementById('plan-tbody');
-  const planCnt   = document.getElementById('cnt-plan');
-  if (!planTbody) return;
-
-  // Populate store filter
-  const curStore = planStore ? planStore.value : '';
-  const stores = [...new Set(rows.map(r => r.store))].filter(Boolean).sort();
-  if (planStore) {
-    planStore.innerHTML = '<option value="">Todas las tiendas</option>' +
-      stores.map(s => `<option value="${s}" ${s === curStore ? 'selected' : ''}>${s}</option>`).join('');
-  }
-
-  const sf = planStore ? planStore.value : '';
-  const rf = planResp  ? planResp.value  : '';
-  const sobre = rows.filter(r =>
-    (r.estado === 'sobrestock' || r.estado === 'gestionar') &&
-    (!sf || r.store === sf) &&
-    (!rf || (RESPONSABLES[r.category] || '—') === rf)
-  );
-
-  if (planCnt) planCnt.textContent = sobre.length;
-
-  // KPIs
-  const totalVal   = sobre.reduce((a, r) => a + (r.inv_valorizado || 0), 0);
-  const totalInv   = sobre.reduce((a, r) => a + (r.inv_actual || 0), 0);
-  const validDias  = sobre.filter(r => r.dias_inv != null && r.dias_inv > 0 && r.dias_inv < 9999);
-  const diasProm   = validDias.length ? validDias.reduce((a, r) => a + r.dias_inv, 0) / validDias.length : 0;
-  const gestionar  = sobre.filter(r => r.estado === 'gestionar').length;
-  const catsAfect  = new Set(sobre.map(r => r.category)).size;
-
-  if (planSumEl) planSumEl.innerHTML = [
-    { label:'SKUs Sobrestock',        val: sobre.length.toLocaleString('es-CO'),  sub: `${((sobre.length/Math.max(rows.length,1))*100).toFixed(1)}% del total`, color:'#8b5cf6' },
-    { label:'Capital Inmovilizado',   val: '$'+Math.round(totalVal).toLocaleString('es-CO'), sub:'Inv. valorizado sobrestock', color:'#f59e0b' },
-    { label:'Días Prom. Sobrestock',  val: diasProm > 0 ? diasProm.toFixed(0) : '—', sub:'días promedio de cobertura', color:'#a78bfa' },
-    { label:'⚠️ Riesgo Vencimiento', val: gestionar, sub:'supera vida útil', color:'#ef4444' },
-    { label:'Categorías Afectadas',   val: catsAfect, sub:'con al menos 1 SKU', color:'#8b5cf6' },
-    { label:'Unidades en Exceso',     val: Math.round(totalInv).toLocaleString('es-CO'), sub:'unidades en sobrestock', color:'#64748b' },
-  ].map(k => `<div style="background:#111827;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px">
-    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px">${k.label}</div>
-    <div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div>
-    <div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div>
-  </div>`).join('');
-
-  // Chart Responsables
-  const respMap = {};
-  sobre.forEach(r => { const resp = RESPONSABLES[r.category]||'—'; respMap[resp]=(respMap[resp]||0)+1; });
-  const respEl = document.getElementById('plan-chart-resp');
-  if (respEl) {
-    const entries = Object.entries(respMap).sort((a,b)=>b[1]-a[1]);
-    const max = entries[0]?.[1]||1;
-    respEl.innerHTML = entries.map(([resp,cnt]) => {
-      const color = RESP_COLORS[resp]||'#64748b';
-      const pct = (cnt/max*100).toFixed(1);
-      return `<div style="display:flex;align-items:center;gap:10px">
-        <span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span>
-        <div style="flex:1;height:22px;background:#1a2332;border-radius:4px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px">
-            <span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span>
-          </div>
-        </div>
-        <span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(sobre.length,1))*100).toFixed(0)}%</span>
-      </div>`;
-    }).join('');
-  }
-
-  // Chart Proveedores
-  const provMap = {};
-  sobre.forEach(r => { const p = r.supplier||'(Sin prov.)'; provMap[p]=(provMap[p]||0)+1; });
-  const provEl = document.getElementById('plan-chart-prov');
-  if (provEl) {
-    const entries = Object.entries(provMap).sort((a,b)=>b[1]-a[1]).slice(0,20);
-    const max = entries[0]?.[1]||1;
-    const colors = ['#8b5cf6','#a78bfa','#c4b5fd','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#7c3aed','#8b5cf6','#9333ea','#a855f7','#b366f5','#c084fc','#d8b4fe','#8b5cf6','#7c3aed','#6d28d9','#a78bfa','#c4b5fd','#8b5cf6'];
-    provEl.innerHTML = entries.map(([prov,cnt], i) => {
-      const pct = (cnt/max*100).toFixed(1);
-      const short = prov.length > 28 ? prov.substring(0,26)+'…' : prov;
-      return `<div style="display:flex;align-items:center;gap:8px">
-        <span style="min-width:160px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(prov)}">${escH(short)}</span>
-        <div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:3px;display:flex;align-items:center;padding-left:6px">
-            <span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // Group by category → subcategory
-  const catMap = {};
-  sobre.forEach(r => {
-    const cat = r.category || '(Sin categoría)';
-    const sub = r.sub_category || '(Sin subcategoría)';
-    if (!catMap[cat]) catMap[cat] = { skus:0, inv_val:0, inv_actual:0, diasSum:0, diasN:0, subs:{}, gestionar:0 };
-    const c = catMap[cat];
-    c.skus++; c.inv_val += r.inv_valorizado||0; c.inv_actual += r.inv_actual||0;
-    if (r.estado==='gestionar') c.gestionar++;
-    if (r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){c.diasSum+=r.dias_inv;c.diasN++;}
-    if (!c.subs[sub]) c.subs[sub] = { skus:0, inv_val:0, inv_actual:0, diasSum:0, diasN:0, gestionar:0, rows:[] };
-    const s = c.subs[sub];
-    s.skus++; s.inv_val+=r.inv_valorizado||0; s.inv_actual+=r.inv_actual||0;
-    if(r.estado==='gestionar') s.gestionar++;
+function renderPlan(rows){
+  const planStore=document.getElementById('plan-store');const planResp=document.getElementById('plan-resp');
+  const planSumEl=document.getElementById('plan-summary');const planTbody=document.getElementById('plan-tbody');
+  const planCnt=document.getElementById('cnt-plan');if(!planTbody) return;
+  const stores=[...new Set(rows.map(r=>r.store))].filter(Boolean).sort();
+  const curStore=planStore?planStore.value:'';
+  if(planStore) planStore.innerHTML='<option value="">Todas las tiendas</option>'+stores.map(s=>`<option value="${s}" ${s===curStore?'selected':''}>${s}</option>`).join('');
+  const sf=planStore?planStore.value:'';const rf=planResp?planResp.value:'';
+  const sobre=rows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  if(planCnt) planCnt.textContent=sobre.length;
+  const totalVal=sobre.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const totalInv=sobre.reduce((a,r)=>a+(r.inv_actual||0),0);
+  const validDias=sobre.filter(r=>r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999);
+  const diasProm=validDias.length?validDias.reduce((a,r)=>a+r.dias_inv,0)/validDias.length:0;
+  const gst=sobre.filter(r=>r.estado==='gestionar').length;
+  if(planSumEl) planSumEl.innerHTML=[
+    {label:'SKUs Sobrestock',val:sobre.length.toLocaleString('es-CO'),sub:((sobre.length/Math.max(rows.length,1))*100).toFixed(1)+'% del total',color:'#8b5cf6'},
+    {label:'Capital Inmovilizado',val:'$'+Math.round(totalVal).toLocaleString('es-CO'),sub:'Inv. valorizado sobrestock',color:'#f59e0b'},
+    {label:'Días Prom.',val:diasProm>0?diasProm.toFixed(0):'—',sub:'días promedio cobertura',color:'#a78bfa'},
+    {label:'⚠️ Riesgo Vencimiento',val:gst,sub:'supera vida útil',color:'#ef4444'},
+    {label:'Categorías Afectadas',val:new Set(sobre.map(r=>r.category)).size,sub:'con al menos 1 SKU',color:'#8b5cf6'},
+    {label:'Unidades en Exceso',val:Math.round(totalInv).toLocaleString('es-CO'),sub:'unidades sobrestock',color:'#64748b'},
+  ].map(k=>`<div style="background:#111827;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
+  const respMap={};sobre.forEach(r=>{const resp=RESPONSABLES[r.category]||'—';respMap[resp]=(respMap[resp]||0)+1;});
+  const respEl=document.getElementById('plan-chart-resp');
+  if(respEl){const ent=Object.entries(respMap).sort((a,b)=>b[1]-a[1]);const max=ent[0]?.[1]||1;
+    respEl.innerHTML=ent.map(([resp,cnt])=>{const color=RESP_COLORS[resp]||'#64748b';const pct=(cnt/max*100).toFixed(1);
+      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span><div style="flex:1;height:22px;background:#1a2332;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span></div></div><span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(sobre.length,1))*100).toFixed(0)}%</span></div>`;
+    }).join('');}
+  const provMap={};sobre.forEach(r=>{const p=r.supplier||'(Sin prov.)';provMap[p]=(provMap[p]||0)+1;});
+  const provEl=document.getElementById('plan-chart-prov');
+  if(provEl){const ent=Object.entries(provMap).sort((a,b)=>b[1]-a[1]).slice(0,20);const max=ent[0]?.[1]||1;
+    const colors=['#8b5cf6','#a78bfa','#c4b5fd','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#7c3aed','#8b5cf6','#9333ea','#a855f7','#b366f5','#c084fc','#d8b4fe','#8b5cf6','#7c3aed','#6d28d9','#a78bfa','#c4b5fd','#8b5cf6'];
+    provEl.innerHTML=ent.map(([prov,cnt],i)=>{const pct=(cnt/max*100).toFixed(1);const short=prov.length>28?prov.substring(0,26)+'…':prov;
+      return`<div style="display:flex;align-items:center;gap:8px"><span style="min-width:160px;font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(prov)}">${escH(short)}</span><div style="flex:1;height:18px;background:#1a2332;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:3px;display:flex;align-items:center;padding-left:6px"><span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span></div></div></div>`;
+    }).join('');}
+  const catMap={};sobre.forEach(r=>{
+    const cat=r.category||'(Sin categoría)';const sub=r.sub_category||'(Sin subcategoría)';
+    if(!catMap[cat]) catMap[cat]={skus:0,inv_val:0,inv_actual:0,diasSum:0,diasN:0,gestionar:0,subs:{}};
+    const c=catMap[cat];c.skus++;c.inv_val+=r.inv_valorizado||0;c.inv_actual+=r.inv_actual||0;if(r.estado==='gestionar')c.gestionar++;
+    if(r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){c.diasSum+=r.dias_inv;c.diasN++;}
+    if(!c.subs[sub]) c.subs[sub]={skus:0,inv_val:0,inv_actual:0,diasSum:0,diasN:0,gestionar:0,rows:[]};
+    const s=c.subs[sub];s.skus++;s.inv_val+=r.inv_valorizado||0;s.inv_actual+=r.inv_actual||0;if(r.estado==='gestionar')s.gestionar++;
     if(r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){s.diasSum+=r.dias_inv;s.diasN++;}
     s.rows.push(r);
   });
-
-  const catRows = Object.entries(catMap)
-    .map(([cat,g]) => ({cat,...g, dias:g.diasN?g.diasSum/g.diasN:0}))
-    .sort((a,b) => {
-      if(planSortCol==='skus') return planSortDir*(b.skus-a.skus);
-      if(planSortCol==='inv_val') return planSortDir*(b.inv_val-a.inv_val);
-      if(planSortCol==='dias') return planSortDir*(b.dias-a.dias);
-      if(planSortCol==='inv_actual') return planSortDir*(b.inv_actual-a.inv_actual);
-      return planSortDir*(b.inv_val-a.inv_val);
-    });
-
-  const estBadge = e => e === 'gestionar'
-    ? '<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(244,63,94,0.15);color:#fb7185">⚠️ Gestionar</span>'
-    : '<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(139,92,246,0.15);color:#a78bfa">🔵 Sobrestock</span>';
-
-  let html = '';
-  catRows.forEach(({cat, skus, inv_val, inv_actual, dias, gestionar: gest, subs}) => {
-    const resp = RESPONSABLES[cat]||'—';
-    const rcolor = RESP_COLORS[resp]||'#64748b';
-    const respH = `<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${rcolor}22;color:${rcolor};border:1px solid ${rcolor}44">${resp}</span>`;
-    const rowId = 'plan-' + cat.replace(/[^a-zA-Z0-9]/g,'_');
-    const diasC = dias>=60 ? '#8b5cf6' : '#64748b';
-
-    const subEntries = Object.entries(subs).sort((a,b)=>b[1].inv_val-a[1].inv_val);
-    const subHtml = subEntries.map(([sub, sg]) => {
-      const sDias = sg.diasN ? sg.diasSum/sg.diasN : 0;
-      const subId = rowId + '_' + sub.replace(/[^a-zA-Z0-9]/g,'_');
-
-      const skuHtml = sg.rows.sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0)).map(r => {
-        const storeColor = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
-        return '<tr style="background:#070c14">' +
-          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px">' +
-            '<span style="color:#334155;margin-right:5px">⤷</span>' + escH(r.sku||'') +
-            ' <span style="color:#475569;font-size:10px">' + escH(r.product||'') + '</span>' +
-            ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+storeColor+'22;color:'+storeColor+';border:1px solid '+storeColor+'44;margin-left:4px">' + (r.store||'') + '</span>' +
-          '</td>' +
-          '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">' + escH(r.supplier||'') + '</td>' +
-          '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">' + (r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—') + '</td>' +
-          '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">' + (r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—') + '</td>' +
-          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">' + (r.inv_actual!=null?fmt(r.inv_actual):'—') + '</td>' +
-          '<td style="padding:5px 12px;text-align:center">' + estBadge(r.estado) + '</td>' +
-          '</tr>';
-      }).join('');
-
-      return '<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(\'' + subId + '\')">' +
-          '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px">' +
-            '<span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span>' +
-            '<span style="color:#475569;margin-right:6px">└</span>' + escH(sub) +
-            ' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span>' +
-          '</td>' +
-          '<td style="padding:7px 12px;text-align:center">' + respH + '</td>' +
-          '<td style="padding:7px 12px;text-align:right;color:#a78bfa;font-weight:700">' + sg.skus + '</td>' +
-          '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600">' + (sg.inv_val>0?'$'+Math.round(sg.inv_val).toLocaleString('es-CO'):'—') + '</td>' +
-          '<td style="padding:7px 12px;text-align:right;color:' + (sDias>=60?'#8b5cf6':'#64748b') + ';font-weight:700">' + (sDias>0?sDias.toFixed(0)+'d':'—') + '</td>' +
-          '<td style="padding:7px 12px;text-align:right;color:#64748b">' + (sg.inv_actual>0?fmt(sg.inv_actual):'—') + '</td>' +
-          '<td style="padding:7px 12px"></td>' +
-        '</tr>' +
-        '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0">' +
-          '<table style="width:100%;border-collapse:collapse">' +
-            '<thead><tr style="background:#040810">' +
-              '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>' +
-              '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>' +
-              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>' +
-              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días Inv</th>' +
-              '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>' +
-              '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>' +
-            '</tr></thead>' +
-            '<tbody>' + skuHtml + '</tbody>' +
-          '</table>' +
-        '</td></tr>';
-    }).join('');
-
-    html += '<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(\'' + rowId + '\')">' +
-        '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px">' +
-          '<span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>' + escH(cat) +
-          (gest > 0 ? ' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gest+' venc.</span>' : '') +
-        '</td>' +
-        '<td style="padding:11px 12px;text-align:center">' + respH + '</td>' +
-        '<td style="padding:11px 12px;text-align:right;color:#a78bfa;font-weight:800;font-size:15px">' + skus + '</td>' +
-        '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">' + (inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—') + '</td>' +
-        '<td style="padding:11px 12px;text-align:right;color:'+diasC+';font-weight:700;font-size:14px">' + (dias>0?dias.toFixed(0)+'d':'—') + '</td>' +
-        '<td style="padding:11px 12px;text-align:right;color:#94a3b8">' + (inv_actual>0?fmt(inv_actual):'—') + '</td>' +
-        '<td></td>' +
-      '</tr>' +
-      '<tr id="'+rowId+'" style="display:none"><td colspan="7" style="padding:0">' +
-        '<table style="width:100%;border-collapse:collapse"><tbody>' + subHtml + '</tbody></table>' +
-      '</td></tr>';
+  const catRows=Object.entries(catMap).map(([cat,g])=>({cat,...g,dias:g.diasN?g.diasSum/g.diasN:0})).sort((a,b)=>{
+    if(planSortCol==='skus') return planSortDir*(b.skus-a.skus);if(planSortCol==='inv_val') return planSortDir*(b.inv_val-a.inv_val);
+    if(planSortCol==='dias') return planSortDir*(b.dias-a.dias);if(planSortCol==='inv_actual') return planSortDir*(b.inv_actual-a.inv_actual);
+    return planSortDir*(b.inv_val-a.inv_val);
   });
-
-  planTbody.innerHTML = html || '<tr><td colspan="7" class="empty">Sin SKUs en sobrestock con los filtros actuales</td></tr>';
-
-  // Event listeners (bind once)
-  if (planStore && !planStore._bound) {
-    planStore._bound = true;
-    planStore.addEventListener('change', () => renderPlan(lastRows));
-    const pr = document.getElementById('plan-resp');
-    if (pr) pr.addEventListener('change', () => renderPlan(lastRows));
-  }
+  const estBadge=e=>e==='gestionar'?'<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(244,63,94,0.15);color:#fb7185">⚠️ Gestionar</span>':'<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(139,92,246,0.15);color:#a78bfa">🔵 Sobrestock</span>';
+  let html='';
+  catRows.forEach(({cat,skus,inv_val,inv_actual,dias,gestionar:gstC,subs})=>{
+    const resp=RESPONSABLES[cat]||'—';const rcolor=RESP_COLORS[resp]||'#64748b';
+    const respH=`<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${rcolor}22;color:${rcolor};border:1px solid ${rcolor}44">${resp}</span>`;
+    const rowId='plan-'+cat.replace(/[^a-zA-Z0-9]/g,'_');
+    const subHtml=Object.entries(subs).sort((a,b)=>b[1].inv_val-a[1].inv_val).map(([sub,sg])=>{
+      const sDias=sg.diasN?sg.diasSum/sg.diasN:0;const subId=rowId+'_'+sub.replace(/[^a-zA-Z0-9]/g,'_');
+      const skuHtml=sg.rows.sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0)).map(r=>{
+        const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
+        return'<tr style="background:#070c14">'+
+          '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
+          '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:center">'+estBadge(r.estado)+'</td></tr>';
+      }).join('');
+      return'<tr style="background:#0d1420;cursor:pointer" onclick="toggleAtacarRow(''+subId+'')">'+
+        '<td style="padding:7px 12px 7px 36px;color:#94a3b8;font-size:12px"><span id="icon-'+subId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span><span style="color:#475569;margin-right:6px">└</span>'+escH(sub)+' <span style="color:#475569;font-size:10px">('+sg.skus+' SKUs)</span></td>'+
+        '<td style="padding:7px 12px;text-align:center">'+respH+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#a78bfa;font-weight:700">'+sg.skus+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600">'+(sg.inv_val>0?'$'+Math.round(sg.inv_val).toLocaleString('es-CO'):'—')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#8b5cf6;font-weight:700">'+(sDias>0?sDias.toFixed(0)+'d':'—')+'</td>'+
+        '<td style="padding:7px 12px;text-align:right;color:#64748b">'+(sg.inv_actual>0?fmt(sg.inv_actual):'—')+'</td><td></td></tr>'+
+        '<tr id="'+subId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#040810">'+
+          '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
+        '</tr></thead><tbody>'+skuHtml+'</tbody></table></td></tr>';
+    }).join('');
+    html+='<tr style="cursor:pointer;border-top:2px solid #1e2d3d;background:#111827" onclick="toggleAtacarRow(''+rowId+'')">'+
+      '<td style="padding:11px 12px;font-weight:700;color:#f1f5f9;font-size:13px"><span id="icon-'+rowId+'" style="margin-right:8px;color:#64748b;font-size:11px">▶</span>'+escH(cat)+(gstC>0?' <span style="font-size:10px;color:#fb7185;margin-left:6px">⚠️ '+gstC+' venc.</span>':'')+'</td>'+
+      '<td style="padding:11px 12px;text-align:center">'+respH+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#a78bfa;font-weight:800;font-size:15px">'+skus+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:14px">'+(inv_val>0?'$'+Math.round(inv_val).toLocaleString('es-CO'):'—')+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:14px">'+(dias>0?dias.toFixed(0)+'d':'—')+'</td>'+
+      '<td style="padding:11px 12px;text-align:right;color:#94a3b8">'+(inv_actual>0?fmt(inv_actual):'—')+'</td><td></td></tr>'+
+      '<tr id="'+rowId+'" style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse"><tbody>'+subHtml+'</tbody></table></td></tr>';
+  });
+  planTbody.innerHTML=html||'<tr><td colspan="7" class="empty">Sin SKUs en sobrestock</td></tr>';
+  if(planStore&&!planStore._bound){planStore._bound=true;planStore.addEventListener('change',()=>renderPlan(lastRows));const pr=document.getElementById('plan-resp');if(pr)pr.addEventListener('change',()=>renderPlan(lastRows));}
 }
 
-function exportPlanXLSX() {
-  const sf = document.getElementById('plan-store')?.value || '';
-  const rf = document.getElementById('plan-resp')?.value || '';
-  const sobre = lastRows.filter(r =>
-    (r.estado==='sobrestock'||r.estado==='gestionar') &&
-    (!sf||r.store===sf) && (!rf||(RESPONSABLES[r.category]||'—')===rf)
-  ).sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-  if (!sobre.length) return;
-  const wsData = [['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Días Inv.','Inv. Actual','Val. Inv','Estado','Vida Útil']];
-  sobre.forEach(r => wsData.push([
-    r.category||'', r.sub_category||'', RESPONSABLES[r.category]||'—',
-    r.store||'', r.supplier||'', r.brand||'', r.sku||'', r.product||'',
-    r.dias_inv!=null?+r.dias_inv.toFixed(1):'',
-    r.inv_actual||'', r.inv_valorizado||'', r.estado||'',
-    r.vida_util!=null?+r.vida_util.toFixed(1):''
-  ]));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [20,20,12,10,25,18,12,35,10,12,16,12,10].map(w=>({wch:w}));
-  const rng = XLSX.utils.decode_range(ws['!ref']);
-  for (let C=rng.s.c; C<=rng.e.c; C++) {
-    const cell = ws[XLSX.utils.encode_cell({r:0,c:C})];
-    if (cell) cell.s = { fill:{fgColor:{rgb:'8B5CF6'}}, font:{bold:true,color:{rgb:'FFFFFF'}}, alignment:{horizontal:'center'} };
-  }
-  XLSX.utils.book_append_sheet(wb, ws, 'Plan de Ataque');
-  XLSX.writeFile(wb, 'plan_ataque_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
+function exportPlanXLSX(){
+  const sf=document.getElementById('plan-store')?.value||'';const rf=document.getElementById('plan-resp')?.value||'';
+  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf)).sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
+  if(!sobre.length) return;
+  const wsData=[['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Días Inv.','Inv. Actual','Val. Inv','Estado']];
+  sobre.forEach(r=>wsData.push([r.category||'',r.sub_category||'',RESPONSABLES[r.category]||'—',r.store||'',r.supplier||'',r.brand||'',r.sku||'',r.product||'',r.dias_inv!=null?+r.dias_inv.toFixed(1):'',r.inv_actual||'',r.inv_valorizado||'',r.estado||'']));
+  const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[20,20,12,10,25,18,12,35,10,12,16,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Plan de Ataque');
+  XLSX.writeFile(wb,'plan_ataque_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
@@ -2006,7 +1830,6 @@ function render() {
   renderAlerts(rows);
   renderProveedores(rows);
   renderMarcas(rows);
-  renderPlan(rows);
   currentPage = 1;
   renderTable(rows);
 }
@@ -2018,8 +1841,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'plan' && lastRows.length) renderPlan(lastRows);
-    window.scrollTo({top:0, behavior:'smooth'});
+    if(btn.dataset.tab==='plan'&&lastRows.length) renderPlan(lastRows);
+    window.scrollTo({top:0,behavior:'smooth'});
   });
 });
 
@@ -2070,9 +1893,9 @@ document.getElementById('pg-size').addEventListener('change',e=>{pageSize=parseI
 
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
 document.getElementById('btn-exp-det').addEventListener('click',()=>exportExcel(lastRows,'dias_inventario'));
+document.getElementById('btn-plan-export').addEventListener('click',exportPlanXLSX);
 document.getElementById('btn-exp-prov').addEventListener('click',exportProvExcel);
 document.getElementById('btn-exp-marca').addEventListener('click',exportMarcaExcel);
-document.getElementById('btn-plan-export').addEventListener('click',exportPlanXLSX);
 document.getElementById('f-search-marca').addEventListener('input',e=>{ searchMarcaTerm=e.target.value; renderMarcas(lastRows); });
 document.getElementById('btn-refresh').addEventListener('click',()=>{DATA=[];loadData();});
 
