@@ -314,18 +314,10 @@
   </header>
 
   <div id="exec-summary" class="exec-summary" style="display:none"></div>
-  <div class="meta-bar" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span id="meta-txt" style="font-size:13px"><b>—</b> registros · <b>—</b> tiendas · <b>—</b> SKUs únicos</span>
-      <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
-    </div>
-    <div id="last-update-bar" style="display:none;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.35);border-radius:6px;padding:6px 12px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:16px">🕐</span>
-      <div>
-        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:700">Última actualización</div>
-        <div id="last-update" style="font-size:13px;font-weight:700;color:#f97316"></div>
-      </div>
-    </div>
+  <div style="display:none">
+    <span id="meta-txt"></span>
+    <div id="last-update-bar"></div>
+    <span id="last-update"></span>
   </div>
   <div class="err-bar" id="err-bar"></div>
 
@@ -577,7 +569,7 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbydEY8qdQmnGYSc7Mm6jT6YqnyHmVHbKWFqKXELjpbnvqreWCbvPevowUGgHZvDeK2NNg/exec';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbwzhVxi9u6n3bkCFpdqb2Txpj3h0PojK91ZKG1Uwz9tBuLwf8_zYIADlGMs4uq7KoSVOQ/exec';
 
 // Se detectan automaticamente desde los datos al cargar
 let VENTA_MONTHS = [];
