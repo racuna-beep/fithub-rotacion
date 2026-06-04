@@ -282,7 +282,7 @@
         <div class="header-meta">
           <div class="header-title">📦 Dashboard Días de Inventario 2026</div>
           <div class="header-badges">
-            <span class="estado-badge eb-quiebre">🚨 Quiebre 0–3d</span>
+            <span class="estado-badge eb-quiebre">💀 Sin Stock 0d</span> <span class="estado-badge eb-quiebre">🚨 Quiebre 1–3d</span>
             <span class="estado-badge eb-bien">🟢 Bien 4–59d</span>
             <span class="estado-badge eb-sobre">🔵 Sobrestock ≥60d</span>
           </div>
@@ -406,12 +406,20 @@
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
     <div class="alert-cols">
+      <div class="alert-col" style="border-top:3px solid #dc2626">
+        <div class="alert-col-hdr">
+          <h4 style="color:#dc2626">💀 Sin Stock (0d)</h4>
+          <span class="badge-cnt" id="cnt-ss0" style="background:rgba(220,38,38,0.15);color:#dc2626">0</span>
+        </div>
+        <div class="alert-col-desc">Sin inventario con ventas activas — quiebre total.</div>
+        <div class="alert-col-body" id="body-list-sin_stock"><div id="list-sin_stock"></div></div>
+      </div>
       <div class="alert-col quiebre">
         <div class="alert-col-hdr">
-          <h4>🚨 Quiebre (0–3d)</h4>
+          <h4>🚨 Quiebre (1–3d)</h4>
           <span class="badge-cnt" id="cnt-q" style="background:rgba(239,68,68,0.15);color:#f87171">0</span>
         </div>
-        <div class="alert-col-desc">0 a 3 días de inventario. Acción inmediata.</div>
+        <div class="alert-col-desc">1 a 3 días de inventario. Acción inmediata.</div>
         <div class="alert-col-body" id="body-list-quiebre"><div id="list-quiebre"></div></div>
       </div>
       <div class="alert-col" style="border-top:3px solid #8b5cf6">
@@ -659,7 +667,8 @@ function normalise(raw) {
     const invNum = inv != null ? inv : 0;
     estado = invNum > 0 ? 'sin_movimiento' : 'nuevo';
   } else if (dias != null) {
-    if (dias <= 3)                              estado = 'quiebre';
+    if (dias === 0 || (r.inv_actual === 0 && r.prom_vta_ytd > 0)) estado = 'sin_stock';
+    else if (dias <= 3)                         estado = 'quiebre';
     else if (vidaUtil != null && dias > vidaUtil) estado = 'gestionar';
     else if (dias >= 60)                        estado = 'sobrestock';
     else if (dias >= 4)                         estado = 'bien';
@@ -828,7 +837,7 @@ function repopulateFilters() {
   msSetOptions('ms-brand',    DATA.map(r=>r.brand));
   msSetOptions('ms-cat',      DATA.map(r=>r.category));
   msSetOptions('ms-subcat',   DATA.map(r=>r.sub_category));
-  msSetOptions('ms-estado',   ['nuevo','quiebre','bien','sobrestock','gestionar']);
+  msSetOptions('ms-estado',   ['nuevo','sin_stock','quiebre','bien','sobrestock','gestionar','sin_movimiento']);
   msSetOptions('ms-pago',     DATA.map(r=>r.tipo_pago));
 }
 
@@ -895,7 +904,7 @@ function estadoBadge(e) {
   const tips = {
     nuevo:          'Sin inventario ni ventas — producto pendiente de entrada',
     sin_movimiento: 'Tiene inventario pero sin ventas — revisar o discontinuar',
-    quiebre:        'Tiene ventas pero 0 días de inventario — acción inmediata',
+    quiebre:        '1 a 3 días de inventario — acción inmediata',
 
     bien:           '16 a 59 días de cobertura — nivel adecuado',
     sobrestock:     '60+ días de cobertura — exceso de inventario',
@@ -910,7 +919,7 @@ const KPI_TIPS = {
   'Registros': 'Total de filas. Un mismo SKU puede aparecer en varias tiendas.',
   'SKUs únicos': 'Cantidad de productos distintos en los datos filtrados.',
   'Días Inv. Prom': 'Promedio de días de inventario de todos los SKUs filtrados.',
-  'Quiebre': 'SKUs con 0 a 3 días de inventario. Acción inmediata.',
+  'Quiebre': 'SKUs con 1 a 3 días de inventario. Acción inmediata.',
   'Bajo (8-15 días)': 'SKUs que requieren reposición pronto.',
   'Exceso': 'SKUs con inventario que supera su vida útil.',
   'Inv. Actual Total': 'Suma de unidades en inventario para los SKUs filtrados.',
@@ -1089,7 +1098,7 @@ function renderBars(svgId, data, color, W, H) {
 // ── RENDER DONUT ──────────────────────────────────────────────────────────────
 function renderDonut(rows) {
   const svg = document.getElementById('chart-donut'); svg.innerHTML = '';
-  const counts = { nuevo:0, sin_movimiento:0, quiebre:0, bien:0, sobrestock:0, gestionar:0 };
+  const counts = { nuevo:0, sin_movimiento:0, sin_stock:0, quiebre:0, bien:0, sobrestock:0, gestionar:0 };
   rows.forEach(r => { if(counts[r.estado]!=null) counts[r.estado]++; });
   const total = rows.length || 1;
   const items = [
@@ -1229,10 +1238,10 @@ function toggleAlertCol(btn) {
 }
 
 function expandAlert(btn, id, rows) {
-  const map = { 'list-nuevo':'nuevo','list-sin_movimiento':'sin_movimiento','list-quiebre':'quiebre','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
+  const map = { 'list-nuevo':'nuevo','list-sin_movimiento':'sin_movimiento','list-sin_stock':'sin_stock','list-quiebre':'quiebre','list-sobrestock':'sobrestock','list-gestionar':'gestionar' };
   const estado = map[id];
   const full = rows.filter(r=>r.estado===estado).sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const colorMap = { nuevo:'#94a3b8', sin_movimiento:'#60a5fa', quiebre:'#ef4444', critico:'#ef4444', revisar:'#10b981', bien:'#10b981', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
+  const colorMap = { nuevo:'#94a3b8', sin_movimiento:'#60a5fa', sin_stock:'#dc2626', quiebre:'#ef4444', critico:'#ef4444', revisar:'#10b981', bien:'#10b981', sobrestock:'#8b5cf6', gestionar:'#f43f5e' };
   renderAlertCards(id, full, colorMap[estado], r=>`${fmtD(r.dias_inv)} días`,
     r=>r.vida_util!=null?`Vida: ${fmtD(r.vida_util)} días`:`Inv: ${fmt(r.inv_actual)}`, null, 999);
   btn.remove();
@@ -1254,6 +1263,8 @@ function renderAlerts(rows) {
   const subInv = r => `${fmt(r.inv_actual)} uds${r.inv_valorizado ? ' · ' + fmtM(r.inv_valorizado) : ''}`;
   renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`,  r=>'Sin ventas ni stock',         'cnt-nv');
   renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>fmtM(r.inv_valorizado||0),    subInv,                           'cnt-sm');
+  const sin_stock_l = rows.filter(r=>r.estado==='sin_stock').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
+  renderAlertCards('list-sin_stock', sin_stock_l, '#dc2626', r=>'Sin stock', subInv, 'cnt-ss0');
   renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-q');
 
 
@@ -1486,10 +1497,10 @@ function renderTable(rows) {
     const respH = `<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${rcolor}22;color:${rcolor};border:1px solid ${rcolor}44">${resp}</span>`;
     const rowId = 'det2-'+cat.replace(/[^a-zA-Z0-9]/g,'_');
 
-    const subHtml = Object.entries(subs).sort((a,b)=>b[1].skus-a[1].skus).map(([sub,sg]) => {
+    const subHtml = Object.entries(subs).sort((a,b)=>b[1].inv_val-a[1].inv_val).map(([sub,sg]) => {
       const sDias = sg.diasN?sg.diasSum/sg.diasN:0;
       const subId = rowId+'_'+sub.replace(/[^a-zA-Z0-9]/g,'_');
-      const skuHtml = sg.rows.sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0)).map(r => {
+      const skuHtml = sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r => {
         const sc2 = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         const ec = estadoColor(r.estado); const el = estadoLabel(r.estado);
         return '<tr style="background:#070c14">'+
@@ -1777,7 +1788,7 @@ function renderPlan(rows){
     const rowId='plan-'+cat.replace(/[^a-zA-Z0-9]/g,'_');
     const subHtml=Object.entries(subs).sort((a,b)=>b[1].inv_val-a[1].inv_val).map(([sub,sg])=>{
       const sDias=sg.diasN?sg.diasSum/sg.diasN:0;const subId=rowId+'_'+sub.replace(/[^a-zA-Z0-9]/g,'_');
-      const skuHtml=sg.rows.sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0)).map(r=>{
+      const skuHtml=sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r=>{
         const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         return'<tr style="background:#070c14">'+
           '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
