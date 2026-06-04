@@ -1509,6 +1509,7 @@ function renderTable(rows) {
           ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+ec+'22;color:'+ec+'">'+el+'</span></td>'+
@@ -1527,6 +1528,7 @@ function renderTable(rows) {
             '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
             '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
             '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+            '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
             '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
             '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
             '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
@@ -1794,6 +1796,7 @@ function renderPlan(rows){
           '<td style="padding:5px 12px 5px 56px;color:#64748b;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:#64748b;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#94a3b8;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center">'+estBadge(r.estado)+'</td></tr>';
@@ -1809,6 +1812,7 @@ function renderPlan(rows){
           '<th style="padding:4px 12px 4px 56px;text-align:left;color:#334155;font-size:9px;text-transform:uppercase">SKU · Producto · Tienda</th>'+
           '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Proveedor</th>'+
           '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Prom. Vta</th>'+
           '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Días</th>'+
           '<th style="padding:4px 12px;text-align:right;color:#334155;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
           '<th style="padding:4px 12px;text-align:center;color:#334155;font-size:9px;text-transform:uppercase">Estado</th>'+
