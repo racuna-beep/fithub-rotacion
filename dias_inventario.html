@@ -416,22 +416,7 @@
         <div class="alert-col-desc">Tiene ventas pero 0 días de inventario. Acción inmediata.</div>
         <div class="alert-col-body" id="body-list-quiebre"><div id="list-quiebre"></div></div>
       </div>
-      <div class="alert-col critico">
-        <div class="alert-col-hdr">
-          <h4>🔴 Crítico (1–7 días)</h4>
-          <span class="badge-cnt" id="cnt-c" style="background:rgba(249,115,22,0.15);color:#fb923c">0</span>
-        </div>
-        <div class="alert-col-desc">Menos de 7 días. Reponer de inmediato.</div>
-        <div class="alert-col-body" id="body-list-critico"><div id="list-critico"></div></div>
-      </div>
-      <div class="alert-col bajo" style="border-top:3px solid var(--yellow)">
-        <div class="alert-col-hdr">
-          <h4 style="color:var(--yellow)">🟡 Revisar (8–15 días)</h4>
-          <span class="badge-cnt" id="cnt-b" style="background:rgba(245,158,11,0.15);color:#fbbf24">0</span>
-        </div>
-        <div class="alert-col-desc">Cobertura baja. Programar reposición pronto.</div>
-        <div class="alert-col-body" id="body-list-revisar"><div id="list-revisar"></div></div>
-      </div>
+
       <div class="alert-col" style="border-top:3px solid #8b5cf6">
         <div class="alert-col-hdr">
           <h4 style="color:#8b5cf6">🔵 Sobrestock (≥60 días)</h4>
@@ -691,7 +676,7 @@ function normalise(raw) {
 async function loadData() {
   setLoader('Conectando con Google Sheets…', 15);
   try {
-    const res = await fetch(APPS_URL, { cache: 'no-store' });
+    const res = await fetch(APPS_URL, { cache: 'no-store', redirect: 'follow' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     setLoader('Procesando datos…', 60);
     const raw = await res.json();
@@ -911,7 +896,7 @@ const KPI_TIPS = {
   'Registros': 'Total de filas. Un mismo SKU puede aparecer en varias tiendas.',
   'SKUs únicos': 'Cantidad de productos distintos en los datos filtrados.',
   'Días Inv. Prom': 'Promedio de días de inventario de todos los SKUs filtrados.',
-  'Quiebre / Crítico': 'SKUs sin stock o con menos de 7 días de cobertura.',
+  'Quiebre': 'SKUs con 0 a 3 días de inventario. Acción inmediata.',
   'Bajo (8-15 días)': 'SKUs que requieren reposición pronto.',
   'Exceso': 'SKUs con inventario que supera su vida útil.',
   'Inv. Actual Total': 'Suma de unidades en inventario para los SKUs filtrados.',
