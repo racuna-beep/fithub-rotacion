@@ -1868,7 +1868,7 @@ function renderPlan(rows){
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#8b5cf6;font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
-          (()=>{const ex=r.inv_actual!=null&&r.prom_vta!=null?Math.round(r.inv_actual-(r.prom_vta*60)):null;
+          (()=>{const ex=r.inv_actual!=null&&r.prom_vta!=null?Math.round(r.inv_actual-(r.prom_vta*2)):null;
             return '<td style="padding:5px 12px;text-align:right">'+(ex!=null&&ex>0?'<span style="font-weight:700;color:#f43f5e;font-size:12px">'+fmt(ex)+'</span>':'<span style="color:#d1d5db">—</span>')+'</td>';
           })()+
           '<td style="padding:5px 12px;text-align:center">'+estBadge(r.estado)+'</td></tr>';
