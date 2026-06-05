@@ -695,7 +695,7 @@ function normalise(raw) {
     dias_inv:  dias,
     vida_util: vidaUtil,
     prom_vta:  num(g('Promedio de Venta YTD')) || promVta,
-    venta_mes: num(g('Venta Mayo') || g('Venta Mes') || g('venta_mes') || 0),
+    venta_mes: num(g('Venta Mayo') || g('Venta Mayo ') || g('Venta Mes') || g('venta_mes') || g('Ventas Mayo') || 0),
     ventas,
     estado,
   };
@@ -1021,9 +1021,9 @@ function renderKPIs(rows) {
   const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
   const n = rows.length || 1;
 
-  // Ventas del mes actual (Venta Mayo) — suma directa de la columna
-  const totalVentasMes = rows.reduce((a,r) => a + (r.venta_mes||0), 0);
-  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(2) : '—';
+  // Ventas del mes: Venta Mayo directa, fallback a prom_vta*30
+  const totalVentasMes = rows.reduce((a,r) => a + (r.venta_mes || (r.prom_vta||0)*30), 0);
+  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(1) : '—';
   const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
 
   const kpis = [
@@ -1441,7 +1441,7 @@ function renderProveedores(rows) {
     const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
     const barW = (d.inv_val / maxVal * 100).toFixed(1);
 
-    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" onmouseover="this.style.background='#faf9f7'" onmouseout="this.style.background=''">
+    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
       <td style="padding:12px 16px">
         <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.supplier)}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">${fmt(d.skus)} SKUs · ${fmt(d.inv)} uds</div>
@@ -1682,7 +1682,7 @@ function renderMarcas(rows) {
     const pctRisk = d.skus > 0 ? ((totalRisk / d.skus)*100).toFixed(0) : 0;
     const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
 
-    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" onmouseover="this.style.background='#faf9f7'" onmouseout="this.style.background=''">
+    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
       <td style="padding:12px 16px">
         <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.brand)}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(d.supplier)} · ${fmt(d.skus)} SKUs</div>
