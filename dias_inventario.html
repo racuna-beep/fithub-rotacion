@@ -695,6 +695,7 @@ function normalise(raw) {
     dias_inv:  dias,
     vida_util: vidaUtil,
     prom_vta:  num(g('Promedio de Venta YTD')) || promVta,
+    venta_mes: num(g('Venta Mayo') || g('Venta Mes') || g('venta_mes') || 0),
     ventas,
     estado,
   };
@@ -1020,10 +1021,9 @@ function renderKPIs(rows) {
   const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
   const n = rows.length || 1;
 
-  // Ventas del mes más reciente (último VENTA_MONTHS)
-  const lastVentaKey = VENTA_MONTHS.length ? VENTA_MONTHS[VENTA_MONTHS.length - 1] : null;
-  const totalVentasMes = lastVentaKey ? rows.reduce((a,r) => a + (r.ventas[VENTA_MONTHS.length-1]||0), 0) : 0;
-  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(1) : '—';
+  // Ventas del mes actual (Venta Mayo) — suma directa de la columna
+  const totalVentasMes = rows.reduce((a,r) => a + (r.venta_mes||0), 0);
+  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(2) : '—';
   const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
 
   const kpis = [
@@ -1377,37 +1377,46 @@ function renderProveedores(rows) {
   const map = {};
   rows.forEach(r => {
     const k = r.supplier || '(Sin proveedor)';
-    if (!map[k]) map[k] = { supplier:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0 };
-    map[k].skus++;
-    map[k].inv     += r.inv_actual    || 0;
-    map[k].inv_val += r.inv_valorizado|| 0;
-    const validEstados = ['bien','sobrestock','gestionar','quiebre'];
-    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
-      map[k].diasSum += r.dias_inv; map[k].diasN++;
+    if (!map[k]) map[k] = { supplier:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0,
+      sin_stock:0, quiebre:0, sobrestock:0, gestionar:0, bien:0 };
+    const m = map[k];
+    m.skus++; m.inv += r.inv_actual||0; m.inv_val += r.inv_valorizado||0;
+    if (r.estado === 'sin_stock')   m.sin_stock++;
+    if (r.estado === 'quiebre')     m.quiebre++;
+    if (r.estado === 'sobrestock')  m.sobrestock++;
+    if (r.estado === 'gestionar')   m.gestionar++;
+    if (r.estado === 'bien')        m.bien++;
+    const validEstados = ['bien','sobrestock','gestionar','quiebre','sin_movimiento'];
+    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
+      m.diasSum += r.dias_inv; m.diasN++;
     }
   });
+
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
   if (term) data = data.filter(d=>d.supplier.toLowerCase().includes(term));
   data.sort((a,b)=>{
     const va=a[provSortCol], vb=b[provSortCol];
-    if (va==null) return 1; if (vb==null) return -1;
+    if(va==null) return 1; if(vb==null) return -1;
     return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * provSortDir;
   });
   document.getElementById('cnt-prov').textContent = data.length + ' proveedores';
 
-  const cols = [
-    { key:'supplier',  label:'Proveedor',          num:false },
-    { key:'skus',      label:'Cant. SKUs',          num:true  },
-    { key:'inv',       label:'Stock Actual (uds)',  num:true  },
-    { key:'dias_prom', label:'Días Inv. Promedio',  num:true  },
-    { key:'inv_val',   label:'Inv. Valorizado',     num:true  },
-  ];
+  const diasColor = v => v==null?'#94a3b8':v<=3?'#dc2626':v>=60?'#7c3aed':'#059669';
+  const maxVal = Math.max(...data.map(d=>d.inv_val||0), 1);
+  const maxDias = Math.max(...data.map(d=>d.dias_prom||0), 1);
 
-  document.getElementById('prov-thead').innerHTML = cols.map(c => {
-    const active = provSortCol === c.key;
-    const arrow  = active ? (provSortDir === -1 ? ' ↓' : ' ↑') : '';
-    return `<th class="${c.num?'num':''}" data-pcol="${c.key}" style="cursor:pointer${active?';color:var(--orange)':''}">${c.label}${arrow}</th>`;
-  }).join('');
+  // New rich header
+  document.getElementById('prov-thead').innerHTML = `
+    <tr style="background:#f0ede8">
+      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-pcol="supplier">Proveedor${provSortCol==='supplier'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-pcol="skus">SKUs${provSortCol==='skus'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#dc2626;cursor:pointer" data-pcol="sin_stock">Sin Stock${provSortCol==='sin_stock'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ea6c0a;cursor:pointer" data-pcol="quiebre">Quiebre${provSortCol==='quiebre'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7c3aed;cursor:pointer" data-pcol="sobrestock">Sobrestock${provSortCol==='sobrestock'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;cursor:pointer" data-pcol="dias_prom">Días Prom${provSortCol==='dias_prom'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#d97706;cursor:pointer" data-pcol="inv_val">Val. Inv${provSortCol==='inv_val'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Estado</th>
+    </tr>`;
 
   document.querySelectorAll('#prov-thead th[data-pcol]').forEach(th=>{
     th.addEventListener('click',()=>{
@@ -1417,32 +1426,54 @@ function renderProveedores(rows) {
     });
   });
 
-  const diasColor = v => v==null?'#64748b':v<=3?'#ef4444':v>=60?'#8b5cf6':'#10b981';
-  const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
-  const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
+  const pctBar = (v, max, color) =>
+    `<div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;min-width:50px">` +
+    `<div style="height:100%;width:${Math.min(v/max*100,100).toFixed(1)}%;background:${color};border-radius:3px"></div></div>`;
 
-  document.getElementById('prov-tbody').innerHTML = data.length ? data.map(d=>`
-    <tr>
-      <td><b style="color:var(--text)">${escH(d.supplier)}</b></td>
-      <td class="num">${fmt(d.skus)}</td>
-      <td class="num">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-          <span style="font-weight:600">${fmt(d.inv)}</span>
-          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
-            <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
-          </div>
+  const riskBadge = (n, color, label) => n > 0
+    ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${color}18;color:${color};border:1px solid ${color}30">${n} ${label}</span>`
+    : '';
+
+  document.getElementById('prov-tbody').innerHTML = data.length ? data.map((d,i) => {
+    const dc = diasColor(d.dias_prom);
+    const totalRisk = d.sin_stock + d.quiebre;
+    const pctRisk = d.skus > 0 ? ((totalRisk / d.skus)*100).toFixed(0) : 0;
+    const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
+    const barW = (d.inv_val / maxVal * 100).toFixed(1);
+
+    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" onmouseover="this.style.background='#faf9f7'" onmouseout="this.style.background=''">
+      <td style="padding:12px 16px">
+        <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.supplier)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${fmt(d.skus)} SKUs · ${fmt(d.inv)} uds</div>
+      </td>
+      <td style="padding:12px;text-align:right;font-weight:700;color:#1e293b">${fmt(d.skus)}</td>
+      <td style="padding:12px;text-align:right">
+        ${d.sin_stock > 0 ? `<span style="font-weight:700;color:#dc2626">${d.sin_stock}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        ${d.quiebre > 0 ? `<span style="font-weight:700;color:#ea6c0a">${d.quiebre}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        ${(d.sobrestock+d.gestionar) > 0 ? `<span style="font-weight:700;color:#7c3aed">${d.sobrestock+d.gestionar}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        <span style="font-weight:700;color:${dc};font-size:14px">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+      </td>
+      <td style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+          <span style="font-weight:700;color:#d97706;font-size:13px">${d.inv_val ? fmtM(d.inv_val) : '—'}</span>
+          ${pctBar(d.inv_val, maxVal, '#f59e0b')}
         </div>
       </td>
-      <td class="num">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-          <span style="color:${diasColor(d.dias_prom)};font-weight:700">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
-            <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
-          </div>
+      <td style="padding:12px 16px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${totalRisk > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dc262618;color:#dc2626;border:1px solid #dc262630">⚠ ${pctRisk}% riesgo</span>` : ''}
+          ${(d.sobrestock+d.gestionar) > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#7c3aed18;color:#7c3aed;border:1px solid #7c3aed30">📦 ${pctSobre}% sobre</span>` : ''}
+          ${totalRisk === 0 && (d.sobrestock+d.gestionar) === 0 ? `<span style="color:#059669;font-size:11px;font-weight:600">✓ OK</span>` : ''}
         </div>
       </td>
-      <td class="num" style="color:var(--green)">${d.inv_val ? fmtM(d.inv_val) : '—'}</td>
-    </tr>`).join('') : '<tr><td colspan="5" class="empty">Sin resultados</td></tr>';
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
@@ -1596,35 +1627,43 @@ function renderMarcas(rows) {
   const map = {};
   rows.forEach(r => {
     const k = r.brand || '(Sin marca)';
-    if (!map[k]) map[k] = { brand:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0 };
-    map[k].skus++;
-    map[k].inv     += r.inv_actual    || 0;
-    map[k].inv_val += r.inv_valorizado|| 0;
-    const validEstados = ['bien','sobrestock','gestionar','quiebre'];
-    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
-      map[k].diasSum += r.dias_inv; map[k].diasN++;
+    if (!map[k]) map[k] = { brand:k, supplier:r.supplier||'', skus:0, inv:0, inv_val:0, diasSum:0, diasN:0,
+      sin_stock:0, quiebre:0, sobrestock:0, gestionar:0 };
+    const m = map[k];
+    m.skus++; m.inv += r.inv_actual||0; m.inv_val += r.inv_valorizado||0;
+    if (r.estado === 'sin_stock')   m.sin_stock++;
+    if (r.estado === 'quiebre')     m.quiebre++;
+    if (r.estado === 'sobrestock')  m.sobrestock++;
+    if (r.estado === 'gestionar')   m.gestionar++;
+    const valid = ['bien','sobrestock','gestionar','quiebre','sin_movimiento'];
+    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0 && r.dias_inv<366 && valid.includes(r.estado)) {
+      m.diasSum += r.dias_inv; m.diasN++;
     }
   });
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
   if (term) data = data.filter(d=>d.brand.toLowerCase().includes(term));
   data.sort((a,b)=>{
     const va=a[marcaSortCol], vb=b[marcaSortCol];
-    if (va==null) return 1; if (vb==null) return -1;
+    if(va==null) return 1; if(vb==null) return -1;
     return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * marcaSortDir;
   });
   document.getElementById('cnt-marca').textContent = data.length + ' marcas';
-  const cols = [
-    { key:'brand',     label:'Marca',               num:false },
-    { key:'skus',      label:'Cant. SKUs',           num:true  },
-    { key:'inv',       label:'Stock Actual (uds)',   num:true  },
-    { key:'dias_prom', label:'Dias Inv. Promedio',   num:true  },
-    { key:'inv_val',   label:'Inv. Valorizado',      num:true  },
-  ];
-  document.getElementById('marca-thead').innerHTML = cols.map(c => {
-    const active = marcaSortCol === c.key;
-    const arrow  = active ? (marcaSortDir === -1 ? ' ↓' : ' ↑') : '';
-    return `<th class="${c.num?'num':''}" data-mcol="${c.key}" style="cursor:pointer${active?';color:var(--orange)':''}">${c.label}${arrow}</th>`;
-  }).join('');
+
+  const diasColor = v => v==null?'#94a3b8':v<=3?'#dc2626':v>=60?'#7c3aed':'#059669';
+  const maxVal = Math.max(...data.map(d=>d.inv_val||0), 1);
+
+  document.getElementById('marca-thead').innerHTML = `
+    <tr style="background:#f0ede8">
+      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="brand">Marca${marcaSortCol==='brand'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="skus">SKUs${marcaSortCol==='skus'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#dc2626;cursor:pointer" data-mcol="sin_stock">Sin Stock${marcaSortCol==='sin_stock'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ea6c0a;cursor:pointer" data-mcol="quiebre">Quiebre${marcaSortCol==='quiebre'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7c3aed;cursor:pointer" data-mcol="sobrestock">Sobrestock${marcaSortCol==='sobrestock'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;cursor:pointer" data-mcol="dias_prom">Días Prom${marcaSortCol==='dias_prom'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#d97706;cursor:pointer" data-mcol="inv_val">Val. Inv${marcaSortCol==='inv_val'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Estado</th>
+    </tr>`;
+
   document.querySelectorAll('#marca-thead th[data-mcol]').forEach(th=>{
     th.addEventListener('click',()=>{
       const col=th.getAttribute('data-mcol');
@@ -1632,31 +1671,50 @@ function renderMarcas(rows) {
       renderMarcas(lastRows);
     });
   });
-  const diasColor = v => v==null?'#64748b':v<=3?'#ef4444':v>=60?'#8b5cf6':'#10b981';
-  const maxInv    = Math.max(...data.map(d=>d.inv||0), 1);
-  const maxDias   = Math.max(...data.map(d=>d.dias_prom||0), 1);
-  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d=>`
-    <tr>
-      <td><b style="color:var(--text)">${escH(d.brand)}</b></td>
-      <td class="num">${fmt(d.skus)}</td>
-      <td class="num">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-          <span style="font-weight:600">${fmt(d.inv)}</span>
-          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
-            <div class="dias-bar-fill" style="width:${Math.min((d.inv/maxInv)*100,100).toFixed(0)}%;background:var(--blue)"></div>
-          </div>
+
+  const pctBar = (v, max, color) =>
+    `<div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;min-width:50px">` +
+    `<div style="height:100%;width:${Math.min(v/max*100,100).toFixed(1)}%;background:${color};border-radius:3px"></div></div>`;
+
+  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d => {
+    const dc = diasColor(d.dias_prom);
+    const totalRisk = d.sin_stock + d.quiebre;
+    const pctRisk = d.skus > 0 ? ((totalRisk / d.skus)*100).toFixed(0) : 0;
+    const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
+
+    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" onmouseover="this.style.background='#faf9f7'" onmouseout="this.style.background=''">
+      <td style="padding:12px 16px">
+        <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.brand)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(d.supplier)} · ${fmt(d.skus)} SKUs</div>
+      </td>
+      <td style="padding:12px;text-align:right;font-weight:700;color:#1e293b">${fmt(d.skus)}</td>
+      <td style="padding:12px;text-align:right">
+        ${d.sin_stock > 0 ? `<span style="font-weight:700;color:#dc2626">${d.sin_stock}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        ${d.quiebre > 0 ? `<span style="font-weight:700;color:#ea6c0a">${d.quiebre}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        ${(d.sobrestock+d.gestionar) > 0 ? `<span style="font-weight:700;color:#7c3aed">${d.sobrestock+d.gestionar}</span>` : '<span style="color:#d1d5db">—</span>'}
+      </td>
+      <td style="padding:12px;text-align:right">
+        <span style="font-weight:700;color:${dc};font-size:14px">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
+      </td>
+      <td style="padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+          <span style="font-weight:700;color:#d97706;font-size:13px">${d.inv_val ? fmtM(d.inv_val) : '—'}</span>
+          ${pctBar(d.inv_val, maxVal, '#f59e0b')}
         </div>
       </td>
-      <td class="num">
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-          <span style="color:${diasColor(d.dias_prom)};font-weight:700">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-          <div class="dias-bar-track" style="width:60px;flex-shrink:0">
-            <div class="dias-bar-fill" style="width:${d.dias_prom!=null?Math.min((d.dias_prom/maxDias)*100,100).toFixed(0):0}%;background:${diasColor(d.dias_prom)}"></div>
-          </div>
+      <td style="padding:12px 16px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${totalRisk > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dc262618;color:#dc2626;border:1px solid #dc262630">⚠ ${pctRisk}% riesgo</span>` : ''}
+          ${(d.sobrestock+d.gestionar) > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#7c3aed18;color:#7c3aed;border:1px solid #7c3aed30">📦 ${pctSobre}% sobre</span>` : ''}
+          ${totalRisk === 0 && (d.sobrestock+d.gestionar) === 0 ? `<span style="color:#059669;font-size:11px;font-weight:600">✓ OK</span>` : ''}
         </div>
       </td>
-      <td class="num" style="color:var(--green)">${d.inv_val ? fmtM(d.inv_val) : '—'}</td>
-    </tr>`).join('') : '<tr><td colspan="5" class="empty">Sin resultados</td></tr>';
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
 }
 
 // ── EXPORT EXCEL ─────────────────────────────────────────────────────────────
