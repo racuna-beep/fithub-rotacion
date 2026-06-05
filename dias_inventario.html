@@ -696,6 +696,7 @@ function normalise(raw) {
     vida_util: vidaUtil,
     prom_vta:  num(g('Promedio de Venta YTD')) || promVta,
     venta_mes: num(g('Venta Mayo') || g('Venta Mayo ') || g('Venta Mes') || g('venta_mes') || g('Ventas Mayo') || 0),
+    costo:     num(g('Costo Sin Iva') || g('Costo Sin IVA') || g('costo') || 0),
     ventas,
     estado,
   };
@@ -969,7 +970,7 @@ function renderExecSummary(rows) {
     </div>
     <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.6fr;gap:12px;align-items:stretch">
       <div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#a78bfa;text-transform:uppercase;margin-bottom:8px">CAPITAL INMOVILIZADO</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#a78bfa;text-transform:uppercase;margin-bottom:8px">INVENTARIO EN RIESGO</div>
         <div style="font-size:22px;font-weight:900;color:#c4b5fd;line-height:1;margin-bottom:4px">${fmtM(valSS+valSM)}</div>
         <div style="font-size:11px;color:#64748b;margin-bottom:10px">${pctCapInm}% del inventario valorizado</div>
         <div style="display:flex;gap:16px">
@@ -1021,13 +1022,13 @@ function renderKPIs(rows) {
   const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
   const n = rows.length || 1;
 
-  // Ventas del mes: Venta Mayo directa, fallback a prom_vta*30
-  const totalVentasMes = rows.reduce((a,r) => a + (r.venta_mes || (r.prom_vta||0)*30), 0);
-  const mesesStock = (totalVentasMes > 0 && invVal > 0) ? (invVal / totalVentasMes).toFixed(1) : '—';
+  // Ventas del mes en pesos = Venta Mayo (uds) × Costo Sin IVA
+  const totalVentasMesPesos = rows.reduce((a,r) => a + ((r.venta_mes||0) * (r.costo||0)), 0);
+  const mesesStock = (totalVentasMesPesos > 0 && invVal > 0) ? (invVal / totalVentasMesPesos).toFixed(1) : '—';
   const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
 
   const kpis = [
-    { label:'💰 Capital Inmovilizado',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/(invVal||1))*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil.' },
+    { label:'⚠️ Inventario en Riesgo',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/(invVal||1))*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil.' },
     { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                             cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
     { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                               cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
     { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                       cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada.' },
