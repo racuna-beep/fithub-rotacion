@@ -636,12 +636,21 @@ const MONTH_ORDER = ['enero','febrero','marzo','abril','mayo','junio','julio','a
 
 // Mapeo mes → claves vta/inv en normalizeRow
 const MONTH_VTA_INV = {
-  enero:    { vtaKey: 'vta_enero',   invKey: 'inv_enero'   },
-  febrero:  { vtaKey: 'vta_febrero', invKey: 'inv_febrero' },
-  marzo:    { vtaKey: 'vta_marzo',   invKey: 'inv_marzo'   },
-  abril:    { vtaKey: 'vta_abril',   invKey: 'inv_abril'   },
-  mayo:     { vtaKey: 'vta_mes',     invKey: 'inv_prom'    },
+  enero:      { vtaKey: 'vta_enero',      invKey: 'inv_enero'      },
+  febrero:    { vtaKey: 'vta_febrero',    invKey: 'inv_febrero'    },
+  marzo:      { vtaKey: 'vta_marzo',      invKey: 'inv_marzo'      },
+  abril:      { vtaKey: 'vta_abril',      invKey: 'inv_abril'      },
+  mayo:       { vtaKey: 'vta_mayo',       invKey: 'inv_mayo'       },
+  junio:      { vtaKey: 'vta_junio',      invKey: 'inv_junio'      },
+  julio:      { vtaKey: 'vta_julio',      invKey: 'inv_julio'      },
+  agosto:     { vtaKey: 'vta_agosto',     invKey: 'inv_agosto'     },
+  septiembre: { vtaKey: 'vta_septiembre', invKey: 'inv_septiembre' },
+  octubre:    { vtaKey: 'vta_octubre',    invKey: 'inv_octubre'    },
+  noviembre:  { vtaKey: 'vta_noviembre',  invKey: 'inv_noviembre'  },
+  diciembre:  { vtaKey: 'vta_diciembre',  invKey: 'inv_diciembre'  },
 };
+// vta_mes / inv_prom will always point to the LAST detected month (auto-set in normalizeRow)
+
 
 function detectMonths(headers) {
   const found = [];
@@ -672,18 +681,32 @@ function normalizeRow(raw, months) {
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
   r.category    = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || '';
   r.sub_category = raw['Sub_Category'] || raw['sub_category'] || raw['SubCategoria'] || raw['Subcategoria'] || '';
-  r.vta_mes  = parseNum(raw['Vta. Mayo'] ?? raw['Venta Mayo'] ?? raw['Vta. Mes'] ?? raw['vta_mes'] ?? raw['Ventas'] ?? 0);
-  r.inv_prom = parseNum(raw['Inv. prom Mayo'] ?? raw['Inv. prom'] ?? raw['inv_prom'] ?? raw['Inv. Prom'] ?? raw['Inventario Promedio'] ?? 0);
-  // Pares históricos Vta/Inv por mes para cálculo preciso
-  // Soporta ambos formatos: "Venta Enero" (Sheet actual) y "Vta. Enero" (formato anterior)
-  r.vta_enero    = parseNum(raw['Venta Enero']   ?? raw['Vta. Enero']   ?? 0);
-  r.inv_enero    = parseNum(raw['Inv. prom Enero']   ?? 0);
-  r.vta_febrero  = parseNum(raw['Venta Febrero'] ?? raw['Vta. Febrero'] ?? 0);
-  r.inv_febrero  = parseNum(raw['Inv. prom Febrero'] ?? 0);
-  r.vta_marzo    = parseNum(raw['Venta Marzo']   ?? raw['Vta. Marzo']   ?? 0);
-  r.inv_marzo    = parseNum(raw['Inv. prom Marzo']   ?? 0);
-  r.vta_abril    = parseNum(raw['Venta Abril']   ?? raw['Vta. Abril']   ?? 0);
-  r.inv_abril    = parseNum(raw['Inv. prom Abril']   ?? 0);
+  // Históricos — todos los meses nombrados
+  r.vta_enero      = parseNum(raw['Venta Enero']      ?? raw['Vta. Enero']      ?? 0);
+  r.inv_enero      = parseNum(raw['Inv. prom Enero']                             ?? 0);
+  r.vta_febrero    = parseNum(raw['Venta Febrero']    ?? raw['Vta. Febrero']    ?? 0);
+  r.inv_febrero    = parseNum(raw['Inv. prom Febrero']                           ?? 0);
+  r.vta_marzo      = parseNum(raw['Venta Marzo']      ?? raw['Vta. Marzo']      ?? 0);
+  r.inv_marzo      = parseNum(raw['Inv. prom Marzo']                             ?? 0);
+  r.vta_abril      = parseNum(raw['Venta Abril']      ?? raw['Vta. Abril']      ?? 0);
+  r.inv_abril      = parseNum(raw['Inv. prom Abril']                             ?? 0);
+  r.vta_mayo       = parseNum(raw['Venta Mayo']       ?? raw['Vta. Mayo']       ?? 0);
+  r.inv_mayo       = parseNum(raw['Inv. prom Mayo']                              ?? 0);
+  r.vta_junio      = parseNum(raw['Venta Junio']      ?? raw['Vta. Junio']      ?? 0);
+  r.inv_junio      = parseNum(raw['Inv. prom Junio']                             ?? 0);
+  r.vta_julio      = parseNum(raw['Venta Julio']      ?? raw['Vta. Julio']      ?? 0);
+  r.inv_julio      = parseNum(raw['Inv. prom Julio']                             ?? 0);
+  r.vta_agosto     = parseNum(raw['Venta Agosto']     ?? raw['Vta. Agosto']     ?? 0);
+  r.inv_agosto     = parseNum(raw['Inv. prom Agosto']                            ?? 0);
+  r.vta_septiembre = parseNum(raw['Venta Septiembre'] ?? raw['Vta. Septiembre'] ?? 0);
+  r.inv_septiembre = parseNum(raw['Inv. prom Septiembre']                        ?? 0);
+  r.vta_octubre    = parseNum(raw['Venta Octubre']    ?? raw['Vta. Octubre']    ?? 0);
+  r.inv_octubre    = parseNum(raw['Inv. prom Octubre']                           ?? 0);
+  r.vta_noviembre  = parseNum(raw['Venta Noviembre']  ?? raw['Vta. Noviembre']  ?? 0);
+  r.inv_noviembre  = parseNum(raw['Inv. prom Noviembre']                         ?? 0);
+  r.vta_diciembre  = parseNum(raw['Venta Diciembre']  ?? raw['Vta. Diciembre']  ?? 0);
+  r.inv_diciembre  = parseNum(raw['Inv. prom Diciembre']                         ?? 0);
+  // vta_mes / inv_prom se asignan automáticamente al mes actual después de normalizeRow
   const _obsRaw = String(raw['Obs'] || raw['obs'] || raw['Estado'] || '').trim();
   const _obsMap = { 'cumple': 'Cumple', 'no cumple': 'No cumple', 'nuevo': 'Nuevo', 'atacar': 'No cumple' };
   r.obs = _obsMap[_obsRaw.toLowerCase()] || _obsRaw;
@@ -756,7 +779,17 @@ async function loadData() {
 
     setLoaderText('Calculando métricas…', 85);
 
-    DATA = raw.map(r => normalizeRow(r, months)).map(r => {
+    // Auto-set vta_mes/inv_prom to current month keys
+    const _curMonth = months.length ? months[months.length - 1] : null;
+    const _curVtaKey = _curMonth ? (MONTH_VTA_INV[_curMonth.month]?.vtaKey || 'vta_mes') : 'vta_mes';
+    const _curInvKey = _curMonth ? (MONTH_VTA_INV[_curMonth.month]?.invKey || 'inv_prom') : 'inv_prom';
+
+    DATA = raw.map(r => {
+      const row = normalizeRow(r, months);
+      row.vta_mes  = row[_curVtaKey]  || 0;
+      row.inv_prom = row[_curInvKey]  || 0;
+      return row;
+    }).map(r => {
       const rot = r[CURRENT_MONTH_KEY];
       const days = (rot && rot > 0) ? 30 / rot : null;
       let tier;
