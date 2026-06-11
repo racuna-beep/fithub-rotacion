@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fithub — Abastecimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+// ── Configuración — actualiza APPS_SCRIPT_URL después del deploy ──
+const FITHUB_CONFIG = {
+  APPS_SCRIPT_URL: 'PEGAR_URL_AQUI',
+  VERSION: '2.0',
+  AUTO_REFRESH_MIN: 0,
+};
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--s1:#111;--s2:#1a1a1a;--s3:#222;--s4:#2a2a2a;
+  --border:#252525;--border2:#333;
+  --text:#f2f2f2;--t2:#888;--t3:#555;
+  --orange:#FF6B1A;--orange-dim:#2a1500;
+  --red:#f04040;--red-dim:#1f0808;
+  --yellow:#f59e0b;--yellow-dim:#1f1500;
+  --green:#22c55e;--green-dim:#061a0e;
+  --blue:#3b82f6;--blue-dim:#060d1f;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow:hidden}
+
+/* LAYOUT */
+.app{display:grid;grid-template-rows:56px 1fr;height:100vh}
+.topbar{background:linear-gradient(180deg,#161616 0%,var(--s1) 100%);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:12px}
+.body{display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+
+/* TOPBAR */
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--orange) 0%,#ff9f5a 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;letter-spacing:-.5px;flex-shrink:0;box-shadow:0 2px 12px rgba(255,107,26,.4)}
+.logo-text{font-weight:800;font-size:15px;letter-spacing:-.4px;background:linear-gradient(90deg,#fff 60%,var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:10px;color:var(--t3);margin-top:1px;letter-spacing:.02em}
+.top-center{display:flex;gap:2px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:4px}
+.day-pill{padding:6px 16px;border-radius:9px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;transition:all .2s;white-space:nowrap;position:relative;letter-spacing:-.1px}
+.day-pill:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.day-pill.active{background:var(--orange);color:#fff;font-weight:700;box-shadow:0 2px 16px rgba(255,107,26,.4),inset 0 1px 0 rgba(255,255,255,.15)}
+.day-pill .alert-dot{width:5px;height:5px;border-radius:50%;background:var(--red);position:absolute;top:4px;right:4px;box-shadow:0 0 6px var(--red)}
+.day-pill.active .alert-dot{background:rgba(255,255,255,.9)}
+.top-right{display:flex;align-items:center;gap:8px}
+.top-date-wrap{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:5px 12px}
+.top-date-icon{font-size:12px}
+.top-date{font-size:11px;color:var(--t2);font-weight:500;letter-spacing:.01em}
+
+/* SIDEBAR */
+.sidebar{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100%}
+.sidebar-head{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-title{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start}
+.sum-card{background:var(--s2);border-radius:10px;padding:12px 14px;border:1px solid var(--border)}
+.sum-card.sum-full{grid-column:span 2}
+.sum-val{font-size:28px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.sum-val.red{color:var(--red)}
+.sum-val.yellow{color:var(--yellow)}
+.sum-val.orange{color:var(--orange)}
+.sum-val.green{color:var(--green)}
+.sum-val.white{color:var(--text)}
+.sum-label{font-size:10px;color:var(--t3);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+.sum-context{font-size:11px;color:var(--t2);margin-top:3px}
+.sum-progress{height:3px;background:var(--s4);border-radius:2px;margin-top:8px;overflow:hidden}
+.sum-progress-bar{height:100%;border-radius:2px;transition:width .3s}
+.sidebar-list{overflow-y:auto;flex:1;padding:8px;min-height:0}
+.prov-item{padding:10px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:background .12s,border-color .12s;display:flex;align-items:center;gap:8px;border:1px solid transparent}
+.prov-item:hover{background:var(--s2)}
+.prov-item.active{background:var(--s2);border-color:var(--border2)}
+.prov-item.active .prov-item-name{color:var(--orange)}
+.prov-accent{width:3px;height:32px;border-radius:2px;flex-shrink:0}
+.prov-accent.red{background:var(--red)}
+.prov-accent.yellow{background:var(--yellow)}
+.prov-accent.green{background:var(--green)}
+.prov-accent.gray{background:var(--border2)}
+.prov-item-body{flex:1;min-width:0}
+.prov-item-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prov-item-brand{font-size:10px;color:var(--t3);margin-top:1px}
+.prov-item-tags{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+.ptag{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px}
+.ptag-bog{background:#1a1a3a;color:#7c8fff}
+.ptag-med{background:#0d2018;color:#4ade80}
+.ptag-baq{background:#0d1f2d;color:#60a5fa}
+.ptag-pareto{background:var(--orange-dim);color:var(--orange)}
+.prov-qty{font-size:11px;font-weight:700;color:var(--t3);flex-shrink:0}
+.prov-qty.has-order{color:var(--orange)}
+
+/* URGENTES */
+.urgentes-section{border-bottom:1px solid var(--border);padding:8px;flex-shrink:0}
+.urgentes-title{font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;padding:4px 8px 6px;display:flex;align-items:center;gap:5px}
+.urgentes-title .pulse{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.urgente-item{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;transition:all .12s;display:flex;align-items:center;gap:8px;border:1px solid var(--red-dim);background:var(--red-dim)}
+.urgente-item:hover{border-color:var(--red)}
+.urgente-item.active{border-color:var(--red);background:#2a0808}
+.urgente-item.active .prov-item-name{color:var(--red)}
+.urgente-badge{font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:2px 6px;border-radius:4px;flex-shrink:0;white-space:nowrap}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.main-header{padding:0;border-bottom:1px solid var(--border);background:var(--s1)}
+.main-header-top{padding:14px 20px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.main-prov-name{font-size:20px;font-weight:900;letter-spacing:-.5px;color:var(--text);line-height:1.1}
+.main-prov-brand{font-size:11px;color:var(--t3);margin-top:3px}
+.lt-badge{display:inline-flex;align-items:center;gap:5px;background:var(--orange-dim);border:1px solid rgba(255,107,26,.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--orange)}
+.lt-badge-icon{font-size:12px}
+.ciudad-tabs{display:flex;gap:0;border-bottom:none}
+.ctab{padding:8px 16px;font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s}
+.ctab:hover{color:var(--t2)}
+.ctab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.main-body{flex:1;overflow-y:auto;padding:16px 20px}
+
+/* TRASLADOS */
+.traslados-box{background:var(--yellow-dim);border:1px solid #3a2800;border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.traslados-label{font-size:10px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.traslado-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px}
+.t-store{font-weight:700;background:#2a1a00;color:#fbbf24;padding:2px 7px;border-radius:4px;border:1px solid #3a2800}
+.t-arrow{color:var(--yellow);font-size:12px}
+.t-prod{flex:1;color:#d97706;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-qty{font-weight:800;color:var(--yellow)}
+
+/* TABLE */
+.tbl-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--s2);color:var(--t3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--s2)}
+tbody td{padding:9px 12px;color:var(--text);vertical-align:middle}
+.tr{text-align:right;font-variant-numeric:tabular-nums}
+.td-prod{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.chip{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:.02em}
+.chip-red{background:rgba(240,64,64,.15);color:#ff6b6b;border:1px solid rgba(240,64,64,.2)}
+.chip-yellow{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.chip-green{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.chip-blue{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.chip-gray{background:rgba(255,255,255,.06);color:var(--t2);border:1px solid var(--border)}
+
+input[type=number]{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:5px 10px;border-radius:8px;width:68px;text-align:right;font-size:12px;font-weight:700;outline:none;transition:all .15s}
+input[type=number]:focus{border-color:var(--orange);background:rgba(255,107,26,.08);box-shadow:0 0 0 2px rgba(255,107,26,.1)}
+input[type=number].modified{border-color:var(--orange);color:var(--orange);background:rgba(255,107,26,.08)}
+
+/* FOOTER */
+.main-footer{padding:12px 20px;border-top:1px solid var(--border);background:var(--s1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.footer-stats{display:flex;align-items:center;gap:20px}
+.fstat{display:flex;flex-direction:column}
+.fstat-val{font-size:22px;font-weight:800;color:var(--orange);line-height:1;letter-spacing:-.5px}
+.fstat-label{font-size:10px;color:var(--t3);margin-top:2px}
+.footer-actions{display:flex;gap:8px}
+.btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .15s;letter-spacing:-.1px}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-primary:hover{background:#e55c0e;transform:translateY(-1px)}
+.btn-outline{background:var(--s3);color:var(--t2);border:1px solid var(--border2);transition:all .15s}
+.btn-outline:hover{color:var(--text);border-color:var(--t3)}
+.btn-export{background:var(--green-dim);color:var(--green);border:1px solid #1a4a2a}
+.btn-export:hover{background:#0a2a14}
+
+.empty{text-align:center;padding:40px;color:var(--t3);font-size:13px}
+.no-prov{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px}
+.no-prov-icon{font-size:40px;opacity:.3}
+.no-prov-text{font-size:13px}
+
+/* EXPAND ROW */
+.expand-row{background:var(--s2);border-bottom:1px solid var(--border)}
+.expand-row td{padding:8px 12px 10px}
+.expand-inner{display:flex;gap:16px;flex-wrap:wrap}
+.expand-store{background:var(--s3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;min-width:120px}
+.expand-store-name{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.expand-store-row{display:flex;justify-content:space-between;gap:12px;font-size:11px;padding:2px 0}
+.expand-store-label{color:var(--t3)}
+.expand-store-val{font-weight:700;color:var(--text)}
+.expand-store-b2b{color:#818cf8}
+tr.expandable{cursor:pointer}
+tr.expandable:hover td:first-child::before{content:'▸ ';color:var(--orange);font-size:10px}
+tr.expandable.open td:first-child::before{content:'▾ ';color:var(--orange);font-size:10px}
+
+/* TOOLTIP */
+.has-tip{position:relative;cursor:default;border-bottom:1px dashed var(--border2)}
+.has-tip{position:relative;display:inline-block}.has-tip .tip{display:none;position:absolute;z-index:9999;bottom:calc(100% + 8px);left:0;transform:none;background:#2a2a2a;border:1px solid #444;border-radius:8px;padding:10px 14px;min-width:170px;white-space:nowrap;box-shadow:0 12px 32px rgba(0,0,0,.9);pointer-events:none}.has-tip:hover .tip{display:block}.has-tip.tip-down .tip{bottom:auto;top:calc(100% + 8px)}
+
+.tip-row{display:flex;justify-content:space-between;gap:16px;padding:2px 0;font-size:11px}
+.tip-store{color:var(--t2)}
+.tip-val{font-weight:700;color:var(--text)}
+.tip-b2b{color:#818cf8}
+.tip-divider{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+/* EMBALAJE ROUND */
+.emb-wrap{display:inline-flex;align-items:center;gap:4px}
+.emb-btn{width:26px;height:26px;border-radius:5px;background:rgba(255,107,26,.12);border:1px solid rgba(255,107,26,.25);color:var(--orange);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;padding:0;line-height:1}
+.emb-btn:hover{background:rgba(255,107,26,.25);border-color:var(--orange)}
+.emb-btn title{display:none}
+
+/* SEARCH & FILTER BAR */
+.table-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.tbl-search{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:7px;font-size:12px;outline:none;width:200px;transition:border .12s}
+.tbl-search:focus{border-color:var(--orange)}
+.tbl-search::placeholder{color:var(--t3)}
+.filter-pills{display:flex;gap:4px}
+.fpill{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);color:var(--t2);background:transparent;transition:all .12s}
+.fpill:hover{color:var(--text)}
+.fpill.active{background:var(--s3);color:var(--text);border-color:var(--border2)}
+.fpill.active.f-pedir{color:var(--orange);border-color:var(--orange)}
+.fpill.active.f-quiebre{color:var(--red);border-color:var(--red)}
+.fpill.active.f-sobre{color:var(--blue);border-color:var(--blue)}
+
+/* SORT HEADERS */
+thead th.sortable{cursor:pointer;user-select:none}
+thead th.sortable:hover{color:var(--text)}
+thead th.sortable.asc::after{content:' ↑';color:var(--orange)}
+thead th.sortable.desc::after{content:' ↓';color:var(--orange)}
+
+/* ROW EDITED */
+tr.row-edited{background:rgba(255,107,26,.04) !important}
+tr.row-edited td{border-bottom-color:rgba(255,107,26,.1) !important}
+tr.row-edited td:first-child{border-left:2px solid var(--orange)}
+
+/* PROV DONE */
+.prov-item.done .prov-item-name{color:var(--t3);text-decoration:line-through}
+.prov-item.done .prov-accent{opacity:.3}
+.done-check{font-size:12px;color:var(--green);flex-shrink:0}
+
+/* RESUMEN MODAL */
+.resumen-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center}
+.resumen-box{background:var(--s1);border:1px solid var(--border2);border-radius:14px;padding:24px;min-width:380px;max-width:520px;max-height:80vh;overflow-y:auto}
+.resumen-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-.3px}
+.resumen-ciudad{margin-bottom:16px}
+.resumen-ciudad-name{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.resumen-prov-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;background:var(--s2);margin-bottom:3px}
+.resumen-prov-name{font-size:12px;color:var(--text)}
+.resumen-prov-qty{font-size:13px;font-weight:700;color:var(--orange)}
+.resumen-total-row{display:flex;justify-content:space-between;padding:10px 10px 0;border-top:1px solid var(--border);margin-top:8px}
+.resumen-total-label{font-size:12px;color:var(--t2);font-weight:600}
+.resumen-total-val{font-size:18px;font-weight:800;color:var(--orange)}
+.resumen-close{width:100%;margin-top:16px;padding:10px;border-radius:8px;background:var(--orange);border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+.resumen-close:hover{background:#e55c0e}
+
+/* HISTORIAL */
+.hist-list{display:flex;flex-direction:column;gap:4px;padding:8px}
+.hist-item{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hist-info{flex:1;min-width:0}
+.hist-prov{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:10px;color:var(--t3);margin-top:2px}
+.hist-qty{font-size:13px;font-weight:700;color:var(--orange)}
+.hist-ciudad{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--s3);color:var(--t2)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* LOADER */
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:fixed;inset:0;background:rgba(10,10,10,.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.loading-spinner{width:40px;height:40px;border:3px solid #252525;border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+.loading-text{color:var(--t2);font-size:13px;letter-spacing:.02em}
+.loading-sub{color:var(--t3);font-size:11px;margin-top:-6px}
+
+/* CONEXIÓN STATUS */
+.conn-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:6px 16px;font-size:11px;background:var(--s1);border-top:1px solid var(--border);transition:opacity .4s}
+.conn-bar.hidden{opacity:0;pointer-events:none}
+.conn-dot{width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.conn-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.conn-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.conn-dot.yellow{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.conn-info{display:flex;align-items:center;color:var(--t2)}
+.conn-ts{color:var(--t3);font-size:10px}
+.conn-btn{background:transparent;border:1px solid var(--border2);color:var(--t2);padding:3px 10px;border-radius:5px;font-size:10px;cursor:pointer;transition:all .15s}
+.conn-btn:hover{border-color:var(--orange);color:var(--orange)}
+
+/* ALERTA AGOTADOS MODAL */
+.agotado-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center}
+.agotado-box{background:var(--s1);border:1px solid var(--border2);border-radius:14px;padding:24px;min-width:400px;max-width:540px;max-height:82vh;overflow-y:auto}
+.agotado-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.agotado-form-row.full{grid-template-columns:1fr}
+.agotado-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.agotado-input,.agotado-select,.agotado-textarea{width:100%;background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;transition:border .12s}
+.agotado-input:focus,.agotado-select:focus,.agotado-textarea:focus{border-color:var(--orange)}
+.agotado-textarea{resize:vertical;min-height:64px}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Cargando inventario en tiempo real...</div>
+  <div class="loading-sub" id="loading-sub">Conectando con Google Sheets</div>
+</div>
+
+<!-- Alerta agotados modal -->
+<div class="agotado-overlay" id="agotado-modal" style="display:none">
+  <div class="agotado-box">
+    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">🔴 Tipificar agotado</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:18px" id="agotado-sku-label"></div>
+    <div class="agotado-form-row">
+      <div><div class="agotado-label">Tienda</div><input class="agotado-input" id="ag-tienda" readonly></div>
+      <div><div class="agotado-label">SKU</div><input class="agotado-input" id="ag-sku" readonly></div>
+    </div>
+    <div class="agotado-form-row full"><div class="agotado-label">Producto</div><input class="agotado-input" id="ag-producto" readonly></div>
+    <div class="agotado-form-row">
+      <div><div class="agotado-label">Causa</div>
+        <select class="agotado-select" id="ag-causa">
+          <option value="">— Seleccionar —</option>
+          <option value="Proveedor no entregó">Proveedor no entregó</option>
+          <option value="Error de pedido">Error de pedido</option>
+          <option value="Venta mayor a la esperada">Venta mayor a la esperada</option>
+          <option value="Producto descontinuado">Producto descontinuado</option>
+          <option value="Problema logístico">Problema logístico</option>
+          <option value="Sobrestock en otra tienda">Sobrestock en otra tienda</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div><div class="agotado-label">Responsable</div>
+        <select class="agotado-select" id="ag-responsable">
+          <option value="Rocky">Rocky</option>
+          <option value="Edwin">Edwin</option>
+          <option value="Lore">Lore</option>
+          <option value="Jorge">Jorge</option>
+          <option value="Angie">Angie</option>
+        </select>
+      </div>
+    </div>
+    <div class="agotado-form-row full"><div class="agotado-label">Observación</div><textarea class="agotado-textarea" id="ag-obs" placeholder="Detalle adicional..."></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" style="flex:1" onclick="enviarAgotado()">Registrar en Sheets</button>
+      <button class="btn btn-outline" onclick="document.getElementById('agotado-modal').style.display='none'">Cancelar</button>
+    </div>
+    <div id="ag-status" style="margin-top:10px;font-size:11px;text-align:center;display:none"></div>
+  </div>
+</div>
+
+<!-- Barra de conexión (bottom) -->
+<div class="conn-bar hidden" id="conn-bar">
+  <div class="conn-info">
+    <div class="conn-dot green" id="conn-dot"></div>
+    <span id="conn-label">Conectado a Google Sheets</span>
+    &nbsp;&nbsp;<span class="conn-ts" id="conn-ts"></span>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button class="conn-btn" onclick="recargarDatos()">↺ Actualizar</button>
+    <button class="conn-btn" onclick="alertasQuiebres()">🚨 Alertas WA</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">FH</div>
+      <div>
+        <div class="logo-text">Abastecimiento</div>
+        <div class="logo-sub">Sistema de pedidos · Fithub</div>
+      </div>
+    </div>
+    <div class="top-center" id="day-pills"></div>
+    <div class="top-right">
+      <div class="top-date-wrap">
+        <span class="top-date-icon">📅</span>
+        <span class="top-date" id="top-date"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <div style="padding:8px;border-bottom:1px solid var(--border)">
+      <input type="text" id="prov-search-input" placeholder="🔍 Buscar proveedor..." oninput="buscarProveedor(this.value)"
+        style="width:100%;background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:7px;font-size:12px;outline:none;transition:border .12s"
+        onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'">
+      <div id="prov-search-results" style="display:none;margin-top:6px;max-height:200px;overflow-y:auto;background:var(--s2);border:1px solid var(--border2);border-radius:8px"></div>
+    </div>
+    <div class="sidebar-tabs" style="display:flex;border-bottom:1px solid var(--border)">
+      <div class="stab active" id="stab-hoy" onclick="setSideTab('hoy')" style="flex:1;text-align:center;padding:8px 4px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;border-bottom:2px solid var(--orange)">Hoy</div>
+      <div class="stab" id="stab-tras" onclick="setSideTab('tras')" style="flex:1;text-align:center;padding:8px 4px;font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent">Traslados</div>
+      <div class="stab" id="stab-hist" onclick="setSideTab('hist')" style="flex:1;text-align:center;padding:8px 4px;font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent">Historial</div>
+    </div>
+    <div id="side-hoy" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">
+    <div class="sidebar-head" style="padding-bottom:0">
+        <div onclick="toggleResumen()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:10px">
+          <div class="sidebar-title" style="margin-bottom:0">Resumen del día</div>
+          <span id="resumen-arrow" style="font-size:12px;color:var(--t3);transition:transform .2s">▲</span>
+        </div>
+        <div id="resumen-body" style="padding-bottom:10px">
+          <div class="summary-grid" id="summary-grid"></div>
+        </div>
+      </div>
+      <div class="urgentes-section" id="urgentes-section" style="display:none">
+        <div class="urgentes-title"><span class="pulse"></span> Quiebres urgentes</div>
+        <div id="urgentes-list"></div>
+      </div>
+      <div class="sidebar-list" id="sidebar-list"></div>
+    </div>
+    <div id="side-tras" style="display:none;flex:1;overflow-y:auto;flex-direction:column">
+      <div style="padding:10px 8px;flex:1" id="tras-list"><div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay traslados sugeridos para hoy ✓</div></div>
+      <div style="padding:8px;border-top:1px solid var(--border);display:flex;gap:6px">
+        <button onclick="copiarTraslados()" style="flex:1;padding:8px;border-radius:7px;background:var(--s3);border:1px solid var(--border2);color:var(--t2);font-size:11px;font-weight:600;cursor:pointer" id="btn-copiar">⎘ Copiar</button>
+        <button onclick="whatsappTraslados()" style="flex:1;padding:8px;border-radius:7px;background:#1a3a1a;border:1px solid #25d366;color:#25d366;font-size:11px;font-weight:600;cursor:pointer">📱 WhatsApp</button>
+      </div>
+    </div>
+    <div id="side-hist" style="display:none;flex:1;overflow-y:auto">
+      <div class="hist-list" id="hist-list"><div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">Sin pedidos guardados aún</div></div>
+    </div>
+    </div>
+
+    <div class="main">
+      <div class="main-header" id="main-header" style="display:none">
+        <div class="main-header-top">
+          <div>
+            <div class="main-prov-name" id="main-prov-name"></div>
+            <div class="main-prov-brand" id="main-prov-brand"></div>
+          </div>
+          <div class="lt-badge" id="lt-badge">⏱ Lead time: —</div>
+        </div>
+        <div class="ciudad-tabs" id="ciudad-tabs"></div>
+      </div>
+      <div class="main-body" id="main-body">
+        <div class="no-prov">
+          <div class="no-prov-icon">📦</div>
+          <div class="no-prov-text">Selecciona un proveedor</div>
+        </div>
+      </div>
+      <div class="main-footer" id="main-footer" style="display:none">
+        <div class="footer-stats">
+          <div class="fstat"><span class="fstat-val" id="footer-total">0</span><span class="fstat-label">unidades pedido</span></div>
+          <div class="fstat"><span class="fstat-val" id="footer-skus" style="color:var(--t2)">0</span><span class="fstat-label">SKUs</span></div>
+        </div>
+        <div class="footer-actions">
+          <button class="btn btn-outline" id="btn-listo" onclick="marcarListo()">✓ Marcar listo</button>
+          <button class="btn btn-outline" onclick="exportarCSV()">↓ Exportar CSV</button>
+          <button class="btn btn-export" onclick="mostrarResumen()">↓ Resumen del día</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES'];
+const DAYS_ES = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
+// ── Datos dinámicos — se llenan desde Sheets ──────────────
+let FRECUENCIAS = {};
+let INV = [];
+let CFG = {
+  'Días quiebre': 3,
+  'Días crítico': 7,
+  'Días sobrestock': 60,
+  'WhatsApp Ricardo': '',
+  'Cobertura objetivo Bogotá': 36,
+  'Cobertura objetivo Medellín': 36,
+  'Cobertura objetivo Barranquilla': 36,
+};
+
+// ── Mapeo columnas Sheets → objeto INV ────────────────────
+function mapPedidosRow(row) {
+  const n = k => {
+    const v = row[k];
+    if (v === undefined || v === null || v === '') return 0;
+    return parseFloat(String(v).replace(/\./g,'').replace(',','.')) || 0;
+  };
+  const s = k => String(row[k] || '').trim();
+
+  return {
+    s:        s('store') || s('Store'),
+    c:        s('Ciudad'),
+    p:        s('product') || s('Product'),
+    sku:      s('sku') || s('SKU'),
+    nit:      s('suppliers') || s('Nit'),
+    brand:    s('brand') || s('Brand'),
+    inv:      n('Inventario Actual') || n('Inv'),
+    invB2B:   n('Inventario Actual B2B') || n('Inv B2B'),
+    ventaMes: n('Prom Mes 2025') || n('Vta Mes'),
+    ventaDia: n('Prom Día B2C') || n('Vta Día'),
+    prom:     n('Prom Día B2C') || n('Vta Día'),
+    unidNece: Math.max(0, n('Unid Nece B2C') || n('Unid Nece')),
+    unidNeceB2B: Math.max(0, n('Unid Nece B2B')),
+    transit:  n('Unidades Transito') || n('Tránsito'),
+    sug:      n('Pedido') || n('Sugerido'),
+    diasSug:  n("Dias de inv, según sug") || n('Días Sug'),
+    diasActual: n('Dias de inv Actual Fithub') || n('Días Actual'),
+    consumoMax: n('Consumo Max') || 45,
+    emb:      n('Embalaje') || 6,
+    sep:      n('Separar') || 0,
+    lt:       n('Lead time') || 6,
+    tipo:     s('Tipo'),
+  };
+}
+
+// ── Mapeo Frecuencias Sheets → FRECUENCIAS dict ───────────
+function buildFrecuencias(rows) {
+  const out = { LUNES:[], MARTES:[], MIERCOLES:[], JUEVES:[], VIERNES:[] };
+  const dayMap = {
+    'Lunes':'LUNES','LUNES':'LUNES',
+    'Martes':'MARTES','MARTES':'MARTES',
+    'Miércoles':'MIERCOLES','MIERCOLES':'MIERCOLES','Miercoles':'MIERCOLES',
+    'Jueves':'JUEVES','JUEVES':'JUEVES',
+    'Viernes':'VIERNES','VIERNES':'VIERNES',
+  };
+  rows.forEach(row => {
+    const sup = String(row['Supplier'] || row['supplier'] || '').trim();
+    const brand = String(row['Brand'] || row['brand'] || '').trim();
+    const nit = String(row['Nit'] || row['nit'] || '').trim();
+    const tipo = String(row['Tipo'] || row['tipo'] || '').trim();
+    ['Lunes','Martes','Miércoles','Jueves','Viernes'].forEach(dia => {
+      const val = String(row[dia] || row[dia.toUpperCase()] || '').trim().toUpperCase();
+      if (val === 'SI' || val === 'SÍ' || val === 'X' || val === '1' || val === 'TRUE') {
+        const dayKey = dayMap[dia];
+        if (!out[dayKey]) return;
+        if (!sup) return;
+        // Avoid duplicates
+        if (out[dayKey].find(p => p.sup === sup)) return;
+        out[dayKey].push({
+          sup, brand, nit, tipo,
+          stf15: ['SI','SÍ','X','1','TRUE'].includes(String(row['STF15']||row['stf15']||'').trim().toUpperCase()),
+          stf30: ['SI','SÍ','X','1','TRUE'].includes(String(row['STF30']||row['stf30']||'').trim().toUpperCase()),
+          stf51: ['SI','SÍ','X','1','TRUE'].includes(String(row['STF51']||row['stf51']||'').trim().toUpperCase()),
+          obs: String(row['Obs'] || row['obs'] || '').trim(),
+        });
+      }
+    });
+  });
+  return out;
+}
+
+// ── Conexión Sheets ───────────────────────────────────────
+function setConnStatus(state, msg, ts) {
+  const bar = document.getElementById('conn-bar');
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  const tsEl = document.getElementById('conn-ts');
+  bar.classList.remove('hidden');
+  dot.className = 'conn-dot ' + (state === 'ok' ? 'green' : state === 'loading' ? 'yellow' : 'red');
+  label.textContent = msg;
+  if (ts) tsEl.textContent = '· ' + ts;
+  if (state === 'ok') setTimeout(() => bar.classList.add('hidden'), 5000);
+}
+
+async function cargarDatos(silencioso = false) {
+  const url = (typeof FITHUB_CONFIG !== 'undefined') ? FITHUB_CONFIG.APPS_SCRIPT_URL : '';
+
+  if (!url || url === 'PEGAR_URL_AQUI') {
+    // Modo fallback — datos locales (hardcodeados abajo)
+    document.getElementById('loading-overlay').style.display = 'none';
+    setConnStatus('red', 'Sin conexión — usando datos locales', '');
+    iniciarUI();
+    return;
+  }
+
+  if (!silencioso) {
+    document.getElementById('loading-sub').textContent = 'Conectando con Google Sheets...';
+  }
+  setConnStatus('loading', 'Cargando desde Sheets...', '');
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Error en Apps Script');
+
+    // Inventario
+    INV.length = 0;
+    (json.pedidos || []).forEach(row => {
+      const r = mapPedidosRow(row);
+      if (!r.s || !r.sku) return;
+      INV.push(r);
+    });
+    INV.forEach(r => {
+      r.dias = r.prom > 0
+        ? Math.round((r.inv + r.invB2B) / r.prom)
+        : (r.inv + r.invB2B > 0 ? 999 : 0);
+    });
+
+    // Frecuencias
+    if (json.frecuencias && json.frecuencias.length) {
+      FRECUENCIAS = buildFrecuencias(json.frecuencias);
+    }
+
+    // Config
+    if (json.config) {
+      Object.assign(CFG, json.config);
+    }
+
+    const ts = json.fecha || new Date().toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'});
+    setConnStatus('ok', 'Datos actualizados desde Sheets', ts);
+    document.getElementById('loading-overlay').style.display = 'none';
+    iniciarUI();
+
+  } catch (err) {
+    console.warn('Sheets error:', err);
+    setConnStatus('red', 'Error de conexión — usando datos locales', '');
+    document.getElementById('loading-overlay').style.display = 'none';
+    iniciarUI();
+  }
+}
+
+function recargarDatos() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-sub').textContent = 'Actualizando...';
+  cargarDatos(false);
+}
+
+// ── Registro OC en Sheets ─────────────────────────────────
+async function registrarOCEnSheets(rows) {
+  const url = (typeof FITHUB_CONFIG !== 'undefined') ? FITHUB_CONFIG.APPS_SCRIPT_URL : '';
+  if (!url || url === 'PEGAR_URL_AQUI') return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'registrarOC', rows }),
+    });
+  } catch(e) { console.warn('No se pudo registrar OC en Sheets:', e); }
+}
+
+// ── Alertas WhatsApp quiebres ─────────────────────────────
+function alertasQuiebres() {
+  const umbralQ = parseInt(CFG['Días quiebre']) || 3;
+  const umbralC = parseInt(CFG['Días crítico']) || 7;
+  const quiebres = INV.filter(r => r.dias === 0 || (r.inv + r.invB2B === 0));
+  const criticos = INV.filter(r => r.dias > 0 && r.dias <= umbralC && r.inv + r.invB2B > 0);
+
+  if (!quiebres.length && !criticos.length) {
+    alert('✅ Sin quiebres ni críticos en este momento.');
+    return;
+  }
+
+  const porTienda = {};
+  [...quiebres.map(r=>({...r,tipo:'Q'})), ...criticos.map(r=>({...r,tipo:'C'}))].forEach(r => {
+    if (!porTienda[r.s]) porTienda[r.s] = [];
+    porTienda[r.s].push(r);
+  });
+
+  const fecha = new Date().toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
+  let msg = `🚨 *Alerta Inventario Fithub* — ${fecha}\n\n`;
+  Object.entries(porTienda).forEach(([tienda, items]) => {
+    msg += `*${tienda}*\n`;
+    items.filter(r=>r.tipo==='Q').forEach(r => msg += `  🔴 QUIEBRE: ${r.p} (${r.sku})\n`);
+    items.filter(r=>r.tipo==='C').forEach(r => msg += `  🟡 CRÍTICO (${r.dias}d): ${r.p}\n`);
+    msg += '\n';
+  });
+  msg += '_Fithub — Sistema de Abastecimiento_';
+
+  const waNum = CFG['WhatsApp Ricardo'] ? CFG['WhatsApp Ricardo'].replace(/\D/g,'') : '';
+  const encoded = encodeURIComponent(msg);
+  window.open(waNum ? `https://wa.me/${waNum}?text=${encoded}` : `https://wa.me/?text=${encoded}`, '_blank');
+}
+
+// ── Tipificar agotado ─────────────────────────────────────
+let agotadoPendiente = null;
+
+function abrirModalAgotado(sku, producto, tienda) {
+  agotadoPendiente = { sku, producto, tienda };
+  document.getElementById('ag-tienda').value = tienda || '';
+  document.getElementById('ag-sku').value = sku || '';
+  document.getElementById('ag-producto').value = producto || '';
+  document.getElementById('ag-causa').value = '';
+  document.getElementById('ag-obs').value = '';
+  document.getElementById('ag-status').style.display = 'none';
+  document.getElementById('agotado-sku-label').textContent = sku + ' · ' + producto;
+  document.getElementById('agotado-modal').style.display = 'flex';
+}
+
+async function enviarAgotado() {
+  const causa = document.getElementById('ag-causa').value;
+  if (!causa) { alert('Selecciona una causa'); return; }
+
+  const row = {
+    Tienda: document.getElementById('ag-tienda').value,
+    SKU: document.getElementById('ag-sku').value,
+    Producto: document.getElementById('ag-producto').value,
+    Causa: causa,
+    Responsable: document.getElementById('ag-responsable').value,
+    Observación: document.getElementById('ag-obs').value,
+    'Días Sin Stock': agotadoPendiente ? (INV.find(r=>r.sku===agotadoPendiente.sku&&r.s===agotadoPendiente.tienda)||{}).diasActual || '' : '',
+  };
+
+  const btn = document.querySelector('#agotado-modal .btn-primary');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  const url = (typeof FITHUB_CONFIG !== 'undefined') ? FITHUB_CONFIG.APPS_SCRIPT_URL : '';
+  const st = document.getElementById('ag-status');
+
+  if (url && url !== 'PEGAR_URL_AQUI') {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'registrarAgotado', row }),
+      });
+      const j = await res.json();
+      st.style.display = 'block';
+      st.style.color = j.ok ? 'var(--green)' : 'var(--red)';
+      st.textContent = j.ok ? '✓ Registrado en Sheets correctamente' : '⚠️ ' + (j.error || 'Error al registrar');
+      if (j.ok) setTimeout(() => { document.getElementById('agotado-modal').style.display='none'; }, 1500);
+    } catch(e) {
+      st.style.display='block'; st.style.color='var(--red)';
+      st.textContent = '⚠️ Sin conexión — no se pudo registrar';
+    }
+  } else {
+    st.style.display='block'; st.style.color='var(--yellow)';
+    st.textContent = '⚠️ Sin URL configurada en config.js';
+  }
+
+  btn.textContent = 'Registrar en Sheets';
+  btn.disabled = false;
+}
+
+// ── State — declarado temprano para que todas las funciones accedan ──
+let curFilter = '';
+let curSort = {col:null, dir:'asc'};
+let historial = [];
+let doneProv = new Set();
+
+const jsDay = new Date().getDay();
+const dayMap = {1:0,2:1,3:2,4:3,5:4};
+let curDay = dayMap[jsDay]!==undefined ? dayMap[jsDay] : 2;
+let curProv = null;
+let curCiudad = 'Bogotá';
+let edits = {}; // {provName: {sku: qty}}
+
+// iniciarUI se llama luego de que cargarDatos() llena INV y FRECUENCIAS
+function iniciarUI() {
+  renderDayPills();
+  renderSidebar();
+  renderUrgentes();
+}
+
+function alertLevel(sup) {
+  // Quiebres reales desde INV — proveedor tiene SKU con días <= umbral
+  const umbralQ = parseInt(CFG['Días quiebre']) || 3;
+  const umbralC = parseInt(CFG['Días crítico']) || 7;
+  const skusProv = INV.filter(r => r.nit && r.nit === (FRECUENCIAS[DAYS[curDay]]||[]).find(p=>p.sup===sup)?.nit || r.p.toLowerCase().includes(''));
+  // Fallback: usa nombre del proveedor para filtrar
+  const tieneQuiebre = INV.some(r => r.dias <= umbralQ && r.dias >= 0);
+  const tieneCritico = INV.some(r => r.dias > umbralQ && r.dias <= umbralC);
+  // Por proveedor no tenemos link directo todavía — usar lógica original como fallback
+  if(sup==='ABC COCINA S.A.S.') return 'red';
+  if(sup==='SAN MARTÍN LÁCTEOS S.A.S.') return 'yellow';
+  return 'green';
+}
+
+function consolidar(ciudad) {
+  const data = INV.filter(r=>r.c===ciudad);
+  const map = {};
+  data.forEach(r=>{
+    if(!map[r.sku]) map[r.sku]={p:r.p,sku:r.sku,inv:0,invB2B:0,ventaMes:0,ventaDia:0,unidNece:0,unidNeceB2B:0,prom:0,transit:0,sug:0,diasSug:0,diasActual:0,consumoMax:0,emb:r.emb,sep:r.sep,lt:r.lt,dias:0,tiendas:[]};
+    const m=map[r.sku];
+    m.inv+=r.inv||0;
+    m.invB2B+=r.invB2B||0;
+    m.ventaMes+=r.ventaMes||0;
+    m.ventaDia+=r.ventaDia||0;
+    m.unidNece+=r.unidNece||0;
+    m.unidNeceB2B+=r.unidNeceB2B||0;
+    m.prom+=r.prom||0;
+    m.transit+=r.transit||0;
+    m.sug+=r.sug||0;
+    m.diasSug=r.diasSug||0;
+    m.diasActual=r.diasActual||0;
+    m.consumoMax=Math.max(m.consumoMax,r.consumoMax||0);
+    m.tiendas.push({s:r.s,inv:r.inv,invB2B:r.invB2B||0,unidNece:r.unidNece||0,unidNeceB2B:r.unidNeceB2B||0,dias:r.dias,sug:r.sug});
+  });
+  return Object.values(map).map(m=>{
+    m.dias=m.prom>0?Math.round((m.inv+m.invB2B)/m.prom):(m.inv+m.invB2B>0?999:0);
+    return m;
+  });
+}
+
+function calcTraslados(ciudad) {
+  const data=INV.filter(r=>r.c===ciudad);
+  const map={};
+  data.forEach(r=>{
+    if(!map[r.sku]) map[r.sku]={p:r.p,t:[]};
+    map[r.sku].t.push({s:r.s,sug:r.sug,dias:r.dias});
+  });
+  const out=[];
+  Object.values(map).forEach(({p,t})=>{
+    t.filter(x=>x.sug<0).forEach(exc=>{
+      t.filter(x=>x.sug>0&&x.dias<=14).forEach(nec=>{
+        const qty=Math.min(Math.abs(exc.sug),nec.sug);
+        if(qty>0) out.push({from:exc.s,to:nec.s,prod:p,qty});
+      });
+    });
+  });
+  return out;
+}
+
+function chip(d) {
+  const umbralQ = parseInt(CFG['Días quiebre']) || 3;
+  const umbralC = parseInt(CFG['Días crítico']) || 7;
+  const umbralS = parseInt(CFG['Días sobrestock']) || 60;
+  if(d===0) return '<span class="chip chip-red">Sin stock</span>';
+  if(d<=umbralQ) return `<span class="chip chip-red">${d}d</span>`;
+  if(d<=umbralC) return `<span class="chip chip-yellow">${d}d</span>`;
+  if(d<=14) return `<span class="chip chip-yellow">${d}d</span>`;
+  if(d>=umbralS) return `<span class="chip chip-blue">${d}d</span>`;
+  return `<span class="chip chip-green">${d}d</span>`;
+}
+
+function getEdits(prov) { return edits[prov] || {}; }
+function setEdit(prov,sku,val) { if(!edits[prov]) edits[prov]={}; edits[prov][sku]=parseInt(val)||0; }
+function getQty(prov,sku,sug) { const e=getEdits(prov); return e[sku]!==undefined?e[sku]:sug; }
+
+function addDays(n) { const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; }
+
+// RENDER DAY PILLS
+// Proveedores con quiebres FUERA de frecuencia hoy
+function getUrgentes() {
+  const hoy = (FRECUENCIAS[DAYS[curDay]] || []).map(p => p.sup);
+  // Simulamos quiebres de proveedores no programados hoy
+  const urgentes = [
+    {sup:'GREEN PERFORMANCE S.A.S', brand:'Conquesta', skus:2, minDias:0, tienda:'STF 51'},
+    {sup:'DELYNAT SAS', brand:'Prodelagro', skus:1, minDias:1, tienda:'STF 15'},
+  ].filter(u => !hoy.includes(u.sup));
+  return urgentes;
+}
+
+function renderUrgentes() {
+  const urgentes = getUrgentes();
+  const section = document.getElementById('urgentes-section');
+  const list = document.getElementById('urgentes-list');
+  if(!urgentes.length) { section.style.display='none'; return; }
+  section.style.display='block';
+  list.innerHTML = urgentes.map(u => `
+    <div class="urgente-item ${curProv===u.sup?'active':''}" onclick="selectProv('${u.sup.replace(/'/g,"\'")}','${u.brand.replace(/'/g,"\'")}')">
+      <div class="prov-accent red"></div>
+      <div class="prov-item-body">
+        <div class="prov-item-name">${u.sup}</div>
+        <div class="prov-item-brand">${u.tienda} · ${u.skus} SKU${u.skus>1?'s':''}</div>
+      </div>
+      <div class="urgente-badge">${u.minDias}d</div>
+    </div>
+  `).join('');
+}
+
+// Smart tooltip positioning
+
+
+// Mark first 2 rows as tip-down so tooltip shows below
+function markTipDirections() {
+  const rows = document.querySelectorAll('tbody tr:not(.expand-row)');
+  rows.forEach((tr, i) => {
+    tr.querySelectorAll('.has-tip').forEach(el => {
+      if(i < 2) el.classList.add('tip-down');
+      else el.classList.remove('tip-down');
+    });
+  });
+}
+
+function toggleExpand(rowId, trEl) {
+  const expRow = document.getElementById(rowId);
+  if(!expRow) return;
+  const isOpen = expRow.style.display !== 'none';
+  expRow.style.display = isOpen ? 'none' : 'table-row';
+  trEl.classList.toggle('open', !isOpen);
+}
+
+function toggleResumen() {
+  const body = document.getElementById('resumen-body');
+  const arrow = document.getElementById('resumen-arrow');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function getLeadTimeCiudad(sup, ciudad) {
+  const rows = INV.filter(r => r.c === ciudad);
+  if(!rows.length) return 6;
+  const lts = rows.map(r => r.lt||6);
+  // Most common lead time for this city
+  const counts = {};
+  lts.forEach(l => counts[l] = (counts[l]||0)+1);
+  return parseInt(Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0]);
+}
+
+function renderDayPills() {
+  const now=new Date();
+  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const days=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  document.getElementById('top-date').textContent=days[now.getDay()]+' '+now.getDate()+' '+months[now.getMonth()]+' '+now.getFullYear();
+  document.getElementById('day-pills').innerHTML=DAYS.map((d,i)=>{
+    const hasAlert=(FRECUENCIAS[d]||[]).some(p=>alertLevel(p.sup)==='red');
+    return `<div class="day-pill ${i===curDay?'active':''}" onclick="setDay(${i})">${DAYS_ES[i]}${hasAlert&&i!==curDay?'<span class="alert-dot"></span>':''}</div>`;
+  }).join('');
+}
+
+// RENDER SIDEBAR
+function renderSidebar() {
+  const provs=FRECUENCIAS[DAYS[curDay]]||[];
+  const quiebres=provs.filter(p=>alertLevel(p.sup)==='red').length;
+  const warns=provs.filter(p=>alertLevel(p.sup)==='yellow').length;
+  const total=provs.reduce((a,p)=>{
+    const c=consolidar('Bogotá').concat(consolidar('Medellín')).concat(consolidar('Barranquilla'));
+    return a+c.filter(r=>r.sug>0).reduce((s,r)=>s+getQty(p.sup,r.sku,r.sug),0);
+  },0);
+  const aPedir=provs.filter(p=>{
+    const e=getEdits(p.sup);
+    return Object.keys(e).length>0||true;
+  }).length;
+
+  const skusQuiebre = INV.filter(r => r.dias <= 3).length;
+  const totalUnidades = INV.filter(r => r.sug > 0).reduce((a,r) => a + r.sug, 0);
+  const listos = (typeof doneProv !== 'undefined') ? doneProv.size : 0;
+  const progPct = provs.length > 0 ? Math.round((listos/provs.length)*100) : 0;
+
+  document.getElementById('summary-grid').innerHTML=`
+    <div class="sum-card sum-full">
+      <div class="sum-label">Total unidades hoy</div>
+      <div class="sum-val orange">${totalUnidades.toLocaleString('es-CO')}</div>
+      <div class="sum-context">${provs.length} proveedores · ${INV.filter(r=>r.sug>0).length} SKUs</div>
+    </div>
+    <div class="sum-card" style="border-color:${quiebres>0?'var(--red)':'var(--border)'}">
+      <div class="sum-label">Quiebres</div>
+      <div class="sum-val red">${quiebres}</div>
+      <div class="sum-context">${skusQuiebre} SKUs</div>
+    </div>
+    <div class="sum-card" style="border-color:${warns>0?'var(--yellow)':'var(--border)'}">
+      <div class="sum-label">Críticos</div>
+      <div class="sum-val yellow">${warns}</div>
+      <div class="sum-context">4–7 días</div>
+    </div>
+    <div class="sum-card sum-full">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="sum-label">Progreso del día</div>
+          <div style="margin-top:4px"><span style="font-size:28px;font-weight:900;color:var(--text)">${listos}</span><span style="font-size:14px;color:var(--t3);font-weight:600"> / ${provs.length}</span></div>
+          <div class="sum-context">${listos===provs.length&&provs.length>0?'✓ Día completo':'Proveedores listos'}</div>
+        </div>
+        <div style="font-size:26px;font-weight:900;color:${progPct===100?'var(--green)':'var(--orange)'}">${progPct}%</div>
+      </div>
+      <div class="sum-progress">
+        <div class="sum-progress-bar" style="width:${progPct}%;background:${progPct===100?'var(--green)':'var(--orange)'}"></div>
+      </div>
+    </div>
+  `;
+
+  const sorted=[
+    ...provs.filter(p=>alertLevel(p.sup)==='red'),
+    ...provs.filter(p=>alertLevel(p.sup)==='yellow'),
+    ...provs.filter(p=>alertLevel(p.sup)==='green'),
+  ];
+
+  document.getElementById('sidebar-list').innerHTML=sorted.map(p=>{
+    const lvl=alertLevel(p.sup);
+    const stores=[];
+    if(p.stf15) stores.push('<span class="ptag ptag-bog">BOG</span>');
+    if(p.stf30) stores.push('<span class="ptag ptag-med">MED</span>');
+    if(p.stf51) stores.push('<span class="ptag ptag-baq">BAQ</span>');
+    if(!p.stf15&&!p.stf30&&!p.stf51) stores.push('<span class="ptag ptag-bog">BOG</span>','<span class="ptag ptag-med">MED</span>','<span class="ptag ptag-baq">BAQ</span>');
+    if(p.tipo==='Pareto') stores.push('<span class="ptag ptag-pareto">Pareto</span>');
+    const e=getEdits(p.sup);
+    const hasEdits=Object.keys(e).length>0;
+    const isDone=doneProv.has(p.sup);
+    // Total pedido: sum across all cities, deduplicate SKUs per city
+    const _seen={};
+    const totalPedidoProv=INV.filter(r=>r.sug>0).reduce((a,r)=>{
+      const key=r.c+'-'+r.sku;
+      if(_seen[key]) return a;
+      _seen[key]=true;
+      return a+(getEdits(p.sup)[r.sku]!==undefined?parseInt(getEdits(p.sup)[r.sku])||0:r.sug);
+    },0);
+    return `<div class="prov-item ${curProv===p.sup?'active':''} ${isDone?'done':''}" onclick="selectProv('${p.sup.replace(/'/g,"\\'")}','${(p.brand||'').replace(/'/g,"\\'")}')">
+      <div class="prov-accent ${lvl}"></div>
+      <div class="prov-item-body">
+        <div class="prov-item-name">${p.sup}</div>
+        <div class="prov-item-brand">${p.brand||''}</div>
+        <div class="prov-item-tags">${stores.join('')}</div>
+      </div>
+      <div class="${isDone?'done-check':'prov-qty has-order'}" style="${!isDone&&totalPedidoProv===0?'display:none':''}">${isDone?'✓':totalPedidoProv>0?'·':''}</div>
+    </div>`;
+  }).join('');
+}
+
+// RENDER MAIN
+function selectProv(sup,brand) {
+  curProv=sup; curCiudad='Bogotá'; curFilter='';
+  document.getElementById('main-header').style.display='block';
+  document.getElementById('main-footer').style.display='flex';
+  document.getElementById('main-prov-name').textContent=sup;
+  const ltVal = getLeadTimeCiudad(sup, 'Bogotá');
+  document.getElementById('main-prov-brand').textContent=brand;
+  document.getElementById('lt-badge').innerHTML='<span class="lt-badge-icon">⏱</span> Lead time BOG: '+ltVal+' días';
+  renderCiudadTabs();
+  renderTable();
+  renderSidebar();
+  renderUrgentes();
+  // Reset listo button
+  const btnL = document.getElementById('btn-listo');
+  if(btnL) {
+    const isDone = doneProv.has(sup);
+    btnL.textContent = isDone ? '✓ Listo' : '✓ Marcar listo';
+    btnL.style.color = isDone ? 'var(--green)' : '';
+    btnL.style.borderColor = isDone ? 'var(--green)' : '';
+  }
+}
+
+function renderCiudadTabs() {
+  document.getElementById('ciudad-tabs').innerHTML=['Bogotá','Medellín','Barranquilla'].map(c=>
+    `<div class="ctab ${curCiudad===c?'active':''}" onclick="setCiudad('${c}')">${c}</div>`
+  ).join('');
+}
+
+function setCiudad(c) {
+  curCiudad=c;
+  renderCiudadTabs();
+  renderTable();
+  const ltVal = getLeadTimeCiudad(curProv, c);
+  const badge = document.getElementById('lt-badge');
+  if(badge) badge.innerHTML = '<span class="lt-badge-icon">⏱</span> Lead time '+c.substring(0,3).toUpperCase()+': '+ltVal+' días';
+}
+
+function renderTable() {
+  let rows=consolidar(curCiudad);
+  if(curFilter==='pedir') rows=rows.filter(r=>r.sug>0);
+  else if(curFilter==='quiebre') rows=rows.filter(r=>r.dias<=7);
+  else if(curFilter==='sobre') rows=rows.filter(r=>r.dias>=60);
+  if(curSort.col) {
+    rows=[...rows].sort((a,b)=>{
+      const av=a[curSort.col]||0, bv=b[curSort.col]||0;
+      return curSort.dir==='asc'?av-bv:bv-av;
+    });
+  }
+  const traslados=curCiudad==='Bogotá'?calcTraslados('Bogotá'):[];
+  let html='';
+
+  if(traslados.length) {
+    html+=`<div class="traslados-box"><div class="traslados-label">⇄ Traslados sugeridos</div>`;
+    traslados.forEach(t=>{
+      html+=`<div class="traslado-row">
+        <span class="t-store">${t.from}</span><span class="t-arrow">→</span><span class="t-store">${t.to}</span>
+        <span class="t-prod">${t.prod}</span><span class="t-qty">${t.qty} uds</span>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  // Toolbar
+  html+=`<div class="table-toolbar">
+    <input class="tbl-search" type="text" placeholder="Buscar SKU o producto..." oninput="filterTable(this.value)" id="tbl-search-input">
+    <div class="filter-pills">
+      <button class="fpill f-pedir ${curFilter==='pedir'?'active':''}" onclick="setFilter('pedir')">A pedir</button>
+      <button class="fpill f-quiebre ${curFilter==='quiebre'?'active':''}" onclick="setFilter('quiebre')">Quiebres</button>
+      <button class="fpill f-sobre ${curFilter==='sobre'?'active':''}" onclick="setFilter('sobre')">Sobrestock</button>
+      <button class="fpill ${curFilter===''?'active':''}" onclick="setFilter('')">Todos</button>
+    </div>
+  </div>`;
+
+  if(!rows.length) {
+    html+=`<div class="empty">Sin pedidos sugeridos para ${curCiudad}</div>`;
+  } else {
+    html+=`<div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>SKU</th>
+        <th>Producto</th>
+        <th class="tr" style="min-width:110px">Inv</th>
+        <th class="tr">Inv B2B</th>
+        <th class="tr">Vta Mes</th>
+        <th class="tr">Vta/Día</th>
+        <th class="tr">Unid Nece</th>
+        <th class="tr">Tránsito</th>
+        <th class="tr sortable" onclick="sortTable('sug')">Pedido</th>
+        <th class="tr sortable" onclick="sortTable('diasSug')">Días Sug</th>
+        <th class="tr sortable" onclick="sortTable('dias')">Días Act</th>
+        <th class="tr">Cons Max</th>
+        <th class="tr">Embalaje</th>
+      </tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const qty=getQty(curProv,r.sku,r.sug);
+      const modified=getEdits(curProv)[r.sku]!==undefined;
+      const dimRow=r.sug<=0;
+      const sugColor=r.sug>0?'var(--orange)':'var(--t3)';
+      const sugLabel=r.sug>0?r.sug:r.sug<0?`<span style="color:var(--t3);font-size:10px">sobrestock</span>`:`<span style="color:rgba(34,197,94,.4);font-size:10px;font-weight:600;letter-spacing:.03em">ok</span>`;
+      const isBogView = curCiudad==='Bogotá';
+
+      const necTip = isBogView && r.tiendas && r.tiendas.length>1
+        ? `<div class="tip">${r.tiendas.map(t=>`<div class="tip-row"><span class="tip-store">${t.s} B2C</span><span class="tip-val">${t.unidNece||0}</span></div>${t.unidNeceB2B>0?`<div class="tip-row"><span class="tip-store">${t.s} B2B</span><span class="tip-b2b">${t.unidNeceB2B}</span></div>`:''}`).join('')}</div>`
+        : (r.unidNeceB2B>0?`<div class="tip"><div class="tip-row"><span class="tip-store">B2C</span><span class="tip-val">${r.unidNece||0}</span></div><div class="tip-row"><span class="tip-store">B2B</span><span class="tip-b2b">${r.unidNeceB2B||0}</span></div></div>`:'');
+      const rowId = `exp-${r.sku}-${curCiudad.substring(0,3)}`;
+      html+=`<tr class="${getEdits(curProv)[r.sku]!==undefined?'row-edited':''}" style="${dimRow?'opacity:0.45':''}">
+        <td style="font-size:10px;color:var(--t2);white-space:nowrap;font-family:monospace;letter-spacing:.02em">${r.sku}</td>
+        <td class="td-prod" title="${r.p}" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.p}</td>
+        <td class="tr" style="line-height:1.6">
+          ${(r.inv||0).toLocaleString('es-CO')}
+          ${isBogView && r.tiendas && r.tiendas.length>1
+            ? '<div style="margin-top:2px">'+r.tiendas.map(t=>'<div style="font-size:10px;color:var(--t2)">'+t.s+' <b style="color:var(--text)">'+t.inv+'</b></div>').join('')+'</div>'
+            : ''}
+        </td>
+        <td class="tr" style="color:var(--text)">${(r.invB2B||0).toLocaleString('es-CO')}</td>
+        <td class="tr">${(r.ventaMes||0).toLocaleString('es-CO')}</td>
+        <td class="tr">${(r.ventaDia||r.prom||0).toFixed(1)}</td>
+        <td class="tr" style="color:#93c5fd"><span class="${necTip?'has-tip':''}">${(r.unidNece||0).toLocaleString('es-CO')}${necTip}</span></td>
+        <td class="tr" style="color:var(--text)">${r.transit||0}</td>
+        <td class="tr">${r.sug>0
+          ? `<div class="emb-wrap"><input type="number" class="${modified?'modified':''}" min="0" step="${r.emb}" value="${qty}" id="inp-${r.sku}" onchange="editQty('${r.sku}',this.value,this)" data-sug="${r.sug}" data-emb="${r.emb}">${qty > 0 && qty % r.emb !== 0 ? `<button class="emb-btn" onclick="roundToEmb('${r.sku}',${r.emb})">↑${r.emb}</button>` : ''}</div>`
+          : r.sug<0
+            ? `<span class="has-tip" style="color:var(--t2);font-size:10px;font-weight:600;letter-spacing:.03em;cursor:default">sobrestock<div class="tip"><div class="tip-row"><span class="tip-store">Exceso</span><span style="color:var(--yellow);font-weight:700">${Math.abs(r.sug)} uds</span></div><div class="tip-row"><span class="tip-store">Días inv</span><span class="tip-val">${r.dias>=999?'∞':r.dias+'d'}</span></div></div></span>`
+            : `<span style="color:rgba(34,197,94,.4);font-size:10px;font-weight:600;letter-spacing:.03em">ok</span>`
+        }</td>
+        <td class="tr" style="color:var(--text)">${r.diasSug||'-'}</td>
+        <td class="tr">${chip(r.dias)}</td>
+        <td class="tr" style="color:var(--text)">${r.consumoMax||'-'}</td>
+        <td class="tr" style="color:var(--text)">${r.emb||'-'}</td>
+      </tr>`;
+
+    });
+    html+='</tbody></table></div>';
+  }
+
+  document.getElementById('main-body').innerHTML=html;
+  updateFooter();
+  markTipDirections();
+}
+
+function editQty(sku,val,el) {
+  setEdit(curProv,sku,val);
+  const sug=parseInt(el.dataset.sug)||0;
+  const emb=parseInt(el.dataset.emb)||1;
+  const qty=parseInt(val)||0;
+  el.className=qty!==sug?'modified':'';
+  // Show/hide emb button dynamically
+  const btn = el.nextElementSibling;
+  if(btn && btn.classList.contains('emb-btn')) {
+    btn.style.display = (qty > 0 && qty % emb !== 0) ? 'flex' : 'none';
+  }
+  updateFooter();
+  renderSidebar();
+}
+
+function updateFooter() {
+  let rows=consolidar(curCiudad);
+  if(curFilter==='pedir') rows=rows.filter(r=>r.sug>0);
+  else if(curFilter==='quiebre') rows=rows.filter(r=>r.dias<=7);
+  else if(curFilter==='sobre') rows=rows.filter(r=>r.dias>=60);
+  if(curSort.col) {
+    rows=[...rows].sort((a,b)=>{
+      const av=a[curSort.col]||0, bv=b[curSort.col]||0;
+      return curSort.dir==='asc'?av-bv:bv-av;
+    });
+  }
+  const total=rows.reduce((a,r)=>{ const q=getQty(curProv,r.sku,r.sug); return a+(q>0?q:0); },0);
+  document.getElementById('footer-total').textContent=total.toLocaleString('es-CO');
+  document.getElementById('footer-skus').textContent=rows.filter(r=>getQty(curProv,r.sku,r.sug)>0).length;
+}
+
+function exportarCSV() {
+  if(!curProv) return;
+  const rows=consolidar(curCiudad).filter(r=>r.sug>0&&getQty(curProv,r.sku,r.sug)>0);
+  if(!rows.length){alert('No hay SKUs con cantidad > 0');return;}
+  const store=curCiudad==='Bogotá'?'STF 15':curCiudad==='Medellín'?'STF 30':'STF 51';
+  const fechaStr=new Date().toISOString().split('T')[0];
+  const fechaFmt=fechaStr.replace(/-/g,'');
+  const horaStr=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  let csv='order_id,supplier_id,store,product,product_type,quantity,expected_at\n';
+  const ocRows = [];
+  rows.forEach(r=>{
+    const qty=getQty(curProv,r.sku,r.sug);
+    const expAt=addDays(r.lt||6);
+    csv+=`${r.sep||0},${r.nit||''},${store},${r.sku},regular,${qty},${expAt}\n`;
+    ocRows.push({Fecha:fechaStr,Hora:horaStr,Proveedor:curProv,Nit:r.nit||'',Ciudad:curCiudad,Store:store,SKU:r.sku,Producto:r.p,Cantidad:qty,Expected_At:expAt});
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`pedido_${store}_${fechaFmt}.csv`;a.click();
+  URL.revokeObjectURL(url);
+  // Registrar en Sheets en background
+  registrarOCEnSheets(ocRows);
+}
+
+function exportarTodoElDia() {
+  const provs=FRECUENCIAS[DAYS[curDay]]||[];
+  const fecha=new Date().toISOString().split('T')[0].replace(/-/g,'');
+  let csv='order_id,supplier_id,store,product,product_type,quantity,expected_at\n';
+  ['Bogotá','Medellín','Barranquilla'].forEach(ciudad=>{
+    const store=ciudad==='Bogotá'?'STF 15':ciudad==='Medellín'?'STF 30':'STF 51';
+    provs.forEach(p=>{
+      const rows=consolidar(ciudad).filter(r=>r.sug>0);
+      rows.forEach(r=>{
+        const qty=getQty(p.sup,r.sku,r.sug);
+        if(qty>0) csv+=`${r.sep||0},${r.nit||''},${store},${r.sku},regular,${qty},${addDays(r.lt||6)}\n`;
+      });
+    });
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`pedido_masivo_${fecha}.csv`;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function setDay(i) { curDay=i; curProv=null; curCiudad='Bogotá'; document.getElementById('main-header').style.display='none'; document.getElementById('main-footer').style.display='none'; document.getElementById('main-body').innerHTML='<div class="no-prov"><div class="no-prov-icon">📦</div><div class="no-prov-text">Selecciona un proveedor del día</div><div style="font-size:11px;color:var(--t3);margin-top:4px">O busca uno en el sidebar</div></div>'; renderDayPills(); renderSidebar(); renderUrgentes(); }
+
+
+
+function setSideTab(tab) {
+  ['hoy','tras','hist'].forEach(t => {
+    const panel = document.getElementById('side-'+t);
+    const btn = document.getElementById('stab-'+t);
+    if(!panel||!btn) return;
+    const active = t===tab;
+    panel.style.display = active ? 'flex' : 'none';
+    if(active) panel.style.flexDirection = 'column';
+    btn.style.color = active?'var(--text)':'var(--t3)';
+    btn.style.borderBottomColor = active?'var(--orange)':'transparent';
+  });
+  if(tab==='tras') renderTrasladosSidebar();
+}
+
+function renderTrasladosSidebar() {
+  const traslados = calcTraslados('Bogotá');
+  const el = document.getElementById('tras-list');
+  if(!el) return;
+  if(!traslados.length) {
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">Sin traslados sugeridos hoy</div>';
+    return;
+  }
+  el.innerHTML = traslados.map(t=>`
+    <div style="margin-bottom:6px;padding:10px 10px;background:var(--yellow-dim);border:1px solid #3a2800;border-radius:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;background:#2a1a00;color:#fbbf24;padding:2px 7px;border-radius:4px;border:1px solid #3a2800">${t.from}</span>
+        <span style="color:var(--yellow);font-size:12px">→</span>
+        <span style="font-size:11px;font-weight:700;background:#2a1a00;color:#fbbf24;padding:2px 7px;border-radius:4px;border:1px solid #3a2800">${t.to}</span>
+        <span style="margin-left:auto;font-weight:800;color:var(--yellow);font-size:13px">${t.qty} uds</span>
+      </div>
+      <div style="font-size:11px;color:#d97706;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.prod}</div>
+    </div>
+  `).join('');
+}
+
+function setFilter(f) { curFilter=f; renderTable(); }
+
+function filterTable(q) {
+  const rows = document.querySelectorAll('#main-body tbody tr:not(.expand-row)');
+  rows.forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    tr.style.display = text.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function sortTable(col) {
+  if(curSort.col===col) curSort.dir = curSort.dir==='asc'?'desc':'asc';
+  else { curSort.col=col; curSort.dir='asc'; }
+  renderTable();
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.classList.remove('asc','desc');
+    if(th.getAttribute('onclick') && th.getAttribute('onclick').includes(col)) th.classList.add(curSort.dir);
+  });
+}
+
+function marcarListo() {
+  if(!curProv) return;
+  doneProv.add(curProv);
+  // Save to historial
+  const rows = consolidar(curCiudad).filter(r=>r.sug>0);
+  const total = rows.reduce((a,r)=>a+getQty(curProv,r.sku,r.sug),0);
+  if(total>0) {
+    historial.unshift({prov:curProv,ciudad:curCiudad,total,skus:rows.length,fecha:new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})});
+    renderHistorial();
+  }
+  renderSidebar();
+  const btn = document.getElementById('btn-listo');
+  if(btn) { btn.textContent='✓ Listo'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)'; }
+}
+
+function renderHistorial() {
+  const el = document.getElementById('hist-list');
+  if(!el) return;
+  if(!historial.length) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">Sin pedidos guardados aún</div>'; return; }
+  el.innerHTML = historial.map(h=>`
+    <div class="hist-item">
+      <div class="hist-info">
+        <div class="hist-prov">${h.prov}</div>
+        <div class="hist-meta">${h.fecha} · ${h.skus} SKUs · <span class="hist-ciudad">${h.ciudad}</span></div>
+      </div>
+      <div class="hist-qty">${h.total.toLocaleString('es-CO')} uds</div>
+    </div>
+  `).join('');
+}
+
+function mostrarResumen() {
+  const provs = FRECUENCIAS[DAYS[curDay]]||[];
+  const ciudades = ['Bogotá','Medellín','Barranquilla'];
+  let html='';
+  let grandTotal=0;
+
+  // Para la data de prueba: los SKUs no tienen NIT por proveedor
+  // En prod, cada SKU tendrá su proveedor y se filtrará por p.nit
+  // Por ahora mostramos el pedido consolidado por ciudad (sin desglose por proveedor)
+  ciudades.forEach(ciudad=>{
+    const store = ciudad==='Bogotá'?'STF 15':ciudad==='Medellín'?'STF 30':'STF 51';
+    const rows = consolidar(ciudad).filter(r=>r.sug>0);
+    if(!rows.length) return;
+
+    // Use edits from all providers — take max qty per SKU to avoid duplication
+    // In prod this will be filtered by supplier NIT
+    const seen = {};
+    let cityTotal=0;
+    rows.forEach(r=>{
+      if(seen[r.sku]) return;
+      seen[r.sku]=true;
+      // Find best qty across all providers' edits
+      let qty = r.sug; // default sugerido
+      provs.forEach(p=>{
+        const e = getEdits(p.sup);
+        if(e[r.sku]!==undefined) qty = parseInt(e[r.sku])||0;
+      });
+      cityTotal+=qty;
+    });
+    if(!cityTotal) return;
+    grandTotal+=cityTotal;
+
+    html+=`<div class="resumen-ciudad">
+      <div class="resumen-ciudad-name">${ciudad} · ${store}</div>
+      <div class="resumen-prov-row">
+        <span class="resumen-prov-name">${provs.length} proveedor${provs.length>1?'es':''}</span>
+        <span class="resumen-prov-qty">${cityTotal.toLocaleString('es-CO')} uds</span>
+      </div>
+      <div class="resumen-total-row">
+        <span class="resumen-total-label">Total ${ciudad}</span>
+        <span class="resumen-total-val">${cityTotal.toLocaleString('es-CO')}</span>
+      </div>
+    </div>`;
+  });
+
+  if(!grandTotal) html='<div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">No hay pedidos montados aún</div>';
+  html+=`<div style="display:flex;justify-content:space-between;padding:12px 10px;background:var(--orange-dim);border-radius:8px;margin-top:8px">
+    <span style="font-size:13px;font-weight:700;color:var(--text)">Gran total día</span>
+    <span style="font-size:20px;font-weight:800;color:var(--orange)">${grandTotal.toLocaleString('es-CO')}</span>
+  </div>
+  <div style="margin-top:8px;padding:8px 10px;background:var(--s2);border-radius:6px;font-size:10px;color:var(--t3)">
+    ⚠️ En producción el resumen mostrará el desglose por proveedor cuando los SKUs tengan NIT asociado.
+  </div>`;
+  document.getElementById('resumen-content').innerHTML = html;
+  document.getElementById('resumen-modal').style.display='flex';
+}
+
+// Todos los proveedores de todos los días para búsqueda
+function getAllProvs() {
+  const map = {};
+  Object.entries(FRECUENCIAS).forEach(([day, provs]) => {
+    provs.forEach(p => {
+      if(!map[p.sup]) map[p.sup] = {sup:p.sup, brand:p.brand, dias:[]};
+      map[p.sup].dias.push(day);
+    });
+  });
+  return Object.values(map);
+}
+
+function buscarProveedor(q) {
+  const results = document.getElementById('prov-search-results');
+  if(!q.trim()) { results.style.display='none'; return; }
+  const all = getAllProvs();
+  const matches = all.filter(p =>
+    p.sup.toLowerCase().includes(q.toLowerCase()) ||
+    p.brand.toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+  if(!matches.length) {
+    results.style.display='block';
+    results.innerHTML='<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin resultados</div>';
+    return;
+  }
+  results.style.display='block';
+  results.innerHTML = matches.map(p => {
+    const diasEs = p.dias.map(d=>d.charAt(0)+d.slice(1).toLowerCase()).join(', ');
+    const esHoy = p.dias.includes(DAYS[curDay]);
+    return `<div onclick="selectProvFromSearch('${p.sup.replace(/'/g,"\'")}','${p.brand.replace(/'/g,"\'")}'); document.getElementById('prov-search-input').value=''; document.getElementById('prov-search-results').style.display='none';"
+      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s"
+      onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">
+      <div style="font-size:12px;font-weight:500;color:var(--text)">${p.sup}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:2px">${p.brand} &nbsp;·&nbsp; <span style="color:${esHoy?'var(--green)':'var(--t3)'}">${esHoy?'✓ Hoy':'📅 '+diasEs}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function selectProvFromSearch(sup, brand) {
+  // Switch to Hoy tab and open prov
+  setSideTab('hoy');
+  selectProv(sup, brand);
+  // Scroll sidebar to top
+  document.getElementById('sidebar-list').scrollTop = 0;
+}
+
+function roundToEmb(sku, emb) {
+  const inp = document.getElementById('inp-'+sku);
+  if(!inp) return;
+  const val = parseInt(inp.value) || 0;
+  const rounded = val <= 0 ? emb : Math.ceil(val / emb) * emb;
+  inp.value = rounded;
+  inp.classList.add('modified');
+  editQty(sku, rounded, inp);
+  // Hide button after rounding since it's now a valid multiple
+  const btn = inp.nextElementSibling;
+  if(btn && btn.classList.contains('emb-btn')) btn.style.display='none';
+}
+
+function getTrasladosTexto() {
+  const traslados = calcTraslados('Bogotá');
+  if(!traslados.length) return 'Sin traslados sugeridos hoy.';
+  const fecha = new Date().toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
+  let txt = '⇄ *Traslados sugeridos — ' + fecha + '*\n\n';
+  traslados.forEach(t => {
+    txt += `📦 *${t.prod}*\n`;
+    txt += `   ${t.from} → ${t.to}: *${t.qty} uds*\n\n`;
+  });
+  txt += '_Fithub — Sistema de Abastecimiento_';
+  return txt;
+}
+
+function copiarTraslados() {
+  const txt = getTrasladosTexto();
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('btn-copiar');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  });
+}
+
+function whatsappTraslados() {
+  const txt = getTrasladosTexto();
+  const encoded = encodeURIComponent(txt);
+  // Número de Ricardo — en prod configurable
+  window.open('https://wa.me/?text=' + encoded, '_blank');
+}
+
+document.addEventListener('click', function(e) {
+  const results = document.getElementById('prov-search-results');
+  const input = document.getElementById('prov-search-input');
+  if(results && input && !input.contains(e.target) && !results.contains(e.target)) {
+    results.style.display='none';
+  }
+});
+
+// Arranque — carga datos desde Sheets y luego inicializa UI
+cargarDatos();
+</script>
+<div class="resumen-overlay" id="resumen-modal" style="display:none">
+  <div class="resumen-box">
+    <div class="resumen-title">Resumen del día</div>
+    <div id="resumen-content"></div>
+    <button class="resumen-close" onclick="document.getElementById('resumen-modal').style.display='none';exportarTodoElDia()">↓ Exportar todo el día</button>
+    <button style="width:100%;margin-top:8px;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--border2);color:var(--t2);font-size:12px;cursor:pointer" onclick="document.getElementById('resumen-modal').style.display='none'">Cerrar</button>
+  </div>
+</div>
+</body>
+</html>
