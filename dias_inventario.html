@@ -1119,27 +1119,42 @@ function renderExecSummary(rows) { /* removido */ }
 function renderKPIs(rows) {
   const invTotal   = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
   const invVal     = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const sobrestock = rows.filter(r=>r.estado==='sobrestock').length;
-  const gestionar  = rows.filter(r=>r.estado==='gestionar').length;
-  const sobrestockTotal = sobrestock + gestionar;
-  const invValSS   = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const dias       = rows.filter(r=>r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>=0&&r.dias_inv<366);
+  const diasProm   = dias.length ? dias.reduce((a,r)=>a+r.dias_inv,0)/dias.length : 0;
   const invValDescontinuado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
   const cntDescontinuado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
   const uniqueSkus = new Set(rows.map(r=>r.sku)).size;
 
   const kpis = [
-    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),              sub:`capital total en inventario`,                     cls:'orange', tip:'Valor total del inventario a costo.' },
-    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),             sub:`unidades en stock`,                               cls:'green',  tip:'Suma de unidades en inventario de los SKUs filtrados.' },
-    { label:'🔵 Sobrestock',            val: fmt(sobrestockTotal),      sub:`${fmtM(invValSS)} · capital inmovilizado`,        cls:'purple', tip:'SKUs con más de 60 días de inventario o que superan vida útil.' },
-    { label:'🚫 Val. Descontinuado',    val: fmtM(invValDescontinuado), sub:`${cntDescontinuado} SKUs tipo "Depurado"`,        cls:'blue',   tip:'Valor del inventario de productos clasificados como Depurado en Tipo de Producto.' },
+    { label:'💵 Inv. Valorizado',    val: fmtM(invVal),              sub:`capital total en inventario`,              cls:'orange', tip:'Valor total del inventario a costo.' },
+    { label:'🚫 Val. Descontinuado', val: fmtM(invValDescontinuado), sub:`${cntDescontinuado} SKUs tipo "Depurado"`,  cls:'blue',   tip:'Valor del inventario de productos clasificados como Depurado.' },
+    { label:'📦 Unidades en Stock',  val: fmt(invTotal),             sub:`${fmt(uniqueSkus)} SKUs únicos`,            cls:'green',  tip:'Total unidades físicas en inventario.' },
+    { label:'📅 Días Inv. Prom.',    val: fmtD(diasProm)+'d',        sub:`días promedio de cobertura`,               cls:'purple', tip:'Promedio de días de inventario de todos los SKUs activos.' },
   ];
 
-  document.getElementById('kpis').innerHTML = kpis.map(k=>`
-    <div class="kpi ${k.cls}" data-tip="${k.tip.replace(/"/g,"'")}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.val}</div>
-      <div class="kpi-sub">${k.sub}</div>
-    </div>`).join('');
+  document.getElementById('kpis').innerHTML = `
+    <div style="background:#fff;border:1px solid #e8e4de;border-radius:14px;padding:20px 28px;display:flex;align-items:center;gap:0;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px;padding:0 24px 0 0;border-right:1px solid #e8e4de">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">💵 Inv. Valorizado</div>
+        <div style="font-size:26px;font-weight:900;color:#f97316;line-height:1">${fmtM(invVal)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">capital en inventario</div>
+      </div>
+      <div style="flex:1;min-width:160px;padding:0 24px;border-right:1px solid #e8e4de">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">🚫 Val. Descontinuado</div>
+        <div style="font-size:26px;font-weight:900;color:#6366f1;line-height:1">${fmtM(invValDescontinuado)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">${cntDescontinuado} SKUs tipo "Depurado"</div>
+      </div>
+      <div style="flex:1;min-width:160px;padding:0 24px;border-right:1px solid #e8e4de">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">📦 Unidades en Stock</div>
+        <div style="font-size:26px;font-weight:900;color:#10b981;line-height:1">${fmt(invTotal)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">${fmt(uniqueSkus)} SKUs únicos</div>
+      </div>
+      <div style="flex:1;min-width:160px;padding:0 0 0 24px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">📅 Días Inv. Prom.</div>
+        <div style="font-size:26px;font-weight:900;color:#8b5cf6;line-height:1">${fmtD(diasProm)}d</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">días promedio cobertura</div>
+      </div>
+    </div>`;
 
   const hdrR=document.getElementById('hdr-registros');if(hdrR)hdrR.textContent=fmt(rows.length);
   const hdrS=document.getElementById('hdr-skus');if(hdrS)hdrS.textContent=fmt(uniqueSkus);
