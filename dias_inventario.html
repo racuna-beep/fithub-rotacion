@@ -223,8 +223,8 @@
 
   /* ── ALERTS ── */
   /* ── ALERT CARDS ── */
-  .alert-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  @media (max-width: 1200px) { .alert-cols { grid-template-columns: 1fr 1fr; } }
+  .alert-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 1400px) { .alert-cols { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 600px)  { .alert-cols { grid-template-columns: 1fr; } }
   .alert-col { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
   .alert-col-hdr { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
@@ -268,6 +268,7 @@
   .table-header h3 { margin: 0; font-size: 13px; font-weight: 700; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .hover-row:hover { background: rgba(249,115,22,0.04) !important; cursor: default; }
   th { background: var(--surface2); color: var(--muted); font-size: 10px; font-weight: 700;
     letter-spacing: 0.5px; text-transform: uppercase; padding: 8px 10px; text-align: left;
     position: sticky; top: 0; cursor: pointer; white-space: nowrap; user-select: none; }
@@ -729,8 +730,8 @@ let detSortCol2 = 'inv_val', detSortDir2 = -1;
 let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
 function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
 let sortCol = 'dias_inv', sortDir = -1;
-let provSortCol = 'inv', provSortDir = -1;
-let marcaSortCol = 'inv', marcaSortDir = -1;
+let provSortCol = 'inv_val', provSortDir = -1;
+let marcaSortCol = 'inv_val', marcaSortDir = -1;
 let pageSize = 50, currentPage = 1;
 const sortDirs = { store: -1, sup: -1, cat: -1 };
 
@@ -816,7 +817,7 @@ function normalise(raw, keyMap) {
     dias_inv:      dias,
     vida_util:     vidaUtil,
     prom_vta:      numFast(g('promedio de venta ytd')) ?? promVta,
-    venta_mes:     numFast(g('venta mayo') ?? g('venta mes') ?? g('ventas mayo')) ?? 0,
+    venta_mes:     (() => { const last = ventas.filter(v=>v!=null&&v>0); return last.length ? last[last.length-1] : 0; })(),
     costo:         numFast(g('costo sin iva') ?? g('costo sin iva') ?? g('costo')) ?? 0,
     ventas,
     estado,
@@ -1119,7 +1120,7 @@ function renderExecSummary(rows) { /* removido */ }
 function renderKPIs(rows) {
   const invTotal   = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
   const invVal     = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const dias       = rows.filter(r=>r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>=0&&r.dias_inv<366);
+  const dias       = rows.filter(r=>r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&r.estado!=='nuevo'&&r.estado!=='sin_stock');
   const diasProm   = dias.length ? dias.reduce((a,r)=>a+r.dias_inv,0)/dias.length : 0;
   const invValDescontinuado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
   const cntDescontinuado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
@@ -1147,7 +1148,7 @@ function renderKPIs(rows) {
       <div style="flex:1;min-width:160px;padding:0 24px;border-right:1px solid #e8e4de">
         <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">📦 Unidades en Stock</div>
         <div style="font-size:26px;font-weight:900;color:#10b981;line-height:1">${fmt(invTotal)}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:3px">${fmt(uniqueSkus)} SKUs únicos</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:3px">${fmt(rows.length)} registros</div>
       </div>
       <div style="flex:1;min-width:160px;padding:0 0 0 24px">
         <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">📅 Días Inv. Prom.</div>
@@ -2330,25 +2331,28 @@ function render() {
   if (tab === 'transferencias') renderTransferencias(rows);
 
   // Always update counts
+  // Update plan badge
+  const planRows = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar');
+  const cntPlan = document.getElementById('cnt-plan');
+  if(cntPlan) cntPlan.textContent = planRows.length.toLocaleString('es-CO');
+
   renderAlerts_counts(rows);
 }
 
 // ── COUNTS ONLY (sin rebuild de alertas) ─────────────────────────────────────
 function renderAlerts_counts(rows) {
-  const q  = rows.filter(r=>r.estado==='quiebre').length;
-  const ss = rows.filter(r=>r.estado==='sin_stock').length;
-  const sm = rows.filter(r=>r.estado==='sin_movimiento').length;
-  const so = rows.filter(r=>r.estado==='sobrestock').length;
-  const ge = rows.filter(r=>r.estado==='gestionar').length;
-  const nv = rows.filter(r=>r.estado==='nuevo').length;
-  const el = id => document.getElementById(id);
-  if(el('cnt-alertas')) el('cnt-alertas').textContent = q + sm;
-  if(el('cnt-q'))  el('cnt-q').textContent  = q;
-  if(el('cnt-ss0'))el('cnt-ss0').textContent = ss;
-  if(el('cnt-sm')) el('cnt-sm').textContent  = sm;
-  if(el('cnt-ss')) el('cnt-ss').textContent  = so;
-  if(el('cnt-e'))  el('cnt-e').textContent   = ge;
-  if(el('cnt-nv')) el('cnt-nv').textContent  = nv;
+  const ss0 = rows.filter(r=>r.estado==='sin_stock').length;
+  const sm  = rows.filter(r=>r.estado==='sin_movimiento').length;
+  const so  = rows.filter(r=>r.estado==='sobrestock').length;
+  const ge  = rows.filter(r=>r.estado==='gestionar').length;
+  const el  = id => document.getElementById(id);
+  if(el('cnt-alertas')) el('cnt-alertas').textContent = ss0 + sm + so + ge;
+  if(el('cnt-ss0'))     el('cnt-ss0').textContent = ss0;
+  if(el('cnt-sm'))      el('cnt-sm').textContent  = sm;
+  if(el('cnt-ss'))      el('cnt-ss').textContent  = so + ge;
+  if(el('cnt-e'))       el('cnt-e').textContent   = ge;
+  if(el('cnt-q'))       el('cnt-q').textContent   = rows.filter(r=>r.estado==='quiebre').length;
+  if(el('cnt-nv'))      el('cnt-nv').textContent  = rows.filter(r=>r.estado==='nuevo').length;
   if(el('cnt-detalle')) el('cnt-detalle').textContent = rows.length.toLocaleString('es-CO');
 }
 
