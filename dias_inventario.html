@@ -46,7 +46,7 @@
   .ld-text { font-size:12px; color:#475569; letter-spacing:0.5px; }
 
   /* ── SIDEBAR LAYOUT ── */
-  #app { display: none; display: flex; height: 100vh; overflow: hidden; }
+  #app { display: none; height: 100vh; overflow: hidden; max-width: none; margin: 0; padding: 0; }
   #sidebar {
     width: 220px; min-width: 220px; background: #1e293b; color: #e2e8f0;
     display: flex; flex-direction: column; gap: 2px; padding: 0 0 16px;
@@ -76,8 +76,6 @@
   #topbar { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
   #panels-wrap { flex: 1; overflow-y: auto; padding: 20px 24px; }
 
-  /* ── APP (legacy override) ── */
-  #app { max-width: none; margin: 0; padding: 0; }
   header { display: none; }
   #sticky-top { display: none; }
   .tabs { display: none; }
@@ -292,7 +290,6 @@
   #tooltip strong { color: #1e293b; display: block; margin-bottom: 2px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -304,6 +301,10 @@
     <div class="ld-divider"></div>
     <div class="ld-bar"><div class="ld-fill" id="ld-fill"></div></div>
     <div class="ld-text" id="ld-text">Conectando con Google Sheets…</div>
+    <div id="ld-error" style="display:none;margin-top:16px;text-align:center">
+      <div style="color:#f87171;font-size:13px;margin-bottom:12px" id="ld-error-msg"></div>
+      <button onclick="retryLoad()" style="background:#FF6B00;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;">↺ Reintentar</button>
+    </div>
   </div>
 </div>
 
@@ -678,7 +679,7 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbwzhVxi9u6n3bkCFpdqb2Txpj3h0PojK91ZKG1Uwz9tBuLwf8_zYIADlGMs4uq7KoSVOQ/exec';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbwTL4sxrbQZYK14UJmucFFZ875-p6Bl1q36gE8z_MUR6hbNrHJcCIxGlwylJSVA1aRu_A/exec';
 
 // Se detectan automaticamente desde los datos al cargar
 let VENTA_MONTHS = [];
@@ -811,7 +812,7 @@ function normalise(raw, keyMap) {
 }
 
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
-const SESSION_KEY = 'fithub_dias_inv_cache';
+const SESSION_KEY = 'fithub_dias_inv_cache_v2';
 
 async function processInChunks(rawArr, chunkSize, onProgress) {
   // Build keyMap once from first row
@@ -865,7 +866,7 @@ async function loadData() {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     document.getElementById('loading-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+    const appEl=document.getElementById('app');appEl.style.display='flex';appEl.style.height='100vh';appEl.style.overflow='hidden';
 
     const onFC = () => { cascadeFilters(); render(); };
     msCreate('ms-store',    'Todas',  onFC);
@@ -880,12 +881,22 @@ async function loadData() {
     render();
 
   } catch(e) {
-    document.getElementById('loading-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    const eb = document.getElementById('err-bar');
-    eb.style.display = 'block';
-    eb.textContent = '⚠️ Error: ' + e.message;
+    document.getElementById('ld-fill').style.width = '100%';
+    document.getElementById('ld-fill').style.background = '#ef4444';
+    document.getElementById('ld-text').style.display = 'none';
+    const errMsg = document.getElementById('ld-error-msg');
+    const ldErr  = document.getElementById('ld-error');
+    if (errMsg) errMsg.textContent = '⚠️ ' + e.message;
+    if (ldErr)  ldErr.style.display = 'block';
   }
+}
+function retryLoad() {
+  document.getElementById('ld-error').style.display = 'none';
+  document.getElementById('ld-text').style.display = 'block';
+  document.getElementById('ld-fill').style.background = '';
+  document.getElementById('ld-fill').style.width = '0%';
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e2){}
+  DATA = []; loadData();
 }
 
 // ── FILTERS ──────────────────────────────────────────────────────────────────
@@ -2399,7 +2410,7 @@ document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) re
 loadData();
 setTimeout(()=>{
   const ls=document.getElementById('loading-screen');
-  if(ls&&ls.style.display!=='none'){ls.style.display='none';document.getElementById('app').style.display='block';}
+  if(ls&&ls.style.display!=='none'){ls.style.display='none';const appEl=document.getElementById('app');appEl.style.display='flex';appEl.style.height='100vh';appEl.style.overflow='hidden';}
 },15000);
 </script>
 </body>
