@@ -46,17 +46,26 @@
   .ld-text { font-size:12px; color:#475569; letter-spacing:0.5px; }
 
   /* ── SIDEBAR LAYOUT ── */
-  html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-  #app { display: none; height: 100vh; overflow: hidden; max-width: none; margin: 0; padding: 0; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  #app { display: none; max-width: none; margin: 0; padding: 0; }
+
   #sidebar {
-    width: 220px; min-width: 220px; background: #1e293b; color: #e2e8f0;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 220px; background: #1e293b; color: #e2e8f0;
     display: flex; flex-direction: column; gap: 2px; padding: 0 0 16px;
-    overflow-y: auto; overflow-x: hidden; flex-shrink: 0; border-right: 1px solid #0f172a;
-    height: 100vh; flex-basis: 220px;
+    overflow-y: auto; overflow-x: hidden; border-right: 1px solid #0f172a;
+    z-index: 100;
   }
-  #main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); }
-  #topbar { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
-  #panels-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 24px; min-height: 0; }
+
+  #main-content {
+    margin-left: 220px;
+    display: flex; flex-direction: column;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  #topbar { position: sticky; top: 0; z-index: 50; background: var(--surface); border-bottom: 1px solid var(--border); }
+  #panels-wrap { padding: 20px 24px; flex: 1; }
   .sb-logo { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px; }
   .sb-logo .logo-brand { font-size: 22px; font-weight: 900; letter-spacing: -1px; color: #fff; line-height: 1; }
   .sb-logo .logo-brand span { color: #FF6B00; }
@@ -77,9 +86,6 @@
   .sb-stat-val { font-size: 13px; font-weight: 700; color: #e2e8f0; }
   .sb-stat-lbl { font-size: 10px; color: #64748b; }
 
-  #main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); }
-  #topbar { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
-  #panels-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 24px; min-height: 0; }
 
   header { display: none; }
   #sticky-top { display: none; }
@@ -889,7 +895,7 @@ async function loadData() {
     await new Promise(resolve => setTimeout(resolve, 0));
 
     document.getElementById('loading-screen').style.display = 'none';
-    const appEl=document.getElementById('app');appEl.style.display='flex';appEl.style.height='100vh';appEl.style.overflow='hidden';
+    const appEl=document.getElementById('app');appEl.style.display='block';
 
     const onFC = () => { cascadeFilters(); render(); };
     msCreate('ms-store',    'Todas',  onFC);
@@ -2433,7 +2439,7 @@ document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) re
 loadData();
 setTimeout(()=>{
   const ls=document.getElementById('loading-screen');
-  if(ls&&ls.style.display!=='none'){ls.style.display='none';const appEl=document.getElementById('app');appEl.style.display='flex';appEl.style.height='100vh';appEl.style.overflow='hidden';}
+  if(ls&&ls.style.display!=='none'){ls.style.display='none';const appEl=document.getElementById('app');appEl.style.display='block';}
 },15000);
 </script>
 </body>
