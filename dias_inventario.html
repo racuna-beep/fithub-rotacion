@@ -1120,8 +1120,9 @@ function renderExecSummary(rows) { /* removido */ }
 function renderKPIs(rows) {
   const invTotal   = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
   const invVal     = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const dias       = rows.filter(r=>r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&r.estado!=='nuevo'&&r.estado!=='sin_stock');
-  const diasProm   = dias.length ? dias.reduce((a,r)=>a+r.dias_inv,0)/dias.length : 0;
+  // Días prom = mismo cálculo que la gráfica (promedio simple de dias_inv actuales)
+  const diasRows = rows.filter(r => r.dias_inv != null && isFinite(r.dias_inv) && r.dias_inv >= 0 && r.dias_inv < 9999);
+  const diasProm = diasRows.length ? diasRows.reduce((a,r) => a + r.dias_inv, 0) / diasRows.length : 0;
   const invValDescontinuado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
   const cntDescontinuado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
   const uniqueSkus = new Set(rows.map(r=>r.sku)).size;
@@ -2455,6 +2456,7 @@ document.addEventListener('mousemove',e=>{
 document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) return; ttEl.style.opacity='0'; });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} // siempre datos frescos al recargar
 loadData();
 setTimeout(()=>{
   const ls=document.getElementById('loading-screen');
