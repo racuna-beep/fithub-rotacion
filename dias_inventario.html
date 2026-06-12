@@ -680,8 +680,8 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbwhjGhzlYKUmiSvunICUmJmBWhfwcMX-IYsWRYbMVDSYDviWGOxnMfSkMkBGf0Nx949xA/exec';
-const SESSION_KEY = 'fithub_dias_inv_cache_v5';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbxYviXTx6D9aq3Hxp4gK_jCaxFlJv-G-OM9Of6o7eo8DraHrxSwHv_UzyG1G1gHPUJK0g/exec';
+const SESSION_KEY = 'fithub_dias_inv_cache_v6';
 
 // Se detectan automaticamente desde los datos al cargar
 let VENTA_MONTHS = [];
@@ -814,7 +814,7 @@ function normalise(raw, keyMap) {
 }
 
 // ── JSONP FETCH (bypasses CORS for Apps Script on GitHub Pages) ───────────────
-function fetchJSONP(url, timeout = 30000) {
+function fetchJSONP(url, timeout = 60000) {
   return new Promise((resolve, reject) => {
     const cbName = 'fithub_cb_' + Date.now();
     const script = document.createElement('script');
