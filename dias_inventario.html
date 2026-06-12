@@ -45,21 +45,47 @@
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   .ld-text { font-size:12px; color:#475569; letter-spacing:0.5px; }
 
-  /* ── APP ── */
-  #app { display: none; max-width: 1600px; margin: 0 auto; padding: 24px; }
-  header { margin-bottom: 20px; }
-  header h1 { font-size: 26px; font-weight: 800; color: var(--text); }
-  header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
-
-  /* ── STICKY TABS ONLY ── */
-  #sticky-top {
-    position: sticky; top: 0; z-index: 200;
-    background: var(--bg);
-    padding: 8px 0;
-    margin: 0 0 16px;
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  /* ── SIDEBAR LAYOUT ── */
+  #app { display: none; display: flex; height: 100vh; overflow: hidden; }
+  #sidebar {
+    width: 220px; min-width: 220px; background: #1e293b; color: #e2e8f0;
+    display: flex; flex-direction: column; gap: 2px; padding: 0 0 16px;
+    overflow-y: auto; flex-shrink: 0; border-right: 1px solid #0f172a;
   }
+  .sb-logo { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px; }
+  .sb-logo .logo-brand { font-size: 22px; font-weight: 900; letter-spacing: -1px; color: #fff; line-height: 1; }
+  .sb-logo .logo-brand span { color: #FF6B00; }
+  .sb-logo .logo-sub { font-size: 8px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #475569; margin-top: 2px; }
+  .sb-section-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #475569; padding: 4px 16px 2px; }
+  .sb-btn { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border: none; background: none; color: #94a3b8;
+    cursor: pointer; font-size: 12px; font-weight: 600; text-align: left; width: 100%; transition: all 0.15s; border-radius: 0; }
+  .sb-btn:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+  .sb-btn.active { background: rgba(255,107,0,0.15); color: #ff8c38; border-left: 3px solid #FF6B00; padding-left: 13px; }
+  .sb-icon { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; }
+  .sb-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-badge { background: rgba(255,255,255,0.12); color: #94a3b8; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .sb-badge-purple { background: rgba(139,92,246,0.25); color: #a78bfa; }
+  .sb-badge-cyan { background: rgba(6,182,212,0.2); color: #22d3ee; }
+  .sb-btn.active .sb-badge { background: rgba(255,107,0,0.25); color: #fb923c; }
+  .sb-stats { display: flex; flex-direction: column; gap: 6px; padding: 8px 16px; }
+  .sb-stat { display: flex; justify-content: space-between; align-items: center; }
+  .sb-stat-val { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+  .sb-stat-lbl { font-size: 10px; color: #64748b; }
+
+  #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  #topbar { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+  #panels-wrap { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* ── APP (legacy override) ── */
+  #app { max-width: none; margin: 0; padding: 0; }
+  header { display: none; }
+  #sticky-top { display: none; }
+  .tabs { display: none; }
+  .tab-panel { display: none; padding: 0; }
+  .tab-panel.active { display: block; }
+
+  /* ── LAYOUT FIXES ── */
+  .kpis { margin-bottom: 0; }
   .header-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
   .header-left { display:flex; align-items:center; gap:20px; }
   .header-logo .logo-brand { font-size:26px; font-weight:900; letter-spacing:-1.5px; line-height:1; color:#1e293b; }
@@ -282,108 +308,101 @@
 </div>
 
 <div id="app">
-  <header>
-    <div class="header-wrap">
-      <div class="header-left">
-        <div class="header-logo">
-          <div class="logo-brand">fit<span>hub</span></div>
-          <div class="logo-sub">Super Tiendas</div>
+  <!-- ── SIDEBAR ── -->
+  <nav id="sidebar">
+    <div class="sb-logo">
+      <div class="logo-brand">fit<span>hub</span></div>
+      <div class="logo-sub">Super Tiendas</div>
+    </div>
+    <div class="sb-section-label">NAVEGACIÓN</div>
+    <button class="sb-btn active" data-tab="resumen">
+      <span class="sb-icon">📊</span><span class="sb-label">Resumen</span>
+    </button>
+    <button class="sb-btn" data-tab="alertas">
+      <span class="sb-icon">⚠️</span><span class="sb-label">Alertas</span>
+      <span class="sb-badge" id="cnt-alertas">0</span>
+    </button>
+    <button class="sb-btn" data-tab="provmarcas">
+      <span class="sb-icon">🏭</span><span class="sb-label">Proveedores &amp; Marcas</span>
+    </button>
+    <button class="sb-btn" data-tab="detalle">
+      <span class="sb-icon">📋</span><span class="sb-label">Detalle</span>
+      <span class="sb-badge" id="cnt-detalle">0</span>
+    </button>
+    <button class="sb-btn" data-tab="plan">
+      <span class="sb-icon">🎯</span><span class="sb-label">Plan de Ataque</span>
+      <span class="sb-badge sb-badge-purple" id="cnt-plan">0</span>
+    </button>
+    <button class="sb-btn" data-tab="transferencias">
+      <span class="sb-icon">🔁</span><span class="sb-label">Posibles Transferencias</span>
+      <span class="sb-badge sb-badge-cyan" id="cnt-transf">0</span>
+    </button>
+
+    <div class="sb-section-label" style="margin-top:16px">ESTADO</div>
+    <div class="sb-stats">
+      <div class="sb-stat"><span id="hdr-registros" class="sb-stat-val">—</span><span class="sb-stat-lbl">Registros</span></div>
+      <div class="sb-stat"><span id="hdr-skus" class="sb-stat-val">—</span><span class="sb-stat-lbl">SKUs únicos</span></div>
+      <div class="sb-stat"><span id="hdr-tiendas" class="sb-stat-val">—</span><span class="sb-stat-lbl">Tiendas</span></div>
+    </div>
+    <div style="padding:0 12px;margin-top:8px">
+      <span id="last-update-hdr" style="font-size:10px;color:#94a3b8;display:block;margin-bottom:6px"></span>
+      <button class="btn-refresh" id="btn-refresh" style="width:100%;justify-content:center;">↻ Actualizar</button>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div id="main-content">
+    <!-- Top bar: filters + KPIs -->
+    <div id="topbar">
+      <div class="filters" style="background:none;border:none;padding:12px 24px 8px;margin:0;border-bottom:1px solid var(--border);">
+        <div class="filter-group">
+          <span class="filter-label">TIENDA</span>
+          <div class="ms-wrap" id="ms-store"></div>
         </div>
-        <div class="header-divider"></div>
-        <div class="header-meta">
-          <div class="header-title">📦 Dashboard Días de Inventario 2026</div>
-          <div class="header-badges">
-            <span class="estado-badge eb-quiebre">💀 Sin Stock 0d</span> <span class="estado-badge eb-quiebre">🚨 Quiebre 1–3d</span>
-            <span class="estado-badge eb-bien">🟢 Bien 4–59d</span>
-            <span class="estado-badge eb-sobre">🔵 Sobrestock ≥60d</span>
-          </div>
+        <div class="filter-group">
+          <span class="filter-label">PROVEEDOR</span>
+          <div class="ms-wrap" id="ms-supplier"></div>
         </div>
+        <div class="filter-group">
+          <span class="filter-label">MARCA</span>
+          <div class="ms-wrap" id="ms-brand"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">CATEGORÍA</span>
+          <div class="ms-wrap" id="ms-cat"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">SUBCATEGORÍA</span>
+          <div class="ms-wrap" id="ms-subcat"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">ESTADO</span>
+          <div class="ms-wrap" id="ms-estado"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">TIPO PAGO</span>
+          <div class="ms-wrap" id="ms-pago"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">TIPO PRODUCTO</span>
+          <div class="ms-wrap" id="ms-tipoprod"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">BÚSQUEDA</span>
+          <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
+        </div>
+        <button class="btn-reset" id="btn-reset">✕ Limpiar</button>
       </div>
-      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-        <div class="header-stats">
-          <div class="stat-item">
-            <div class="stat-val" id="hdr-registros">—</div>
-            <div class="stat-lbl">Registros</div>
-          </div>
-          <div class="stat-sep"></div>
-          <div class="stat-item">
-            <div class="stat-val" id="hdr-skus">—</div>
-            <div class="stat-lbl">SKUs únicos</div>
-          </div>
-          <div class="stat-sep"></div>
-          <div class="stat-item">
-            <div class="stat-val" id="hdr-tiendas">—</div>
-            <div class="stat-lbl">Tiendas</div>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span id="last-update-hdr" style="font-size:10px;color:#94a3b8"></span>
-          <button class="btn-refresh" id="btn-refresh">↻ Actualizar datos</button>
-        </div>
-      </div>
+      <div id="kpis" class="kpis" style="padding:12px 24px;margin:0;"></div>
     </div>
-  </header>
 
-  <div id="exec-summary" class="exec-summary" style="display:none"></div>
-  <div style="display:none">
-    <span id="meta-txt"></span>
-    <div id="last-update-bar"></div>
-    <span id="last-update"></span>
-  </div>
-  <div class="err-bar" id="err-bar"></div>
-  <div id="kpis" class="kpis"></div>
+    <!-- Hidden meta -->
+    <div style="display:none"><span id="meta-txt"></span><div id="last-update-bar"></div><span id="last-update"></span></div>
+    <div class="err-bar" id="err-bar" style="margin:0 24px 12px"></div>
+    <div id="exec-summary" class="exec-summary" style="display:none!important"></div>
 
-  <div class="filters">
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Filtra por tienda STF">TIENDA</span>
-      <div class="ms-wrap" id="ms-store"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Filtra por proveedor">PROVEEDOR</span>
-      <div class="ms-wrap" id="ms-supplier"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Filtra por marca">MARCA</span>
-      <div class="ms-wrap" id="ms-brand"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Filtra por categoría">CATEGORÍA</span>
-      <div class="ms-wrap" id="ms-cat"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">SUBCATEGORÍA</span>
-      <div class="ms-wrap" id="ms-subcat"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Estado de cobertura del inventario">ESTADO</span>
-      <div class="ms-wrap" id="ms-estado"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Condición comercial: crédito o consignación">TIPO DE PAGO</span>
-      <div class="ms-wrap" id="ms-pago"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label" data-tip="Tipo de Producto del SKU">TIPO PRODUCTO</span>
-      <div class="ms-wrap" id="ms-tipoprod"></div>
-    </div>
-    <div class="filter-group">
-      <span class="filter-label">BÚSQUEDA</span>
-      <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
-    </div>
-    <button class="btn-reset" id="btn-reset">✕ Limpiar</button>
-  </div>
-
-  <!-- Solo las pestañas son sticky -->
-  <div id="sticky-top">
-    <div class="tabs" style="margin:0;padding:0;border:none;">
-      <button class="tab-btn active" data-tab="resumen">📊 Resumen</button>
-      <button class="tab-btn" data-tab="alertas">⚠️ Alertas <span class="tab-badge" id="cnt-alertas">0</span></button>
-      <button class="tab-btn" data-tab="provmarcas">🏭 Proveedores &amp; Marcas</button>
-      <button class="tab-btn" data-tab="detalle">📋 Detalle <span class="tab-badge" id="cnt-detalle">0</span></button>
-      <button class="tab-btn" data-tab="transferencias" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#22d3ee">🔁 Posibles Transferencias <span class="tab-badge" id="cnt-transf" style="background:rgba(6,182,212,0.3)">0</span></button>
-      <button class="tab-btn" data-tab="plan" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa">🎯 Plan de Ataque <span class="tab-badge" id="cnt-plan" style="background:rgba(139,92,246,0.3)">0</span></button>
-    </div>
-  </div>  <!-- RESUMEN -->
+    <!-- Tab panels -->
+    <div id="panels-wrap">  <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
 
     <!-- Fila 1: Donut + Tiendas por días + Categorías -->
@@ -425,22 +444,6 @@
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
     <div class="alert-cols">
-      <div class="alert-col" style="border-top:3px solid #dc2626">
-        <div class="alert-col-hdr">
-          <h4 style="color:#dc2626">💀 Sin Stock (0d)</h4>
-          <span class="badge-cnt" id="cnt-ss0" style="background:rgba(220,38,38,0.15);color:#dc2626">0</span>
-        </div>
-        <div class="alert-col-desc">Sin inventario con ventas activas — quiebre total.</div>
-        <div class="alert-col-body" id="body-list-sin_stock"><div id="list-sin_stock"></div></div>
-      </div>
-      <div class="alert-col quiebre">
-        <div class="alert-col-hdr">
-          <h4>🚨 Quiebre (1–3d)</h4>
-          <span class="badge-cnt" id="cnt-q" style="background:rgba(239,68,68,0.15);color:#f87171">0</span>
-        </div>
-        <div class="alert-col-desc">1 a 3 días de inventario. Acción inmediata.</div>
-        <div class="alert-col-body" id="body-list-quiebre"><div id="list-quiebre"></div></div>
-      </div>
       <div class="alert-col" style="border-top:3px solid #8b5cf6">
         <div class="alert-col-hdr">
           <h4 style="color:#8b5cf6">🔵 Sobrestock (≥60d)</h4>
@@ -449,9 +452,9 @@
         <div class="alert-col-desc">Exceso de inventario. Evaluar devolución o promoción.</div>
         <div class="alert-col-body" id="body-list-sobrestock"><div id="list-sobrestock"></div></div>
       </div>
-      <div class="alert-col exceso" style="border-top:3px solid #f43f5e">
+      <div class="alert-col" style="border-top:3px solid #f43f5e">
         <div class="alert-col-hdr">
-          <h4 style="color:#f43f5e">⚠️ Gestionar (> Vida Útil)</h4>
+          <h4 style="color:#f43f5e">⚠️ Gestionar (&gt; Vida Útil)</h4>
           <span class="badge-cnt" id="cnt-e" style="background:rgba(244,63,94,0.15);color:#fb7185">0</span>
         </div>
         <div class="alert-col-desc">Inventario supera vida útil. Riesgo de vencimiento.</div>
@@ -465,59 +468,102 @@
         <div class="alert-col-desc">Tiene inventario pero sin ventas — revisar o discontinuar.</div>
         <div class="alert-col-body" id="body-list-sin_movimiento"><div id="list-sin_movimiento"></div></div>
       </div>
-      <div class="alert-col" style="border-top:3px solid #94a3b8">
+      <div class="alert-col" style="border-top:3px solid #dc2626">
         <div class="alert-col-hdr">
-          <h4 style="color:#64748b">✨ Nuevos</h4>
-          <span class="badge-cnt" id="cnt-nv" style="background:rgba(148,163,184,0.15);color:#64748b">0</span>
+          <h4 style="color:#dc2626">💀 Sin Stock (0d)</h4>
+          <span class="badge-cnt" id="cnt-ss0" style="background:rgba(220,38,38,0.15);color:#dc2626">0</span>
         </div>
-        <div class="alert-col-desc">Sin inventario y sin ventas — producto nuevo pendiente de entrada.</div>
-        <div class="alert-col-body" id="body-list-nuevo"><div id="list-nuevo"></div></div>
+        <div class="alert-col-desc">Sin inventario con ventas activas — quiebre total.</div>
+        <div class="alert-col-body" id="body-list-sin_stock"><div id="list-sin_stock"></div></div>
       </div>
+      <!-- IDs ocultos para compatibilidad con renderAlerts_counts -->
+      <span id="cnt-q" style="display:none">0</span>
+      <span id="cnt-nv" style="display:none">0</span>
     </div>
   </div>
 
   <!-- PROVEEDORES & MARCAS (unificado) -->
   <div class="tab-panel" id="panel-provmarcas">
     <!-- Sub-tabs internos -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid #e8e4de;padding-bottom:0">
+    <div style="display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid #e8e4de;padding-bottom:0">
       <button class="pm-sub-btn active" data-sub="proveedores" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:#FF6B00;border-bottom:2px solid #FF6B00;margin-bottom:-2px">🏭 Proveedores</button>
       <button class="pm-sub-btn" data-sub="marcas" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-2px">🏷️ Marcas</button>
     </div>
+
     <!-- Panel Proveedores -->
     <div class="pm-sub-panel active" id="sub-proveedores">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>Días de Inventario por Proveedor <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
-            <input class="search-input" id="f-search-prov" placeholder="Buscar proveedor…" style="min-width:180px;"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Top Sobrestock -->
+        <div class="card">
+          <div class="card-header" style="margin-bottom:16px">
+            <h3>📦 Top 20 Proveedores con más Sobrestock</h3>
+            <div style="display:flex;gap:8px">
+              <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">⬇ Excel</button>
+              <input class="search-input" id="f-search-prov" placeholder="Buscar…" style="min-width:140px;font-size:12px;padding:5px 8px"/>
+            </div>
           </div>
+          <div id="prov-chart-sobre" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr id="prov-thead"></tr></thead>
-            <tbody id="prov-tbody"></tbody>
-          </table>
+        <!-- Top Sin Movimiento -->
+        <div class="card">
+          <div class="card-header" style="margin-bottom:16px">
+            <h3>⏸️ Top 20 Proveedores Sin Movimiento</h3>
+          </div>
+          <div id="prov-chart-sinmov" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
         </div>
       </div>
+      <!-- Tabla detalle proveedores (colapsable) -->
+      <details style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0">
+        <summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;list-style:none;display:flex;align-items:center;gap:8px">
+          <span>▶</span> Ver tabla detallada de proveedores <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:4px"></span>
+        </summary>
+        <div style="padding:0 16px 16px">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr id="prov-thead"></tr></thead>
+              <tbody id="prov-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
     </div>
+
     <!-- Panel Marcas -->
     <div class="pm-sub-panel" id="sub-marcas" style="display:none">
-      <div class="table-card">
-        <div class="table-header">
-          <h3>Días de Inventario por Marca <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
-            <input class="search-input" id="f-search-marca" placeholder="Buscar marca…" style="min-width:180px;"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Top Sobrestock Marcas -->
+        <div class="card">
+          <div class="card-header" style="margin-bottom:16px">
+            <h3>📦 Top 20 Marcas con más Sobrestock</h3>
+            <div style="display:flex;gap:8px">
+              <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">⬇ Excel</button>
+              <input class="search-input" id="f-search-marca" placeholder="Buscar…" style="min-width:140px;font-size:12px;padding:5px 8px"/>
+            </div>
           </div>
+          <div id="marca-chart-sobre" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr id="marca-thead"></tr></thead>
-            <tbody id="marca-tbody"></tbody>
-          </table>
+        <!-- Top Sin Movimiento Marcas -->
+        <div class="card">
+          <div class="card-header" style="margin-bottom:16px">
+            <h3>⏸️ Top 20 Marcas Sin Movimiento</h3>
+          </div>
+          <div id="marca-chart-sinmov" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
         </div>
       </div>
+      <!-- Tabla detalle marcas (colapsable) -->
+      <details style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0">
+        <summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;list-style:none;display:flex;align-items:center;gap:8px">
+          <span>▶</span> Ver tabla detallada de marcas <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:4px"></span>
+        </summary>
+        <div style="padding:0 16px 16px">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr id="marca-thead"></tr></thead>
+              <tbody id="marca-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -555,60 +601,30 @@
 
   <!-- POSIBLES TRANSFERENCIAS -->
   <div class="tab-panel" id="panel-transferencias">
-    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
-        <h2 style="font-size:18px;font-weight:800;color:#22d3ee;margin:0">🔁 Posibles Transferencias de Inventario</h2>
-        <p style="font-size:12px;color:#64748b;margin-top:4px">Movimientos sugeridos: prioritario intra-ciudad · secundario inter-ciudad · origen sobrestock ≥60d · destino quiebre/sin stock</p>
+        <h2 style="font-size:20px;font-weight:800;color:#1e293b;margin:0">🔁 Posibles Transferencias</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">SKUs con sobrestock en una tienda y quiebre/sin stock en otra · prioridad intra-ciudad</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="transf-tipo" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px">
-          <option value="">Todos los movimientos</option>
+        <select id="transf-tipo" style="background:#f0ede8;border:1px solid #cbd5e1;color:#334155;padding:7px 12px;border-radius:8px;font-size:13px">
+          <option value="">Todos</option>
           <option value="intra">🏙️ Solo intra-ciudad</option>
           <option value="inter">✈️ Solo inter-ciudad</option>
         </select>
-        <select id="transf-ciudad" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px">
+        <select id="transf-ciudad" style="background:#f0ede8;border:1px solid #cbd5e1;color:#334155;padding:7px 12px;border-radius:8px;font-size:13px">
           <option value="">Todas las ciudades</option>
           <option value="Bogotá">Bogotá</option>
           <option value="Medellín">Medellín</option>
           <option value="Barranquilla">Barranquilla</option>
         </select>
-        <button id="btn-exp-transf" style="background:#0891b2;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
+        <button id="btn-exp-transf" style="background:#0891b2;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Excel</button>
       </div>
     </div>
-    <!-- KPIs transferencias -->
+    <!-- KPIs -->
     <div id="transf-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-    <!-- Leyenda ciudades -->
-    <div style="background:#ffffff;border:1px solid #e8e4de;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase">Tiendas:</span>
-      <span style="font-size:12px;font-weight:600;color:#3b82f6">● STF 15 — Bogotá</span>
-      <span style="font-size:12px;font-weight:600;color:#ec4899">● STF 93 — Bogotá</span>
-      <span style="font-size:12px;font-weight:600;color:#10b981">● STF 82 — Bogotá</span>
-      <span style="font-size:12px;font-weight:600;color:#8b5cf6">● STF 30 — Medellín</span>
-      <span style="font-size:12px;font-weight:600;color:#f59e0b">● STF 51 — Barranquilla</span>
-      <span style="margin-left:auto;font-size:11px;color:#94a3b8">🏙️ Intra-ciudad = prioridad alta · ✈️ Inter-ciudad = prioridad media</span>
-    </div>
-    <!-- Tabla transferencias -->
-    <div class="table-card">
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
-              <th style="padding:10px 12px;text-align:left;color:#64748b">Prioridad</th>
-              <th style="padding:10px 12px;text-align:left;color:#64748b">SKU · Producto</th>
-              <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría</th>
-              <th style="padding:10px 12px;text-align:center;color:#22d3ee">Origen (Sobrestock)</th>
-              <th style="padding:10px 12px;text-align:center;color:#ef4444">Destino (Quiebre)</th>
-              <th style="padding:10px 12px;text-align:right;color:#f59e0b">Val. Inv Origen</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">Días Origen</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">Días Destino</th>
-              <th style="padding:10px 12px;text-align:right;color:#64748b">Uds. Sug.</th>
-              <th style="padding:10px 12px;text-align:center;color:#64748b">Tipo</th>
-            </tr>
-          </thead>
-          <tbody id="transf-tbody"></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Cards grid -->
+    <div id="transf-cards" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
 
   <!-- PLAN DE ATAQUE -->
@@ -656,6 +672,9 @@
       </div>
     </div>
   </div>
+  </div><!-- /panels-wrap -->
+  </div><!-- /main-content -->
+</div><!-- /app -->
 <div id="tooltip"></div>
 
 <script>
@@ -693,7 +712,7 @@ function detectVentaColumns(rawRows) {
 }
 
 let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '', searchMarcaTerm = '';
-let detSortCol2 = 'skus', detSortDir2 = -1;
+let detSortCol2 = 'inv_val', detSortDir2 = -1;
 let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
 function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
 let sortCol = 'dias_inv', sortDir = -1;
@@ -1055,126 +1074,24 @@ function estadoBadge(e) {
 }
 
 // ── RENDER KPIs ───────────────────────────────────────────────────────────────
-const KPI_TIPS = {
-  'Registros': 'Total de filas. Un mismo SKU puede aparecer en varias tiendas.',
-  'SKUs únicos': 'Cantidad de productos distintos en los datos filtrados.',
-  'Días Inv. Prom': 'Promedio de días de inventario de todos los SKUs filtrados.',
-  'Quiebre': 'SKUs con 1 a 3 días de inventario. Acción inmediata.',
-  'Bajo (8-15 días)': 'SKUs que requieren reposición pronto.',
-  'Exceso': 'SKUs con inventario que supera su vida útil.',
-  'Inv. Actual Total': 'Suma de unidades en inventario para los SKUs filtrados.',
-};
-function renderExecSummary(rows) {
-  const el = document.getElementById('exec-summary');
-  if (!rows.length) { el.style.display='none'; return; }
-  el.style.display = 'block';
-  const total = rows.length;
-  const quiebre    = rows.filter(r=>r.estado==='quiebre').length;
-  const sobrestock = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').length;
-  const sinMov     = rows.filter(r=>r.estado==='sin_movimiento').length;
-  const bien       = rows.filter(r=>r.estado==='bien').length;
-  const pctQ       = ((quiebre/total)*100).toFixed(1);
-  const pctSS      = ((sobrestock/total)*100).toFixed(1);
-  const pctBien    = ((bien/total)*100).toFixed(1);
-  const valSS      = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const valSM      = rows.filter(r=>r.estado==='sin_movimiento').reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const valTotal   = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const pctCapInm  = valTotal ? (((valSS+valSM)/valTotal)*100).toFixed(1) : '0.0';
-  const estadosCfg = [
-    { key:'nuevo',          label:'Nuevo',     color:'#60a5fa' },
-    { key:'sin_movimiento', label:'Sin Mov.',   color:'#94a3b8' },
-    { key:'quiebre',        label:'Quiebre',    color:'#ef4444' },
-
-    { key:'bien',           label:'Bien',       color:'#10b981' },
-    { key:'sobrestock',     label:'Sobrestock', color:'#8b5cf6' },
-    { key:'gestionar',      label:'Gestionar',  color:'#f43f5e' },
-  ];
-  const counts = estadosCfg.map(e=>rows.filter(r=>r.estado===e.key).length);
-  const segs   = estadosCfg.map((e,i)=>counts[i]
-    ? `<div class="exec-bar-seg" style="width:${(counts[i]/total*100).toFixed(1)}%;background:${e.color}" data-tip="${e.label}: ${counts[i]} SKUs (${(counts[i]/total*100).toFixed(1)}%)"></div>`
-    : '').join('');
-  const legend = estadosCfg.map((e,i)=>counts[i]
-    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#64748b;white-space:nowrap"><span style="width:7px;height:7px;border-radius:2px;background:${e.color};display:inline-block;flex-shrink:0"></span>${e.label} <b style="color:#334155">${counts[i]}</b></span>`
-    : '').filter(Boolean).join('');
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-      <span style="font-size:11px;font-weight:700;color:#f97316;letter-spacing:1px;text-transform:uppercase;margin-right:4px">RESUMEN EJECUTIVO</span>
-      ${legend}
-    </div>
-    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.6fr;gap:12px;align-items:stretch">
-      <div style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#a78bfa;text-transform:uppercase;margin-bottom:8px">INVENTARIO EN RIESGO</div>
-        <div style="font-size:22px;font-weight:900;color:#c4b5fd;line-height:1;margin-bottom:4px">${fmtM(valSS+valSM)}</div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:10px">${pctCapInm}% del inventario valorizado</div>
-        <div style="display:flex;gap:16px">
-          <div>
-            <div style="font-size:10px;color:#64748b;margin-bottom:2px">Sobrestock/Gestionar</div>
-            <div style="font-size:13px;font-weight:700;color:#a78bfa">${fmtM(valSS)}</div>
-            <div style="font-size:10px;color:#475569">${sobrestock} SKUs · ${pctSS}%</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:#64748b;margin-bottom:2px">Sin Movimiento</div>
-            <div style="font-size:13px;font-weight:700;color:#64748b">${fmtM(valSM)}</div>
-            <div style="font-size:10px;color:#475569">${sinMov} SKUs</div>
-          </div>
-        </div>
-      </div>
-      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#f87171;text-transform:uppercase;margin-bottom:8px">RIESGO QUIEBRE</div>
-        <div style="font-size:36px;font-weight:900;color:${quiebre/total>0.15?'#ef4444':'#f97316'};line-height:1;margin-bottom:6px">${pctQ}%</div>
-        <div style="font-size:11px;color:#64748b">${fmt(quiebre)} SKUs en quiebre o critico</div>
-      </div>
-      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#34d399;text-transform:uppercase;margin-bottom:8px">NIVEL OPTIMO</div>
-        <div style="font-size:36px;font-weight:900;color:#10b981;line-height:1;margin-bottom:6px">${pctBien}%</div>
-        <div style="font-size:11px;color:#64748b">${fmt(bien)} SKUs · 16-59 dias cobertura</div>
-      </div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:10px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <span style="font-size:11px;color:#64748b;font-weight:600">Distribucion por estado</span>
-          <span style="font-size:13px;font-weight:700;color:#334155">${fmt(total)} SKUs</span>
-        </div>
-        <div class="exec-bar-track" style="height:14px;border-radius:7px">${segs}</div>
-      </div>
-    </div>`;
-}
+function renderExecSummary(rows) { /* removido */ }
 
 function renderKPIs(rows) {
-  const dias = rows.filter(r=>r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0).map(r=>r.dias_inv);
-  const diasProm    = dias.length ? dias.reduce((a,b)=>a+b,0)/dias.length : 0;
-  const nuevo       = rows.filter(r=>r.estado==='nuevo').length;
-  const sinMov      = rows.filter(r=>r.estado==='sin_movimiento').length;
-  const quiebre     = rows.filter(r=>r.estado==='quiebre').length;
-  const revisar     = 0; // merged into bien (4-59d)
-  const sobrestock  = rows.filter(r=>r.estado==='sobrestock').length;
-  const gestionar   = rows.filter(r=>r.estado==='gestionar').length;
+  const invTotal   = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
+  const invVal     = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const sobrestock = rows.filter(r=>r.estado==='sobrestock').length;
+  const gestionar  = rows.filter(r=>r.estado==='gestionar').length;
   const sobrestockTotal = sobrestock + gestionar;
-  const invTotal    = rows.reduce((a,r)=>a+(r.inv_actual||0),0);
-  const invVal      = rows.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const invValSS    = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const uniqueSkus  = new Set(rows.map(r=>r.sku)).size;
-  const n = rows.length || 1;
-
-  // Ventas del mes en pesos = Venta Mayo (uds) × Costo Sin IVA
-  const totalVentasMesPesos = rows.reduce((a,r) => a + ((r.venta_mes||0) * (r.costo||0)), 0);
-  const mesesStock = (totalVentasMesPesos > 0 && invVal > 0) ? (invVal / totalVentasMesPesos).toFixed(1) : '—';
-  const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
-
-  const invValDepurado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const cntDepurado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
+  const invValSS   = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const invValDescontinuado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const cntDescontinuado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
+  const uniqueSkus = new Set(rows.map(r=>r.sku)).size;
 
   const kpis = [
-    { label:'⚠️ Inventario en Riesgo',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/(invVal||1))*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil.' },
-    { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                             cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
-    { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                               cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
-    { label:'🗑️ Val. Depurado',         val: fmtM(invValDepurado),     sub:`${cntDepurado} SKUs tipo "Depurado"`,                                            cls:'blue',   tip:'Valor inventario de productos clasificados como Depurado en Tipo de Producto.' },
-    { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                       cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada.' },
-    { label:'💀 Sin Stock',             val: fmt(sinStock),            sub:`0 días — quiebre total`,                                                         cls:'red',    tip:'SKUs con ventas activas pero sin inventario.' },
-    { label:'🚨 Quiebre (1–3d)',        val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                     cls:'red',    tip:'SKUs con 1 a 3 días de inventario.' },
-    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),            sub:`unidades en stock`,                                                              cls:'green',  tip:'Suma de unidades en inventario.' },
-    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),             sub:`capital en inventario`,                                                          cls:'orange', tip:'Valor total del inventario a costo.' },
-    { label:'📅 Días Inv. Prom.',       val: fmtD(diasProm),           sub:`días promedio cobertura`,                                                        cls:'blue',   tip:'Promedio de días de inventario de todos los SKUs activos.' },
-    { label:'⚡ Eficiencia Stock',      val: mesesStock === '—' ? '—' : mesesStock + ' meses', sub:`Inv. valorizado / ventas mes`,                           cls:'orange', tip:'Cuántos meses de ventas cubre el inventario actual a costo.' },
+    { label:'💵 Inv. Valorizado',       val: fmtM(invVal),              sub:`capital total en inventario`,                     cls:'orange', tip:'Valor total del inventario a costo.' },
+    { label:'📦 Inv. Actual Total',     val: fmt(invTotal),             sub:`unidades en stock`,                               cls:'green',  tip:'Suma de unidades en inventario de los SKUs filtrados.' },
+    { label:'🔵 Sobrestock',            val: fmt(sobrestockTotal),      sub:`${fmtM(invValSS)} · capital inmovilizado`,        cls:'purple', tip:'SKUs con más de 60 días de inventario o que superan vida útil.' },
+    { label:'🚫 Val. Descontinuado',    val: fmtM(invValDescontinuado), sub:`${cntDescontinuado} SKUs tipo "Depurado"`,        cls:'blue',   tip:'Valor del inventario de productos clasificados como Depurado en Tipo de Producto.' },
   ];
 
   document.getElementById('kpis').innerHTML = kpis.map(k=>`
@@ -1184,19 +1101,15 @@ function renderKPIs(rows) {
       <div class="kpi-sub">${k.sub}</div>
     </div>`).join('');
 
-  document.getElementById('meta-txt').innerHTML = `<b>${fmt(rows.length)}</b> registros · <b>${new Set(rows.map(r=>r.store)).size}</b> tiendas · <b>${fmt(uniqueSkus)}</b> SKUs únicos`;
   const hdrR=document.getElementById('hdr-registros');if(hdrR)hdrR.textContent=fmt(rows.length);
   const hdrS=document.getElementById('hdr-skus');if(hdrS)hdrS.textContent=fmt(uniqueSkus);
   const hdrT=document.getElementById('hdr-tiendas');if(hdrT)hdrT.textContent=new Set(rows.map(r=>r.store)).size;
   const hdrU=document.getElementById('last-update-hdr');if(hdrU)hdrU.textContent='Cargado: '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-  const luEl = document.getElementById('last-update');
-  const luBar = document.getElementById('last-update-bar');
-  if (luEl) luEl.textContent = new Date().toLocaleString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  if (luBar) luBar.style.display = 'flex';
-  document.getElementById('cnt-alertas').textContent = rows.filter(r=>['quiebre','sin_movimiento'].includes(r.estado)).length;
-  document.getElementById('cnt-detalle').textContent = fmt(rows.length);
+  const luEl=document.getElementById('last-update');const luBar=document.getElementById('last-update-bar');
+  if(luEl)luEl.textContent=new Date().toLocaleString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(luBar)luBar.style.display='flex';
+  const metaEl=document.getElementById('meta-txt');if(metaEl)metaEl.innerHTML=`<b>${fmt(rows.length)}</b> registros`;
 }
-
 // ── RENDER BARS ───────────────────────────────────────────────────────────────
 function renderBars(svgId, data, color, W, H) {
   W = W||400; H = H||260;
@@ -1516,14 +1429,14 @@ function renderProveedores(rows) {
   rows.forEach(r => {
     const k = r.supplier || '(Sin proveedor)';
     if (!map[k]) map[k] = { supplier:k, skus:0, inv:0, inv_val:0, diasSum:0, diasN:0,
-      sin_stock:0, quiebre:0, sobrestock:0, gestionar:0, bien:0 };
+      sin_stock:0, quiebre:0, sobrestock:0, gestionar:0, sinmov:0 };
     const m = map[k];
     m.skus++; m.inv += r.inv_actual||0; m.inv_val += r.inv_valorizado||0;
-    if (r.estado === 'sin_stock')   m.sin_stock++;
-    if (r.estado === 'quiebre')     m.quiebre++;
-    if (r.estado === 'sobrestock')  m.sobrestock++;
-    if (r.estado === 'gestionar')   m.gestionar++;
-    if (r.estado === 'bien')        m.bien++;
+    if (r.estado==='sin_stock')      m.sin_stock++;
+    if (r.estado==='quiebre')        m.quiebre++;
+    if (r.estado==='sobrestock')     m.sobrestock++;
+    if (r.estado==='gestionar')      m.gestionar++;
+    if (r.estado==='sin_movimiento') m.sinmov++;
     const validEstados = ['bien','sobrestock','gestionar','quiebre','sin_movimiento'];
     if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0 && r.dias_inv<366 && validEstados.includes(r.estado)) {
       m.diasSum += r.dias_inv; m.diasN++;
@@ -1532,30 +1445,56 @@ function renderProveedores(rows) {
 
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
   if (term) data = data.filter(d=>d.supplier.toLowerCase().includes(term));
+
+  const cntEl = document.getElementById('cnt-prov');
+  if (cntEl) cntEl.textContent = data.length + ' proveedores';
+
+  // ── BAR CHART helper ───────────────────────────────────────────────────────
+  const renderBarChart = (elId, items, valFn, labelFn, color, limit=20) => {
+    const el = document.getElementById(elId); if (!el) return;
+    const top = [...items].sort((a,b)=>valFn(b)-valFn(a)).slice(0,limit);
+    const max = valFn(top[0]) || 1;
+    el.innerHTML = top.map(d => {
+      const val = valFn(d);
+      const pct = (val/max*100).toFixed(1);
+      const name = d.supplier||d.brand||'';
+      const short = name.length > 28 ? name.substring(0,26)+'…' : name;
+      return `<div style="display:flex;align-items:center;gap:10px;min-height:28px">
+        <span style="min-width:180px;max-width:180px;font-size:11px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0" title="${escH(name)}">${escH(short)}</span>
+        <div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden;position:relative">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.3s;display:flex;align-items:center;padding-left:8px;min-width:28px">
+            <span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${val}</span>
+          </div>
+        </div>
+        <span style="font-size:10px;color:#94a3b8;min-width:28px;text-align:right;flex-shrink:0">${labelFn(d)}</span>
+      </div>`;
+    }).join('') || '<p style="color:#94a3b8;font-size:12px;padding:8px">Sin datos</p>';
+  };
+
+  // Top sobrestock (sobrestock + gestionar)
+  const sobreData = data.filter(d=>(d.sobrestock+d.gestionar)>0);
+  renderBarChart('prov-chart-sobre', sobreData, d=>d.sobrestock+d.gestionar, d=>fmtM(d.inv_val), '#8b5cf6');
+
+  // Top sin movimiento
+  const sinmovData = data.filter(d=>d.sinmov>0);
+  renderBarChart('prov-chart-sinmov', sinmovData, d=>d.sinmov, d=>`${d.skus} SKUs`, '#60a5fa');
+
+  // Tabla detalle (existente, colapsada)
   data.sort((a,b)=>{
     const va=a[provSortCol], vb=b[provSortCol];
     if(va==null) return 1; if(vb==null) return -1;
     return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * provSortDir;
   });
-  document.getElementById('cnt-prov').textContent = data.length + ' proveedores';
-
-  const diasColor = v => v==null?'#94a3b8':v<=3?'#dc2626':v>=60?'#7c3aed':'#059669';
   const maxVal = Math.max(...data.map(d=>d.inv_val||0), 1);
-  const maxDias = Math.max(...data.map(d=>d.dias_prom||0), 1);
-
-  // New rich header
   document.getElementById('prov-thead').innerHTML = `
     <tr style="background:#f0ede8">
       <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-pcol="supplier">Proveedor${provSortCol==='supplier'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-pcol="skus">SKUs${provSortCol==='skus'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#dc2626;cursor:pointer" data-pcol="sin_stock">Sin Stock${provSortCol==='sin_stock'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ea6c0a;cursor:pointer" data-pcol="quiebre">Quiebre${provSortCol==='quiebre'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7c3aed;cursor:pointer" data-pcol="sobrestock">Sobrestock${provSortCol==='sobrestock'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#60a5fa;cursor:pointer" data-pcol="sinmov">Sin Mov.${provSortCol==='sinmov'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;cursor:pointer" data-pcol="dias_prom">Días Prom${provSortCol==='dias_prom'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#d97706;cursor:pointer" data-pcol="inv_val">Val. Inv${provSortCol==='inv_val'?(provSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Estado</th>
     </tr>`;
-
   document.querySelectorAll('#prov-thead th[data-pcol]').forEach(th=>{
     th.addEventListener('click',()=>{
       const col=th.getAttribute('data-pcol');
@@ -1563,55 +1502,15 @@ function renderProveedores(rows) {
       renderProveedores(lastRows);
     });
   });
-
-  const pctBar = (v, max, color) =>
-    `<div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;min-width:50px">` +
-    `<div style="height:100%;width:${Math.min(v/max*100,100).toFixed(1)}%;background:${color};border-radius:3px"></div></div>`;
-
-  const riskBadge = (n, color, label) => n > 0
-    ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${color}18;color:${color};border:1px solid ${color}30">${n} ${label}</span>`
-    : '';
-
-  document.getElementById('prov-tbody').innerHTML = data.length ? data.map((d,i) => {
-    const dc = diasColor(d.dias_prom);
-    const totalRisk = d.sin_stock + d.quiebre;
-    const pctRisk = d.skus > 0 ? ((totalRisk / d.skus)*100).toFixed(0) : 0;
-    const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
-    const barW = (d.inv_val / maxVal * 100).toFixed(1);
-
-    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
-      <td style="padding:12px 16px">
-        <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.supplier)}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${fmt(d.skus)} SKUs · ${fmt(d.inv)} uds</div>
-      </td>
-      <td style="padding:12px;text-align:right;font-weight:700;color:#1e293b">${fmt(d.skus)}</td>
-      <td style="padding:12px;text-align:right">
-        ${d.sin_stock > 0 ? `<span style="font-weight:700;color:#dc2626">${d.sin_stock}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        ${d.quiebre > 0 ? `<span style="font-weight:700;color:#ea6c0a">${d.quiebre}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        ${(d.sobrestock+d.gestionar) > 0 ? `<span style="font-weight:700;color:#7c3aed">${d.sobrestock+d.gestionar}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        <span style="font-weight:700;color:${dc};font-size:14px">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-      </td>
-      <td style="padding:12px 16px">
-        <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
-          <span style="font-weight:700;color:#d97706;font-size:13px">${d.inv_val ? fmtM(d.inv_val) : '—'}</span>
-          ${pctBar(d.inv_val, maxVal, '#f59e0b')}
-        </div>
-      </td>
-      <td style="padding:12px 16px">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${totalRisk > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dc262618;color:#dc2626;border:1px solid #dc262630">⚠ ${pctRisk}% riesgo</span>` : ''}
-          ${(d.sobrestock+d.gestionar) > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#7c3aed18;color:#7c3aed;border:1px solid #7c3aed30">📦 ${pctSobre}% sobre</span>` : ''}
-          ${totalRisk === 0 && (d.sobrestock+d.gestionar) === 0 ? `<span style="color:#059669;font-size:11px;font-weight:600">✓ OK</span>` : ''}
-        </div>
-      </td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
+  document.getElementById('prov-tbody').innerHTML = data.length ? data.map(d=>`
+    <tr style="border-bottom:1px solid #f0ede8" class="hover-row">
+      <td style="padding:10px 16px;font-weight:600;color:#1e293b;font-size:12px">${escH(d.supplier)}</td>
+      <td style="padding:10px 12px;text-align:right;color:#64748b">${fmt(d.skus)}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed">${(d.sobrestock+d.gestionar)||'—'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#60a5fa">${d.sinmov||'—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:${d.dias_prom!=null&&d.dias_prom>=60?'#7c3aed':d.dias_prom!=null&&d.dias_prom<=3?'#ef4444':'#059669'}">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:700;color:#d97706">${d.inv_val?fmtM(d.inv_val):'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
 }
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
@@ -1766,13 +1665,12 @@ function renderMarcas(rows) {
   rows.forEach(r => {
     const k = r.brand || '(Sin marca)';
     if (!map[k]) map[k] = { brand:k, supplier:r.supplier||'', skus:0, inv:0, inv_val:0, diasSum:0, diasN:0,
-      sin_stock:0, quiebre:0, sobrestock:0, gestionar:0 };
+      sobrestock:0, gestionar:0, sinmov:0 };
     const m = map[k];
     m.skus++; m.inv += r.inv_actual||0; m.inv_val += r.inv_valorizado||0;
-    if (r.estado === 'sin_stock')   m.sin_stock++;
-    if (r.estado === 'quiebre')     m.quiebre++;
-    if (r.estado === 'sobrestock')  m.sobrestock++;
-    if (r.estado === 'gestionar')   m.gestionar++;
+    if (r.estado==='sobrestock')     m.sobrestock++;
+    if (r.estado==='gestionar')      m.gestionar++;
+    if (r.estado==='sin_movimiento') m.sinmov++;
     const valid = ['bien','sobrestock','gestionar','quiebre','sin_movimiento'];
     if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0 && r.dias_inv<366 && valid.includes(r.estado)) {
       m.diasSum += r.dias_inv; m.diasN++;
@@ -1780,28 +1678,47 @@ function renderMarcas(rows) {
   });
   let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
   if (term) data = data.filter(d=>d.brand.toLowerCase().includes(term));
+
+  const cntEl = document.getElementById('cnt-marca');
+  if (cntEl) cntEl.textContent = data.length + ' marcas';
+
+  const renderBarChart = (elId, items, valFn, labelFn, color, limit=20) => {
+    const el = document.getElementById(elId); if (!el) return;
+    const top = [...items].sort((a,b)=>valFn(b)-valFn(a)).slice(0,limit);
+    const max = valFn(top[0]) || 1;
+    el.innerHTML = top.map(d => {
+      const val = valFn(d);
+      const pct = (val/max*100).toFixed(1);
+      const name = d.brand||'';
+      const short = name.length > 28 ? name.substring(0,26)+'…' : name;
+      return `<div style="display:flex;align-items:center;gap:10px;min-height:28px">
+        <span style="min-width:180px;max-width:180px;font-size:11px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0" title="${escH(name)}">${escH(short)}</span>
+        <div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden;position:relative">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.3s;display:flex;align-items:center;padding-left:8px;min-width:28px">
+            <span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${val}</span>
+          </div>
+        </div>
+        <span style="font-size:10px;color:#94a3b8;min-width:28px;text-align:right;flex-shrink:0">${labelFn(d)}</span>
+      </div>`;
+    }).join('') || '<p style="color:#94a3b8;font-size:12px;padding:8px">Sin datos</p>';
+  };
+
+  renderBarChart('marca-chart-sobre', data.filter(d=>(d.sobrestock+d.gestionar)>0), d=>d.sobrestock+d.gestionar, d=>fmtM(d.inv_val), '#8b5cf6');
+  renderBarChart('marca-chart-sinmov', data.filter(d=>d.sinmov>0), d=>d.sinmov, d=>`${d.skus} SKUs`, '#60a5fa');
+
   data.sort((a,b)=>{
     const va=a[marcaSortCol], vb=b[marcaSortCol];
     if(va==null) return 1; if(vb==null) return -1;
     return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * marcaSortDir;
   });
-  document.getElementById('cnt-marca').textContent = data.length + ' marcas';
-
-  const diasColor = v => v==null?'#94a3b8':v<=3?'#dc2626':v>=60?'#7c3aed':'#059669';
-  const maxVal = Math.max(...data.map(d=>d.inv_val||0), 1);
-
   document.getElementById('marca-thead').innerHTML = `
     <tr style="background:#f0ede8">
       <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="brand">Marca${marcaSortCol==='brand'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="skus">SKUs${marcaSortCol==='skus'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#dc2626;cursor:pointer" data-mcol="sin_stock">Sin Stock${marcaSortCol==='sin_stock'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ea6c0a;cursor:pointer" data-mcol="quiebre">Quiebre${marcaSortCol==='quiebre'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7c3aed;cursor:pointer" data-mcol="sobrestock">Sobrestock${marcaSortCol==='sobrestock'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;cursor:pointer" data-mcol="dias_prom">Días Prom${marcaSortCol==='dias_prom'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#60a5fa;cursor:pointer" data-mcol="sinmov">Sin Mov.${marcaSortCol==='sinmov'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
       <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#d97706;cursor:pointer" data-mcol="inv_val">Val. Inv${marcaSortCol==='inv_val'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280">Estado</th>
     </tr>`;
-
   document.querySelectorAll('#marca-thead th[data-mcol]').forEach(th=>{
     th.addEventListener('click',()=>{
       const col=th.getAttribute('data-mcol');
@@ -1809,50 +1726,14 @@ function renderMarcas(rows) {
       renderMarcas(lastRows);
     });
   });
-
-  const pctBar = (v, max, color) =>
-    `<div style="flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;min-width:50px">` +
-    `<div style="height:100%;width:${Math.min(v/max*100,100).toFixed(1)}%;background:${color};border-radius:3px"></div></div>`;
-
-  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d => {
-    const dc = diasColor(d.dias_prom);
-    const totalRisk = d.sin_stock + d.quiebre;
-    const pctRisk = d.skus > 0 ? ((totalRisk / d.skus)*100).toFixed(0) : 0;
-    const pctSobre = d.skus > 0 ? (((d.sobrestock+d.gestionar) / d.skus)*100).toFixed(0) : 0;
-
-    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
-      <td style="padding:12px 16px">
-        <div style="font-weight:600;color:#1e293b;font-size:13px">${escH(d.brand)}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(d.supplier)} · ${fmt(d.skus)} SKUs</div>
-      </td>
-      <td style="padding:12px;text-align:right;font-weight:700;color:#1e293b">${fmt(d.skus)}</td>
-      <td style="padding:12px;text-align:right">
-        ${d.sin_stock > 0 ? `<span style="font-weight:700;color:#dc2626">${d.sin_stock}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        ${d.quiebre > 0 ? `<span style="font-weight:700;color:#ea6c0a">${d.quiebre}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        ${(d.sobrestock+d.gestionar) > 0 ? `<span style="font-weight:700;color:#7c3aed">${d.sobrestock+d.gestionar}</span>` : '<span style="color:#d1d5db">—</span>'}
-      </td>
-      <td style="padding:12px;text-align:right">
-        <span style="font-weight:700;color:${dc};font-size:14px">${d.dias_prom!=null?fmtD(d.dias_prom)+'d':'—'}</span>
-      </td>
-      <td style="padding:12px 16px">
-        <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
-          <span style="font-weight:700;color:#d97706;font-size:13px">${d.inv_val ? fmtM(d.inv_val) : '—'}</span>
-          ${pctBar(d.inv_val, maxVal, '#f59e0b')}
-        </div>
-      </td>
-      <td style="padding:12px 16px">
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${totalRisk > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dc262618;color:#dc2626;border:1px solid #dc262630">⚠ ${pctRisk}% riesgo</span>` : ''}
-          ${(d.sobrestock+d.gestionar) > 0 ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#7c3aed18;color:#7c3aed;border:1px solid #7c3aed30">📦 ${pctSobre}% sobre</span>` : ''}
-          ${totalRisk === 0 && (d.sobrestock+d.gestionar) === 0 ? `<span style="color:#059669;font-size:11px;font-weight:600">✓ OK</span>` : ''}
-        </div>
-      </td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
+  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d=>`
+    <tr style="border-bottom:1px solid #f0ede8" class="hover-row">
+      <td style="padding:10px 16px;font-weight:600;color:#1e293b;font-size:12px">${escH(d.brand)}<div style="font-size:10px;color:#94a3b8">${escH(d.supplier)}</div></td>
+      <td style="padding:10px 12px;text-align:right;color:#64748b">${fmt(d.skus)}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed">${(d.sobrestock+d.gestionar)||'—'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#60a5fa">${d.sinmov||'—'}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:700;color:#d97706">${d.inv_val?fmtM(d.inv_val):'—'}</td>
+    </tr>`).join('') : '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
 }
 
 // ── RENDER TRANSFERENCIAS ─────────────────────────────────────────────────────
@@ -1862,59 +1743,47 @@ const STORE_CIUDAD = {
 };
 const STORE_COLOR = { 'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899' };
 
-function renderTransferencias(rows) {
-  const tbody = document.getElementById('transf-tbody');
-  const kpisEl = document.getElementById('transf-kpis');
-  const tipoFil = document.getElementById('transf-tipo')?.value || '';
-  const ciudadFil = document.getElementById('transf-ciudad')?.value || '';
-  if (!tbody) return;
-
-  // Build SKU → store map: origen = sobrestock/gestionar/sin_movimiento, destino = quiebre/sin_stock
+function buildTransferencias(rows, tipoFil, ciudadFil) {
   const skuMap = {};
   rows.forEach(r => {
-    const k = r.sku || r.llave;
-    if (!k) return;
-    if (!skuMap[k]) skuMap[k] = { sku:k, product:r.product, brand:r.brand, category:r.category, sub_category:r.sub_category, supplier:r.supplier, origenes:[], destinos:[] };
+    const k = r.sku || r.llave; if (!k) return;
+    if (!skuMap[k]) skuMap[k] = { sku:k, product:r.product, brand:r.brand, category:r.category, supplier:r.supplier, origenes:[], destinos:[] };
     const isOrigen  = r.estado==='sobrestock'||r.estado==='gestionar'||r.estado==='sin_movimiento';
     const isDestino = r.estado==='quiebre'||r.estado==='sin_stock';
     if (isOrigen && (r.inv_actual||0)>0) skuMap[k].origenes.push(r);
     if (isDestino) skuMap[k].destinos.push(r);
   });
-
   const suggestions = [];
-  Object.values(skuMap).forEach(({ sku, product, brand, category, sub_category, supplier, origenes, destinos }) => {
+  Object.values(skuMap).forEach(({ sku, product, brand, category, supplier, origenes, destinos }) => {
     if (!origenes.length || !destinos.length) return;
-    origenes.forEach(o => {
-      destinos.forEach(d => {
-        if (o.store === d.store) return; // misma tienda no aplica
-        const cO = STORE_CIUDAD[o.store] || 'Otra';
-        const cD = STORE_CIUDAD[d.store] || 'Otra';
-        const intra = cO === cD;
-        const tipo = intra ? 'intra' : 'inter';
-        if (tipoFil && tipoFil !== tipo) return;
-        if (ciudadFil && cO !== ciudadFil && cD !== ciudadFil) return;
-        // Unidades sugeridas = exceso de origen vs 30 días de venta del destino
-        const promD = d.prom_vta || 0;
-        const stockIdeal = Math.ceil(promD * 30); // 30 días cobertura ideal en destino
-        const exceso = Math.max(0, (o.inv_actual||0) - stockIdeal);
-        const sugeridas = exceso > 0 ? exceso : Math.min(o.inv_actual||0, Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
-        if (sugeridas <= 0) return;
-        suggestions.push({ sku, product, brand, category, sub_category, supplier,
-          origen: o.store, ciudadO: cO, destino: d.store, ciudadD: cD,
-          diasO: o.dias_inv, diasD: d.dias_inv, inv_val: o.inv_valorizado||0,
-          estadoO: o.estado, estadoD: d.estado, sugeridas, tipo, intra,
-          prom_vta_d: promD,
-        });
-      });
-    });
+    origenes.forEach(o => { destinos.forEach(d => {
+      if (o.store === d.store) return;
+      const cO = STORE_CIUDAD[o.store]||'Otra', cD = STORE_CIUDAD[d.store]||'Otra';
+      const intra = cO === cD;
+      const tipo = intra ? 'intra' : 'inter';
+      if (tipoFil && tipoFil !== tipo) return;
+      if (ciudadFil && cO !== ciudadFil && cD !== ciudadFil) return;
+      const promD = d.prom_vta || 0;
+      const exceso = Math.max(0, (o.inv_actual||0) - Math.ceil(promD*30));
+      const sug = exceso > 0 ? exceso : Math.min(o.inv_actual||0, Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
+      if (sug <= 0) return;
+      suggestions.push({ sku, product, brand, category, supplier,
+        origen:o.store, ciudadO:cO, destino:d.store, ciudadD:cD,
+        diasO:o.dias_inv, diasD:d.dias_inv, inv_val:o.inv_valorizado||0,
+        estadoO:o.estado, estadoD:d.estado, sugeridas:sug, tipo, intra, inv_actual_o:o.inv_actual||0 });
+    }); });
   });
+  return suggestions.sort((a,b) => a.intra !== b.intra ? (a.intra?-1:1) : b.inv_val - a.inv_val);
+}
 
-  // Sort: intra first, then by valor
-  suggestions.sort((a,b) => {
-    if (a.intra !== b.intra) return a.intra ? -1 : 1;
-    return (b.inv_val||0) - (a.inv_val||0);
-  });
+function renderTransferencias(rows) {
+  const cardsEl = document.getElementById('transf-cards');
+  const kpisEl  = document.getElementById('transf-kpis');
+  const tipoFil   = document.getElementById('transf-tipo')?.value || '';
+  const ciudadFil = document.getElementById('transf-ciudad')?.value || '';
+  if (!cardsEl) return;
 
+  const suggestions = buildTransferencias(rows, tipoFil, ciudadFil);
   const cntEl = document.getElementById('cnt-transf');
   if (cntEl) cntEl.textContent = suggestions.length;
 
@@ -1924,94 +1793,96 @@ function renderTransferencias(rows) {
   const totalVal = suggestions.reduce((a,s)=>a+s.inv_val,0);
   const uniqueSkus = new Set(suggestions.map(s=>s.sku)).size;
   if (kpisEl) kpisEl.innerHTML = [
-    {label:'Sugerencias Totales', val:suggestions.length, sub:'pares origen→destino',color:'#22d3ee'},
-    {label:'🏙️ Intra-Ciudad',     val:nIntra, sub:'alta prioridad — misma ciudad',color:'#10b981'},
-    {label:'✈️ Inter-Ciudad',     val:nInter, sub:'media prioridad — distinta ciudad',color:'#f59e0b'},
-    {label:'SKUs Involucrados',   val:uniqueSkus, sub:'productos distintos',color:'#8b5cf6'},
-    {label:'Val. Inv Involucrado',val:'$'+Math.round(totalVal).toLocaleString('es-CO'), sub:'valor origen en sobrestock',color:'#f97316'},
-  ].map(k=>`<div style="background:#ffffff;border:1px solid #e8e4de;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
+    {label:'Sugerencias',      val:suggestions.length, sub:'pares origen→destino', color:'#0891b2'},
+    {label:'🏙️ Intra-Ciudad', val:nIntra,             sub:'alta prioridad',       color:'#10b981'},
+    {label:'✈️ Inter-Ciudad', val:nInter,             sub:'media prioridad',      color:'#f59e0b'},
+    {label:'SKUs involucrados',val:uniqueSkus,         sub:'productos distintos',  color:'#8b5cf6'},
+    {label:'Val. Inv. origen', val:fmtM(totalVal),    sub:'total sobrestock',     color:'#f97316'},
+  ].map(k=>`<div class="kpi orange" style="border-left-color:${k.color}" data-tip="${k.sub}">
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-value" style="font-size:20px;color:${k.color}">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
 
   if (!suggestions.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="padding:32px;text-align:center;color:#94a3b8">✅ No se detectaron oportunidades de transferencia con los filtros actuales</td></tr>';
+    cardsEl.innerHTML = `<div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border:1px solid #e8e4de;border-radius:12px">
+      <div style="font-size:32px;margin-bottom:12px">✅</div>
+      <div style="font-size:15px;font-weight:600">Sin transferencias sugeridas</div>
+      <div style="font-size:13px;margin-top:4px">No hay SKUs con sobrestock en una tienda y quiebre en otra al mismo tiempo</div>
+    </div>`;
     return;
   }
 
-  const storeTag = s => { const c=STORE_COLOR[s]||'#64748b'; return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${c}22;color:${c};border:1px solid ${c}44">${s}</span>`; };
-  const estadoBadgeTr = (e,dias) => {
-    if (e==='sobrestock') return `<span style="color:#8b5cf6;font-size:10px;font-weight:700">🔵 ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
-    if (e==='gestionar')  return `<span style="color:#f43f5e;font-size:10px;font-weight:700">⚠️ ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
-    if (e==='sin_movimiento') return `<span style="color:#94a3b8;font-size:10px;font-weight:700">😴 Sin Mov.</span>`;
-    if (e==='quiebre')    return `<span style="color:#ef4444;font-size:10px;font-weight:700">🚨 ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
-    if (e==='sin_stock')  return `<span style="color:#dc2626;font-size:10px;font-weight:700">💀 0d</span>`;
-    return `<span style="color:#64748b;font-size:10px">${e}</span>`;
+  const storeTag = (store, ciudad) => {
+    const c = STORE_COLOR[store]||'#64748b';
+    return `<div style="text-align:center">
+      <span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;background:${c}20;color:${c};border:1px solid ${c}40">${store}</span>
+      <div style="font-size:10px;color:#94a3b8;margin-top:3px">${ciudad}</div>
+    </div>`;
   };
 
-  tbody.innerHTML = suggestions.map((s,i) => {
+  const estadoTag = (e, dias) => {
+    const cfg = {
+      sobrestock: ['#8b5cf6','🔵 Sobrestock'],
+      gestionar:  ['#f43f5e','⚠️ Gestionar'],
+      sin_movimiento: ['#94a3b8','⏸️ Sin Mov.'],
+      quiebre:    ['#ef4444','🚨 Quiebre'],
+      sin_stock:  ['#dc2626','💀 Sin Stock'],
+    }[e] || ['#64748b', e];
+    return `<span style="font-size:11px;font-weight:700;color:${cfg[0]}">${cfg[1]}${dias!=null?' · '+dias.toFixed(0)+'d':''}</span>`;
+  };
+
+  cardsEl.innerHTML = suggestions.map(s => {
     const prioColor = s.intra ? '#10b981' : '#f59e0b';
-    const prioLabel = s.intra ? '🏙️ Alta' : '✈️ Media';
-    const pct = i === 0 ? 100 : Math.min(100, Math.round((s.inv_val / (suggestions[0].inv_val||1))*100));
-    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
-      <td style="padding:10px 12px">
-        <span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${prioColor}20;color:${prioColor};border:1px solid ${prioColor}35">${prioLabel}</span>
-      </td>
-      <td style="padding:10px 12px;max-width:200px">
-        <div style="font-weight:600;font-size:12px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(s.product||s.sku)}">${escH((s.product||s.sku||'').substring(0,36))}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">${escH(s.sku)} · ${escH(s.brand||'')}</div>
-      </td>
-      <td style="padding:10px 12px;font-size:11px;color:#64748b;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(s.category||'')}${s.sub_category?'<br><span style="color:#b0b8c4">'+escH(s.sub_category)+'</span>':''}</td>
-      <td style="padding:10px 12px;text-align:center">
-        ${storeTag(s.origen)}<br>
-        <span style="font-size:10px;color:#64748b">${s.ciudadO}</span><br>
-        ${estadoBadgeTr(s.estadoO, s.diasO)}
-      </td>
-      <td style="padding:10px 12px;text-align:center">
-        ${storeTag(s.destino)}<br>
-        <span style="font-size:10px;color:#64748b">${s.ciudadD}</span><br>
-        ${estadoBadgeTr(s.estadoD, s.diasD)}
-      </td>
-      <td style="padding:10px 12px;text-align:right">
-        <span style="font-weight:700;color:#f59e0b;font-size:12px">${fmtM(s.inv_val)}</span>
-        <div style="height:4px;background:#f0ede8;border-radius:2px;overflow:hidden;margin-top:4px;width:80px;margin-left:auto"><div style="height:100%;width:${pct}%;background:#f59e0b;border-radius:2px"></div></div>
-      </td>
-      <td style="padding:10px 12px;text-align:right;font-weight:700;color:${s.diasO!=null&&s.diasO>=60?'#8b5cf6':'#94a3b8'}">${s.diasO!=null?s.diasO.toFixed(0)+'d':'—'}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:700;color:${s.diasD!=null&&s.diasD<=3?'#ef4444':'#94a3b8'}">${s.diasD!=null?s.diasD.toFixed(0)+'d':'—'}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:800;color:#22d3ee;font-size:13px">${fmt(s.sugeridas)}</td>
-      <td style="padding:10px 12px;text-align:center">
-        <span style="font-size:10px;font-weight:700;color:${s.intra?'#10b981':'#f59e0b'}">${s.intra?'🏙️ Intra':'✈️ Inter'}</span>
-        <div style="font-size:9px;color:#94a3b8">${s.ciudadO}${s.intra?'':' → '+s.ciudadD}</div>
-      </td>
-    </tr>`;
+    const prioBg    = s.intra ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)';
+    const prioLabel = s.intra ? '🏙️ Intra-ciudad' : '✈️ Inter-ciudad';
+    const name = (s.product||s.sku||'').substring(0,45);
+    return `<div style="background:#fff;border:1px solid #e8e4de;border-radius:12px;padding:16px;display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:16px;align-items:center;transition:box-shadow 0.15s" class="hover-row">
+      <!-- Prioridad -->
+      <div style="background:${prioBg};border:1px solid ${prioColor}30;border-radius:8px;padding:6px 12px;text-align:center;min-width:100px">
+        <div style="font-size:11px;font-weight:700;color:${prioColor}">${prioLabel}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">${s.ciudadO}${s.intra?'':' → '+s.ciudadD}</div>
+      </div>
+      <!-- Producto -->
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:13px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(s.product||s.sku)}">${escH(name)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(s.sku)} · ${escH(s.category||'')} · ${escH(s.supplier||'')}</div>
+      </div>
+      <!-- Flecha origen → destino -->
+      <div style="display:flex;align-items:center;gap:12px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Origen</div>
+          ${storeTag(s.origen, s.ciudadO)}
+          <div style="margin-top:4px">${estadoTag(s.estadoO, s.diasO)}</div>
+        </div>
+        <div style="font-size:20px;color:#94a3b8;font-weight:300">→</div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Destino</div>
+          ${storeTag(s.destino, s.ciudadD)}
+          <div style="margin-top:4px">${estadoTag(s.estadoD, s.diasD)}</div>
+        </div>
+      </div>
+      <!-- Val inv -->
+      <div style="text-align:right">
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Val. Inv</div>
+        <div style="font-size:14px;font-weight:800;color:#f59e0b">${fmtM(s.inv_val)}</div>
+        <div style="font-size:10px;color:#94a3b8">${fmt(s.inv_actual_o)} uds total</div>
+      </div>
+      <!-- Uds sugeridas -->
+      <div style="text-align:center;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:8px;padding:8px 14px">
+        <div style="font-size:10px;color:#0891b2;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Sugeridas</div>
+        <div style="font-size:20px;font-weight:900;color:#0891b2">${fmt(s.sugeridas)}</div>
+        <div style="font-size:10px;color:#94a3b8">unidades</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
 function exportTransfExcel() {
   if(!lastRows.length) return;
-  const ws_data=[['Prioridad','SKU','Producto','Marca','Categoría','Subcategoría','Proveedor','Origen','Ciudad Origen','Destino','Ciudad Destino','Días Origen','Días Destino','Val. Inv Origen','Uds. Sugeridas','Tipo']];
-  const tbody=document.getElementById('transf-tbody');
-  // Re-generate data
-  const tipoFil=''; const ciudadFil='';
-  const skuMap={};
-  lastRows.forEach(r=>{
-    const k=r.sku||r.llave; if(!k) return;
-    if(!skuMap[k]) skuMap[k]={sku:k,product:r.product,brand:r.brand,category:r.category,sub_category:r.sub_category,supplier:r.supplier,origenes:[],destinos:[]};
-    const isOrigen=r.estado==='sobrestock'||r.estado==='gestionar'||r.estado==='sin_movimiento';
-    const isDestino=r.estado==='quiebre'||r.estado==='sin_stock';
-    if(isOrigen&&(r.inv_actual||0)>0) skuMap[k].origenes.push(r);
-    if(isDestino) skuMap[k].destinos.push(r);
-  });
-  Object.values(skuMap).forEach(({sku,product,brand,category,sub_category,supplier,origenes,destinos})=>{
-    if(!origenes.length||!destinos.length) return;
-    origenes.forEach(o=>{ destinos.forEach(d=>{
-      if(o.store===d.store) return;
-      const cO=STORE_CIUDAD[o.store]||'Otra',cD=STORE_CIUDAD[d.store]||'Otra';
-      const intra=cO===cD;
-      const promD=d.prom_vta||0;
-      const exceso=Math.max(0,(o.inv_actual||0)-Math.ceil(promD*30));
-      const sug=exceso>0?exceso:Math.min(o.inv_actual||0,Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
-      if(sug<=0) return;
-      ws_data.push([intra?'Alta (Intra)':'Media (Inter)',sku,product||'',brand||'',category||'',sub_category||'',supplier||'',o.store,cO,d.store,cD,o.dias_inv!=null?+o.dias_inv.toFixed(1):null,d.dias_inv!=null?+d.dias_inv.toFixed(1):null,o.inv_valorizado||0,sug,intra?'Intra-Ciudad':'Inter-Ciudad']);
-    });});
-  });
+  const suggestions = buildTransferencias(lastRows, '', '');
+  const ws_data=[['Prioridad','SKU','Producto','Marca','Categoría','Proveedor','Origen','Ciudad Origen','Destino','Ciudad Destino','Días Origen','Días Destino','Val. Inv Origen','Uds. Sugeridas','Tipo']];
+  suggestions.forEach(s=>ws_data.push([s.intra?'Alta (Intra)':'Media (Inter)',s.sku,s.product||'',s.brand||'',s.category||'',s.supplier||'',s.origen,s.ciudadO,s.destino,s.ciudadD,s.diasO!=null?+s.diasO.toFixed(1):null,s.diasD!=null?+s.diasD.toFixed(1):null,s.inv_val,s.sugeridas,s.intra?'Intra-Ciudad':'Inter-Ciudad']));
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(ws_data);
   ws['!cols']=[10,14,30,20,20,18,22,10,14,10,14,12,12,18,14,14].map(w=>({wch:w}));
@@ -2342,7 +2213,7 @@ function renderEvolDias(rows) {
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
 function activeTab() {
-  const btn = document.querySelector('.tab-btn.active');
+  const btn = document.querySelector('.sb-btn.active');
   return btn ? btn.dataset.tab : 'resumen';
 }
 
@@ -2427,9 +2298,9 @@ function renderAlerts_counts(rows) {
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn=>{
+document.querySelectorAll('.sb-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
