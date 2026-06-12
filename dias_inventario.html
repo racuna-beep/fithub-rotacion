@@ -680,7 +680,8 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbzreEReSJXtsNhdRspd0Q4W0Yy0iQF5Qvx7VFIxOK0m1QZbnXeGnmAJ1Hjxz7fYlwLi2w/exec';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbyzY3HsLdMa3jDsS9JKYYf0XcuZZgXCf4wgz6X7Ny0UI2sCKszHXOVTlady9O06qNDMYQ/exec';
+const SESSION_KEY = 'fithub_dias_inv_cache_v4';
 
 // Se detectan automaticamente desde los datos al cargar
 let VENTA_MONTHS = [];
@@ -834,7 +835,6 @@ function fetchJSONP(url, timeout = 30000) {
 }
 
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
-const SESSION_KEY = 'fithub_dias_inv_cache_v3';
 
 async function processInChunks(rawArr, chunkSize, onProgress) {
   // Build keyMap once from first row
