@@ -354,6 +354,10 @@
       <div class="ms-wrap" id="ms-pago"></div>
     </div>
     <div class="filter-group">
+      <span class="filter-label" data-tip="Tipo de Producto del SKU">TIPO PRODUCTO</span>
+      <div class="ms-wrap" id="ms-tipoprod"></div>
+    </div>
+    <div class="filter-group">
       <span class="filter-label">BÚSQUEDA</span>
       <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
     </div>
@@ -363,9 +367,9 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="resumen">📊 Resumen</button>
     <button class="tab-btn" data-tab="alertas">⚠️ Alertas <span class="tab-badge" id="cnt-alertas">0</span></button>
-    <button class="tab-btn" data-tab="proveedores">🏭 Proveedores</button>
-    <button class="tab-btn" data-tab="marcas">🏷️ Marcas</button>
+    <button class="tab-btn" data-tab="provmarcas">🏭 Proveedores &amp; Marcas</button>
     <button class="tab-btn" data-tab="detalle">📋 Detalle <span class="tab-badge" id="cnt-detalle">0</span></button>
+    <button class="tab-btn" data-tab="transferencias" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#22d3ee">🔁 Posibles Transferencias <span class="tab-badge" id="cnt-transf" style="background:rgba(6,182,212,0.3)">0</span></button>
     <button class="tab-btn" data-tab="plan" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa">🎯 Plan de Ataque <span class="tab-badge" id="cnt-plan" style="background:rgba(139,92,246,0.3)">0</span></button>
   </div>
 
@@ -462,40 +466,47 @@
     </div>
   </div>
 
-  <!-- PROVEEDORES -->
-  <div class="tab-panel" id="panel-proveedores">
-    <div class="table-card">
-      <div class="table-header">
-        <h3>Días de Inventario por Proveedor <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
-          <input class="search-input" id="f-search-prov" placeholder="Buscar proveedor…" style="min-width:180px;"/>
+  <!-- PROVEEDORES & MARCAS (unificado) -->
+  <div class="tab-panel" id="panel-provmarcas">
+    <!-- Sub-tabs internos -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid #e8e4de;padding-bottom:0">
+      <button class="pm-sub-btn active" data-sub="proveedores" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:#FF6B00;border-bottom:2px solid #FF6B00;margin-bottom:-2px">🏭 Proveedores</button>
+      <button class="pm-sub-btn" data-sub="marcas" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-2px">🏷️ Marcas</button>
+    </div>
+    <!-- Panel Proveedores -->
+    <div class="pm-sub-panel active" id="sub-proveedores">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Días de Inventario por Proveedor <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
+            <input class="search-input" id="f-search-prov" placeholder="Buscar proveedor…" style="min-width:180px;"/>
+          </div>
         </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr id="prov-thead"></tr></thead>
-          <tbody id="prov-tbody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr id="prov-thead"></tr></thead>
+            <tbody id="prov-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
-
-  <!-- MARCAS -->
-  <div class="tab-panel" id="panel-marcas">
-    <div class="table-card">
-      <div class="table-header">
-        <h3>Días de Inventario por Marca <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
-          <input class="search-input" id="f-search-marca" placeholder="Buscar marca…" style="min-width:180px;"/>
+    <!-- Panel Marcas -->
+    <div class="pm-sub-panel" id="sub-marcas" style="display:none">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Días de Inventario por Marca <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;"></span></h3>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">⬇ Excel</button>
+            <input class="search-input" id="f-search-marca" placeholder="Buscar marca…" style="min-width:180px;"/>
+          </div>
         </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr id="marca-thead"></tr></thead>
-          <tbody id="marca-tbody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr id="marca-thead"></tr></thead>
+            <tbody id="marca-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -531,6 +542,64 @@
   </div>
 </div>
 
+
+  <!-- POSIBLES TRANSFERENCIAS -->
+  <div class="tab-panel" id="panel-transferencias">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-size:18px;font-weight:800;color:#22d3ee;margin:0">🔁 Posibles Transferencias de Inventario</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Movimientos sugeridos: prioritario intra-ciudad · secundario inter-ciudad · origen sobrestock ≥60d · destino quiebre/sin stock</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="transf-tipo" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px">
+          <option value="">Todos los movimientos</option>
+          <option value="intra">🏙️ Solo intra-ciudad</option>
+          <option value="inter">✈️ Solo inter-ciudad</option>
+        </select>
+        <select id="transf-ciudad" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px">
+          <option value="">Todas las ciudades</option>
+          <option value="Bogotá">Bogotá</option>
+          <option value="Medellín">Medellín</option>
+          <option value="Barranquilla">Barranquilla</option>
+        </select>
+        <button id="btn-exp-transf" style="background:#0891b2;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Exportar XLSX</button>
+      </div>
+    </div>
+    <!-- KPIs transferencias -->
+    <div id="transf-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+    <!-- Leyenda ciudades -->
+    <div style="background:#ffffff;border:1px solid #e8e4de;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase">Tiendas:</span>
+      <span style="font-size:12px;font-weight:600;color:#3b82f6">● STF 15 — Bogotá</span>
+      <span style="font-size:12px;font-weight:600;color:#ec4899">● STF 93 — Bogotá</span>
+      <span style="font-size:12px;font-weight:600;color:#10b981">● STF 82 — Bogotá</span>
+      <span style="font-size:12px;font-weight:600;color:#8b5cf6">● STF 30 — Medellín</span>
+      <span style="font-size:12px;font-weight:600;color:#f59e0b">● STF 51 — Barranquilla</span>
+      <span style="margin-left:auto;font-size:11px;color:#94a3b8">🏙️ Intra-ciudad = prioridad alta · ✈️ Inter-ciudad = prioridad media</span>
+    </div>
+    <!-- Tabla transferencias -->
+    <div class="table-card">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+              <th style="padding:10px 12px;text-align:left;color:#64748b">Prioridad</th>
+              <th style="padding:10px 12px;text-align:left;color:#64748b">SKU · Producto</th>
+              <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría</th>
+              <th style="padding:10px 12px;text-align:center;color:#22d3ee">Origen (Sobrestock)</th>
+              <th style="padding:10px 12px;text-align:center;color:#ef4444">Destino (Quiebre)</th>
+              <th style="padding:10px 12px;text-align:right;color:#f59e0b">Val. Inv Origen</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">Días Origen</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">Días Destino</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b">Uds. Sug.</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b">Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="transf-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <!-- PLAN DE ATAQUE -->
   <div class="tab-panel" id="panel-plan">
@@ -690,6 +759,7 @@ function normalise(raw) {
     category:  str(g('categories') || g('category') || g('Categoría') || g('Categoria')),
     sub_category: str(g('Sub categories') || g('Sub_Category') || g('sub_category') || g('SubCategoria') || g('Subcategoría') || ''),
     tipo_pago:      str(g('Tipo de Pago') || g('tipo_pago') || g('TipoPago') || g('tipo de pago') || ''),
+    tipo_producto:  str(g('Tipo de Producto') || g('tipo_producto') || g('TipoProducto') || ''),
     inv_valorizado: num(g('Total Inv a Costo') || g('Inventario Actual Valorizado') || g('Inv Valorizado') || g('inv_valorizado')),
     inv_actual: inv,
     dias_inv:  dias,
@@ -727,6 +797,7 @@ async function loadData() {
       msCreate('ms-subcat',   'Todas',  onFC);
       msCreate('ms-estado',   'Todos',  onFC);
       msCreate('ms-pago',     'Todos',  onFC);
+      msCreate('ms-tipoprod', 'Todos',  onFC);
       repopulateFilters();
       render();
     }, 300);
@@ -846,6 +917,7 @@ function repopulateFilters() {
   msSetOptions('ms-subcat',   DATA.map(r=>r.sub_category));
   msSetOptions('ms-estado',   ['nuevo','sin_stock','quiebre','bien','sobrestock','gestionar','sin_movimiento']);
   msSetOptions('ms-pago',     DATA.map(r=>r.tipo_pago));
+  msSetOptions('ms-tipoprod', DATA.map(r=>r.tipo_producto));
 }
 
 function cascadeFilters() {
@@ -873,6 +945,7 @@ function filterRows() {
   const cats    = msGetSelected('ms-cat');
   const estados = msGetSelected('ms-estado');
   const pagos   = msGetSelected('ms-pago');
+  const tiposProd = msGetSelected('ms-tipoprod');
   const term    = searchTerm.toLowerCase();
   const subcats = msGetSelected('ms-subcat');
   return DATA.filter(r => {
@@ -883,6 +956,7 @@ function filterRows() {
     if (subcats.size && !subcats.has(r.sub_category))   return false;
     if (estados.size && !estados.has(r.estado))         return false;
     if (pagos.size   && !pagos.has(r.tipo_pago))        return false;
+    if (tiposProd.size && !tiposProd.has(r.tipo_producto)) return false;
     if (term) {
       const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -1027,10 +1101,14 @@ function renderKPIs(rows) {
   const mesesStock = (totalVentasMesPesos > 0 && invVal > 0) ? (invVal / totalVentasMesPesos).toFixed(1) : '—';
   const sinStock = rows.filter(r=>r.estado==='sin_stock').length;
 
+  const invValDepurado = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const cntDepurado    = rows.filter(r=>r.tipo_producto&&r.tipo_producto.toLowerCase()==='depurado').length;
+
   const kpis = [
     { label:'⚠️ Inventario en Riesgo',  val: fmtM(invValSS),          sub:`Sobrestock + Gestionar · ${((invValSS/(invVal||1))*100).toFixed(1)}% del total`, cls:'purple', tip:'Valor del inventario en sobrestock o que supera vida útil.' },
     { label:'🔵 Sobrestock',            val: fmt(sobrestock),          sub:`60+ días cobertura`,                                                             cls:'purple', tip:'SKUs con más de 60 días de inventario.' },
     { label:'⚠️ Gestionar',             val: fmt(gestionar),           sub:`Supera vida útil`,                                                               cls:'red',    tip:'Inventario que supera la vida útil — riesgo de vencimiento.' },
+    { label:'🗑️ Val. Depurado',         val: fmtM(invValDepurado),     sub:`${cntDepurado} SKUs tipo "Depurado"`,                                            cls:'blue',   tip:'Valor inventario de productos clasificados como Depurado en Tipo de Producto.' },
     { label:'😴 Sin Movimiento',        val: fmt(sinMov),              sub:`con inv. pero sin ventas`,                                                       cls:'blue',   tip:'SKUs con existencias pero sin ninguna venta registrada.' },
     { label:'💀 Sin Stock',             val: fmt(sinStock),            sub:`0 días — quiebre total`,                                                         cls:'red',    tip:'SKUs con ventas activas pero sin inventario.' },
     { label:'🚨 Quiebre (1–3d)',        val: fmt(quiebre),             sub:`${((quiebre/n)*100).toFixed(1)}% del total`,                                     cls:'red',    tip:'SKUs con 1 a 3 días de inventario.' },
@@ -1718,6 +1796,170 @@ function renderMarcas(rows) {
   }).join('') : '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
 }
 
+// ── RENDER TRANSFERENCIAS ─────────────────────────────────────────────────────
+const STORE_CIUDAD = {
+  'STF 15': 'Bogotá', 'STF 93': 'Bogotá', 'STF 82': 'Bogotá',
+  'STF 30': 'Medellín', 'STF 51': 'Barranquilla',
+};
+const STORE_COLOR = { 'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899' };
+
+function renderTransferencias(rows) {
+  const tbody = document.getElementById('transf-tbody');
+  const kpisEl = document.getElementById('transf-kpis');
+  const tipoFil = document.getElementById('transf-tipo')?.value || '';
+  const ciudadFil = document.getElementById('transf-ciudad')?.value || '';
+  if (!tbody) return;
+
+  // Build SKU → store map: origen = sobrestock/gestionar/sin_movimiento, destino = quiebre/sin_stock
+  const skuMap = {};
+  rows.forEach(r => {
+    const k = r.sku || r.llave;
+    if (!k) return;
+    if (!skuMap[k]) skuMap[k] = { sku:k, product:r.product, brand:r.brand, category:r.category, sub_category:r.sub_category, supplier:r.supplier, origenes:[], destinos:[] };
+    const isOrigen  = r.estado==='sobrestock'||r.estado==='gestionar'||r.estado==='sin_movimiento';
+    const isDestino = r.estado==='quiebre'||r.estado==='sin_stock';
+    if (isOrigen && (r.inv_actual||0)>0) skuMap[k].origenes.push(r);
+    if (isDestino) skuMap[k].destinos.push(r);
+  });
+
+  const suggestions = [];
+  Object.values(skuMap).forEach(({ sku, product, brand, category, sub_category, supplier, origenes, destinos }) => {
+    if (!origenes.length || !destinos.length) return;
+    origenes.forEach(o => {
+      destinos.forEach(d => {
+        if (o.store === d.store) return; // misma tienda no aplica
+        const cO = STORE_CIUDAD[o.store] || 'Otra';
+        const cD = STORE_CIUDAD[d.store] || 'Otra';
+        const intra = cO === cD;
+        const tipo = intra ? 'intra' : 'inter';
+        if (tipoFil && tipoFil !== tipo) return;
+        if (ciudadFil && cO !== ciudadFil && cD !== ciudadFil) return;
+        // Unidades sugeridas = exceso de origen vs 30 días de venta del destino
+        const promD = d.prom_vta || 0;
+        const stockIdeal = Math.ceil(promD * 30); // 30 días cobertura ideal en destino
+        const exceso = Math.max(0, (o.inv_actual||0) - stockIdeal);
+        const sugeridas = exceso > 0 ? exceso : Math.min(o.inv_actual||0, Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
+        if (sugeridas <= 0) return;
+        suggestions.push({ sku, product, brand, category, sub_category, supplier,
+          origen: o.store, ciudadO: cO, destino: d.store, ciudadD: cD,
+          diasO: o.dias_inv, diasD: d.dias_inv, inv_val: o.inv_valorizado||0,
+          estadoO: o.estado, estadoD: d.estado, sugeridas, tipo, intra,
+          prom_vta_d: promD,
+        });
+      });
+    });
+  });
+
+  // Sort: intra first, then by valor
+  suggestions.sort((a,b) => {
+    if (a.intra !== b.intra) return a.intra ? -1 : 1;
+    return (b.inv_val||0) - (a.inv_val||0);
+  });
+
+  const cntEl = document.getElementById('cnt-transf');
+  if (cntEl) cntEl.textContent = suggestions.length;
+
+  // KPIs
+  const nIntra = suggestions.filter(s=>s.intra).length;
+  const nInter = suggestions.filter(s=>!s.intra).length;
+  const totalVal = suggestions.reduce((a,s)=>a+s.inv_val,0);
+  const uniqueSkus = new Set(suggestions.map(s=>s.sku)).size;
+  if (kpisEl) kpisEl.innerHTML = [
+    {label:'Sugerencias Totales', val:suggestions.length, sub:'pares origen→destino',color:'#22d3ee'},
+    {label:'🏙️ Intra-Ciudad',     val:nIntra, sub:'alta prioridad — misma ciudad',color:'#10b981'},
+    {label:'✈️ Inter-Ciudad',     val:nInter, sub:'media prioridad — distinta ciudad',color:'#f59e0b'},
+    {label:'SKUs Involucrados',   val:uniqueSkus, sub:'productos distintos',color:'#8b5cf6'},
+    {label:'Val. Inv Involucrado',val:'$'+Math.round(totalVal).toLocaleString('es-CO'), sub:'valor origen en sobrestock',color:'#f97316'},
+  ].map(k=>`<div style="background:#ffffff;border:1px solid #e8e4de;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
+
+  if (!suggestions.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="padding:32px;text-align:center;color:#94a3b8">✅ No se detectaron oportunidades de transferencia con los filtros actuales</td></tr>';
+    return;
+  }
+
+  const storeTag = s => { const c=STORE_COLOR[s]||'#64748b'; return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${c}22;color:${c};border:1px solid ${c}44">${s}</span>`; };
+  const estadoBadgeTr = (e,dias) => {
+    if (e==='sobrestock') return `<span style="color:#8b5cf6;font-size:10px;font-weight:700">🔵 ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
+    if (e==='gestionar')  return `<span style="color:#f43f5e;font-size:10px;font-weight:700">⚠️ ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
+    if (e==='sin_movimiento') return `<span style="color:#94a3b8;font-size:10px;font-weight:700">😴 Sin Mov.</span>`;
+    if (e==='quiebre')    return `<span style="color:#ef4444;font-size:10px;font-weight:700">🚨 ${dias!=null?dias.toFixed(0)+'d':'—'}</span>`;
+    if (e==='sin_stock')  return `<span style="color:#dc2626;font-size:10px;font-weight:700">💀 0d</span>`;
+    return `<span style="color:#64748b;font-size:10px">${e}</span>`;
+  };
+
+  tbody.innerHTML = suggestions.map((s,i) => {
+    const prioColor = s.intra ? '#10b981' : '#f59e0b';
+    const prioLabel = s.intra ? '🏙️ Alta' : '✈️ Media';
+    const pct = i === 0 ? 100 : Math.min(100, Math.round((s.inv_val / (suggestions[0].inv_val||1))*100));
+    return `<tr style="border-bottom:1px solid #f0ede8;transition:background 0.1s" class="hover-row">
+      <td style="padding:10px 12px">
+        <span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:${prioColor}20;color:${prioColor};border:1px solid ${prioColor}35">${prioLabel}</span>
+      </td>
+      <td style="padding:10px 12px;max-width:200px">
+        <div style="font-weight:600;font-size:12px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(s.product||s.sku)}">${escH((s.product||s.sku||'').substring(0,36))}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">${escH(s.sku)} · ${escH(s.brand||'')}</div>
+      </td>
+      <td style="padding:10px 12px;font-size:11px;color:#64748b;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(s.category||'')}${s.sub_category?'<br><span style="color:#b0b8c4">'+escH(s.sub_category)+'</span>':''}</td>
+      <td style="padding:10px 12px;text-align:center">
+        ${storeTag(s.origen)}<br>
+        <span style="font-size:10px;color:#64748b">${s.ciudadO}</span><br>
+        ${estadoBadgeTr(s.estadoO, s.diasO)}
+      </td>
+      <td style="padding:10px 12px;text-align:center">
+        ${storeTag(s.destino)}<br>
+        <span style="font-size:10px;color:#64748b">${s.ciudadD}</span><br>
+        ${estadoBadgeTr(s.estadoD, s.diasD)}
+      </td>
+      <td style="padding:10px 12px;text-align:right">
+        <span style="font-weight:700;color:#f59e0b;font-size:12px">${fmtM(s.inv_val)}</span>
+        <div style="height:4px;background:#f0ede8;border-radius:2px;overflow:hidden;margin-top:4px;width:80px;margin-left:auto"><div style="height:100%;width:${pct}%;background:#f59e0b;border-radius:2px"></div></div>
+      </td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:${s.diasO!=null&&s.diasO>=60?'#8b5cf6':'#94a3b8'}">${s.diasO!=null?s.diasO.toFixed(0)+'d':'—'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:${s.diasD!=null&&s.diasD<=3?'#ef4444':'#94a3b8'}">${s.diasD!=null?s.diasD.toFixed(0)+'d':'—'}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:800;color:#22d3ee;font-size:13px">${fmt(s.sugeridas)}</td>
+      <td style="padding:10px 12px;text-align:center">
+        <span style="font-size:10px;font-weight:700;color:${s.intra?'#10b981':'#f59e0b'}">${s.intra?'🏙️ Intra':'✈️ Inter'}</span>
+        <div style="font-size:9px;color:#94a3b8">${s.ciudadO}${s.intra?'':' → '+s.ciudadD}</div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function exportTransfExcel() {
+  if(!lastRows.length) return;
+  const ws_data=[['Prioridad','SKU','Producto','Marca','Categoría','Subcategoría','Proveedor','Origen','Ciudad Origen','Destino','Ciudad Destino','Días Origen','Días Destino','Val. Inv Origen','Uds. Sugeridas','Tipo']];
+  const tbody=document.getElementById('transf-tbody');
+  // Re-generate data
+  const tipoFil=''; const ciudadFil='';
+  const skuMap={};
+  lastRows.forEach(r=>{
+    const k=r.sku||r.llave; if(!k) return;
+    if(!skuMap[k]) skuMap[k]={sku:k,product:r.product,brand:r.brand,category:r.category,sub_category:r.sub_category,supplier:r.supplier,origenes:[],destinos:[]};
+    const isOrigen=r.estado==='sobrestock'||r.estado==='gestionar'||r.estado==='sin_movimiento';
+    const isDestino=r.estado==='quiebre'||r.estado==='sin_stock';
+    if(isOrigen&&(r.inv_actual||0)>0) skuMap[k].origenes.push(r);
+    if(isDestino) skuMap[k].destinos.push(r);
+  });
+  Object.values(skuMap).forEach(({sku,product,brand,category,sub_category,supplier,origenes,destinos})=>{
+    if(!origenes.length||!destinos.length) return;
+    origenes.forEach(o=>{ destinos.forEach(d=>{
+      if(o.store===d.store) return;
+      const cO=STORE_CIUDAD[o.store]||'Otra',cD=STORE_CIUDAD[d.store]||'Otra';
+      const intra=cO===cD;
+      const promD=d.prom_vta||0;
+      const exceso=Math.max(0,(o.inv_actual||0)-Math.ceil(promD*30));
+      const sug=exceso>0?exceso:Math.min(o.inv_actual||0,Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
+      if(sug<=0) return;
+      ws_data.push([intra?'Alta (Intra)':'Media (Inter)',sku,product||'',brand||'',category||'',sub_category||'',supplier||'',o.store,cO,d.store,cD,o.dias_inv!=null?+o.dias_inv.toFixed(1):null,d.dias_inv!=null?+d.dias_inv.toFixed(1):null,o.inv_valorizado||0,sug,intra?'Intra-Ciudad':'Inter-Ciudad']);
+    });});
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!cols']=[10,14,30,20,20,18,22,10,14,10,14,12,12,18,14,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Transferencias');
+  XLSX.writeFile(wb,'posibles_transferencias_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
 // ── EXPORT EXCEL ─────────────────────────────────────────────────────────────
 function exportExcel(rows, filename) {
   const headers = ['Tienda','SKU','Marca','Proveedor','Producto','Categoría','Subcategoría','Inv. Actual','Dias Inv','Vida Util','Prom Vta YTD','Estado','Nota'];
@@ -2098,6 +2340,7 @@ function render() {
   currentPage = 1;
   renderTable(rows);
   renderPlan(rows);
+  renderTransferencias(rows);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
@@ -2108,7 +2351,21 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab==='plan'&&lastRows.length) renderPlan(lastRows);
+    if(btn.dataset.tab==='transferencias'&&lastRows.length) renderTransferencias(lastRows);
+    if(btn.dataset.tab==='provmarcas'&&lastRows.length){renderProveedores(lastRows);renderMarcas(lastRows);}
     window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+// Sub-tabs Proveedores & Marcas
+document.querySelectorAll('.pm-sub-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.pm-sub-btn').forEach(b=>{
+      b.style.color='#94a3b8'; b.style.borderBottomColor='transparent'; b.classList.remove('active');
+    });
+    document.querySelectorAll('.pm-sub-panel').forEach(p=>p.style.display='none');
+    btn.style.color='#FF6B00'; btn.style.borderBottomColor='#FF6B00'; btn.classList.add('active');
+    document.getElementById('sub-'+btn.dataset.sub).style.display='block';
   });
 });
 
@@ -2137,7 +2394,7 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 // ── FILTER EVENTS ─────────────────────────────────────────────────────────────
 // Multi-select onChange already wired in msCreate
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago'].forEach(msClear);
+  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago','ms-tipoprod'].forEach(msClear);
   document.getElementById('f-search').value=''; searchTerm='';
   repopulateFilters(); render();
 });
@@ -2158,8 +2415,11 @@ document.getElementById('btn-exp-det').addEventListener('click',()=>exportExcel(
 document.getElementById('btn-plan-export').addEventListener('click',exportPlanXLSX);
 document.getElementById('btn-exp-prov').addEventListener('click',exportProvExcel);
 document.getElementById('btn-exp-marca').addEventListener('click',exportMarcaExcel);
+document.getElementById('btn-exp-transf').addEventListener('click',exportTransfExcel);
 document.getElementById('f-search-marca').addEventListener('input',e=>{ searchMarcaTerm=e.target.value; renderMarcas(lastRows); });
 document.getElementById('btn-refresh').addEventListener('click',()=>{DATA=[];loadData();});
+document.getElementById('transf-tipo').addEventListener('change',()=>renderTransferencias(lastRows));
+document.getElementById('transf-ciudad').addEventListener('change',()=>renderTransferencias(lastRows));
 
 // ── TOOLTIP SYSTEM ────────────────────────────────────────────────────────────
 const ttEl=document.getElementById('tooltip');
