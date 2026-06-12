@@ -51,14 +51,14 @@
   header h1 { font-size: 26px; font-weight: 800; color: var(--text); }
   header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-  /* ── STICKY HEADER + TABS ── */
+  /* ── STICKY TABS ONLY ── */
   #sticky-top {
     position: sticky; top: 0; z-index: 200;
     background: var(--bg);
-    padding: 12px 24px 0;
-    margin: -24px -24px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 8px 0;
+    margin: 0 0 16px;
     border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
   .header-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
   .header-left { display:flex; align-items:center; gap:20px; }
@@ -282,7 +282,6 @@
 </div>
 
 <div id="app">
-  <div id="sticky-top">
   <header>
     <div class="header-wrap">
       <div class="header-left">
@@ -325,7 +324,16 @@
     </div>
   </header>
 
-  <div class="filters" style="margin-bottom:0;border-radius:0;border-left:none;border-right:none;border-top:1px solid var(--border);border-bottom:none;">
+  <div id="exec-summary" class="exec-summary" style="display:none"></div>
+  <div style="display:none">
+    <span id="meta-txt"></span>
+    <div id="last-update-bar"></div>
+    <span id="last-update"></span>
+  </div>
+  <div class="err-bar" id="err-bar"></div>
+  <div id="kpis" class="kpis"></div>
+
+  <div class="filters">
     <div class="filter-group">
       <span class="filter-label" data-tip="Filtra por tienda STF">TIENDA</span>
       <div class="ms-wrap" id="ms-store"></div>
@@ -365,26 +373,17 @@
     <button class="btn-reset" id="btn-reset">✕ Limpiar</button>
   </div>
 
-  <div class="tabs" style="margin-bottom:0;padding:10px 0 0;border-bottom:none;">
-    <button class="tab-btn active" data-tab="resumen">📊 Resumen</button>
-    <button class="tab-btn" data-tab="alertas">⚠️ Alertas <span class="tab-badge" id="cnt-alertas">0</span></button>
-    <button class="tab-btn" data-tab="provmarcas">🏭 Proveedores &amp; Marcas</button>
-    <button class="tab-btn" data-tab="detalle">📋 Detalle <span class="tab-badge" id="cnt-detalle">0</span></button>
-    <button class="tab-btn" data-tab="transferencias" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#22d3ee">🔁 Posibles Transferencias <span class="tab-badge" id="cnt-transf" style="background:rgba(6,182,212,0.3)">0</span></button>
-    <button class="tab-btn" data-tab="plan" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa">🎯 Plan de Ataque <span class="tab-badge" id="cnt-plan" style="background:rgba(139,92,246,0.3)">0</span></button>
-  </div>
-  </div><!-- /sticky-top -->
-
-  <div style="height:16px"></div>
-
-  <div id="exec-summary" class="exec-summary" style="display:none"></div>
-  <div style="display:none">
-    <span id="meta-txt"></span>
-    <div id="last-update-bar"></div>
-    <span id="last-update"></span>
-  </div>
-  <div class="err-bar" id="err-bar"></div>
-  <div id="kpis" class="kpis"></div>  <!-- RESUMEN -->
+  <!-- Solo las pestañas son sticky -->
+  <div id="sticky-top">
+    <div class="tabs" style="margin:0;padding:0;border:none;">
+      <button class="tab-btn active" data-tab="resumen">📊 Resumen</button>
+      <button class="tab-btn" data-tab="alertas">⚠️ Alertas <span class="tab-badge" id="cnt-alertas">0</span></button>
+      <button class="tab-btn" data-tab="provmarcas">🏭 Proveedores &amp; Marcas</button>
+      <button class="tab-btn" data-tab="detalle">📋 Detalle <span class="tab-badge" id="cnt-detalle">0</span></button>
+      <button class="tab-btn" data-tab="transferencias" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#22d3ee">🔁 Posibles Transferencias <span class="tab-badge" id="cnt-transf" style="background:rgba(6,182,212,0.3)">0</span></button>
+      <button class="tab-btn" data-tab="plan" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa">🎯 Plan de Ataque <span class="tab-badge" id="cnt-plan" style="background:rgba(139,92,246,0.3)">0</span></button>
+    </div>
+  </div>  <!-- RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
 
     <!-- Fila 1: Donut + Tiendas por días + Categorías -->
