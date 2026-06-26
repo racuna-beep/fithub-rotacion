@@ -364,6 +364,9 @@
     <div style="padding:0 12px;margin-top:8px">
       <span id="last-update-hdr" style="font-size:10px;color:#94a3b8;display:block;margin-bottom:6px"></span>
       <button class="btn-refresh" id="btn-refresh" style="width:100%;justify-content:center;">↻ Actualizar</button>
+      <button onclick="generarCorreoSemanal()" style="width:100%;margin-top:8px;justify-content:center;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        📧 Enviar Reporte
+      </button>
     </div>
   </nav>
 
@@ -1339,28 +1342,23 @@ function expandAlert(btn, id, rows) {
 }
 
 function renderAlerts(rows) {
-  const quiebre = rows.filter(r=>r.estado==='quiebre').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-
-  const bajo     = rows.filter(r=>r.estado==='bajo').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-  const exceso   = rows.filter(r=>r.estado==='exceso').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-
-  const quiebre_l   = rows.filter(r=>r.estado==='quiebre').sort((a,b)=>(a.dias_inv||0)-(b.dias_inv||0));
-
-
-  const sobrestock_l= rows.filter(r=>r.estado==='sobrestock').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   const gestionar_l = rows.filter(r=>r.estado==='gestionar').sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-  const nuevo_l2      = rows.filter(r=>r.estado==='nuevo').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
-  const sin_mov_l     = rows.filter(r=>r.estado==='sin_movimiento').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
-  const subInv = r => `${fmt(r.inv_actual)} uds${r.inv_valorizado ? ' · ' + fmtM(r.inv_valorizado) : ''}`;
-  renderAlertCards('list-nuevo',         nuevo_l2,  '#94a3b8', r=>`Inv: ${fmt(r.inv_actual)}`,  r=>'Sin ventas ni stock',         'cnt-nv');
-  renderAlertCards('list-sin_movimiento',sin_mov_l, '#60a5fa', r=>fmtM(r.inv_valorizado||0),    subInv,                           'cnt-sm');
   const sin_stock_l = rows.filter(r=>r.estado==='sin_stock').sort((a,b)=>(b.inv_actual||0)-(a.inv_actual||0));
-  renderAlertCards('list-sin_stock', sin_stock_l, '#dc2626', r=>'Sin stock', subInv, 'cnt-ss0');
-  renderAlertCards('list-quiebre',    quiebre_l,    'var(--red)',    r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-q');
+  const subInv = r => `${fmt(r.inv_actual)} uds${r.inv_valorizado ? ' · ' + fmtM(r.inv_valorizado) : ''}`;
 
+  // Estas llamadas actualizan contadores ocultos (cnt-sm, cnt-ss, etc.) sin fallar
+  const sobrestock_l= rows.filter(r=>r.estado==='sobrestock');
+  const nuevo_l2    = rows.filter(r=>r.estado==='nuevo');
+  const sin_mov_l   = rows.filter(r=>r.estado==='sin_movimiento');
+  const quiebre_l   = rows.filter(r=>r.estado==='quiebre');
+  renderAlertCards('list-nuevo',          nuevo_l2,     '#94a3b8',    r=>`Inv: ${fmt(r.inv_actual)}`, r=>'Sin ventas ni stock', 'cnt-nv');
+  renderAlertCards('list-sin_movimiento', sin_mov_l,    '#60a5fa',    r=>fmtM(r.inv_valorizado||0),  subInv, 'cnt-sm');
+  renderAlertCards('list-quiebre',        quiebre_l,    'var(--red)', r=>`${fmtD(r.dias_inv)} días`, subInv, 'cnt-q');
+  renderAlertCards('list-sobrestock',     sobrestock_l, '#8b5cf6',    r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-ss');
 
-  renderAlertCards('list-sobrestock', sobrestock_l, '#8b5cf6',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-ss');
-  renderAlertCards('list-gestionar',  gestionar_l,  '#f43f5e',       r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-e');
+  // Columnas visibles
+  renderAlertCards('list-sin_stock', sin_stock_l, '#dc2626', r=>'Sin stock',              subInv, 'cnt-ss0');
+  renderAlertCards('list-gestionar', gestionar_l, '#f43f5e', r=>`${fmtD(r.dias_inv)} días`, r=>`Vida: ${fmtD(r.vida_util)} días · ${fmt(r.inv_actual)} uds`, 'cnt-e');
 }
 
 // ── RENDER STACKED BARS BY STORE ─────────────────────────────────────────────
@@ -1781,14 +1779,18 @@ function renderMarcas(rows) {
     const skusSorted = [...m.rows].sort((a,b) => (b.inv_valorizado||0) - (a.inv_valorizado||0));
     const uid = 'marca_acc_' + idx;
 
-    // Cálculo Uds a gestionar = inv_actual - ceil(prom_vta * 30)
-    const totalUdsGestionar = skusSorted.reduce((acc, r) => {
-      const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0) * 30));
-      return acc + exceso;
-    }, 0);
+    // Cálculo Uds a gestionar:
+    // - gestionar: todo el inv_actual (supera vida útil → gestionar todo)
+    // - sobrestock/sin_movimiento: exceso sobre 30d de venta
+    const calcExceso = r => {
+      if (r.estado === 'gestionar') return r.inv_actual || 0;
+      return Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0) * 30));
+    };
+
+    const totalUdsGestionar = skusSorted.reduce((acc, r) => acc + calcExceso(r), 0);
 
     const skuRows = skusSorted.map(r => {
-      const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
+      const exceso = calcExceso(r);
       const sc = storeColor(r.store);
       const ec = estadoColor(r.estado);
       const el = estadoLabel(r.estado);
@@ -1826,11 +1828,11 @@ function renderMarcas(rows) {
           <div style="font-size:10px;color:#94a3b8;margin-top:2px">${m.rows.length} SKU${m.rows.length!==1?'s':''} · ${[...new Set(m.rows.map(r=>r.store))].join(', ')}</div>
         </div>
         <!-- Barra capital -->
-        <div style="flex:2;min-width:120px;max-width:320px">
-          <div style="height:8px;background:#f0ede8;border-radius:4px;overflow:hidden">
+        <div style="flex:2;min-width:140px;max-width:320px">
+          <div style="font-size:18px;font-weight:900;color:#8b5cf6;white-space:nowrap;margin-bottom:4px">${m.inv_val>0?'$'+Math.round(m.inv_val).toLocaleString('es-CO'):'—'}</div>
+          <div style="height:6px;background:#f0ede8;border-radius:4px;overflow:hidden">
             <div style="height:100%;width:${capPct}%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);border-radius:4px;transition:width 0.3s"></div>
           </div>
-          <div style="font-size:10px;color:#8b5cf6;font-weight:700;margin-top:3px">${m.inv_val>0?'$'+Math.round(m.inv_val).toLocaleString('es-CO'):'—'}</div>
         </div>
         <!-- Stats chips -->
         <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
@@ -2514,7 +2516,7 @@ function render() {
 
   // Render only the active heavy tab
   if (tab === 'alertas')       renderAlerts(rows);
-  if (tab === 'provmarcas')    { renderProveedores(rows); renderMarcas(rows); }
+  if (tab === 'provmarcas')    { renderMarcas(rows); }
   if (tab === 'detalle')       { currentPage = 1; renderTable(rows); }
   if (tab === 'plan')          renderPlan(rows);
   if (tab === 'transferencias') renderTransferencias(rows);
@@ -2562,7 +2564,7 @@ document.querySelectorAll('.sb-btn').forEach(btn=>{
     if (t === 'alertas')        renderAlerts(lastRows);
     if (t === 'plan')           renderPlan(lastRows);
     if (t === 'transferencias') renderTransferencias(lastRows);
-    if (t === 'provmarcas')     { renderProveedores(lastRows); renderMarcas(lastRows); }
+    if (t === 'provmarcas')     { renderMarcas(lastRows); }
     if (t === 'detalle')        { currentPage = 1; renderTable(lastRows); }
     if (t === 'sinmovimiento')  renderSinMovimiento(lastRows);
   });
@@ -2616,7 +2618,7 @@ document.getElementById('f-search').addEventListener('input',e=>{
 document.getElementById('f-search2').addEventListener('input',e=>{
   search2Term=e.target.value; renderTable(lastRows);
 });
-document.getElementById('f-search-prov').addEventListener('input',e=>{
+document.getElementById('f-search-prov')?.addEventListener('input',e=>{
   searchProvTerm=e.target.value; renderProveedores(lastRows);
 });
 
@@ -2624,7 +2626,7 @@ document.getElementById('f-search-prov').addEventListener('input',e=>{
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
 document.getElementById('btn-exp-det').addEventListener('click',()=>exportExcel(lastRows,'dias_inventario'));
 document.getElementById('btn-plan-export').addEventListener('click',exportPlanXLSX);
-document.getElementById('btn-exp-prov').addEventListener('click',exportProvExcel);
+document.getElementById('btn-exp-prov')?.addEventListener('click',exportProvExcel);
 document.getElementById('btn-exp-marca').addEventListener('click',exportMarcaExcel);
 document.getElementById('btn-exp-transf').addEventListener('click',exportTransfExcel);
 document.getElementById('btn-exp-sinmov').addEventListener('click',exportSinMovExcel);
@@ -2638,7 +2640,9 @@ function exportMarcaExcel() {
   ).sort((a,b) => (b.inv_valorizado||0) - (a.inv_valorizado||0));
   const ws_data = [['Marca','SKU','Producto','Tienda','Proveedor','Valor Inv','Prom. Vta','Días Inv','Inv. Actual','Uds a Gestionar','Estado']];
   ss60.forEach(r => {
-    const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
+    const exceso = r.estado === 'gestionar'
+      ? (r.inv_actual || 0)
+      : Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
     ws_data.push([r.brand||'',r.sku||'',r.product||'',r.store||'',r.supplier||'',
       r.inv_valorizado||0, r.prom_vta||0, r.dias_inv!=null?r.dias_inv:0,
       r.inv_actual||0, exceso, r.estado||'']);
@@ -2670,6 +2674,149 @@ document.addEventListener('mousemove',e=>{
   ttEl.style.top=(y+ttEl.offsetHeight>window.innerHeight?e.clientY-ttEl.offsetHeight-8:y)+'px';
 });
 document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) return; ttEl.style.opacity='0'; });
+
+// ── REPORTE SEMANAL POR CORREO ────────────────────────────────────────────────
+function generarCorreoSemanal() {
+  if (!lastRows.length) { alert('Espera a que carguen los datos primero.'); return; }
+
+  const rows = lastRows;
+
+  // ── Semana actual
+  const hoy = new Date();
+  const semana = (() => {
+    const d = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  })();
+
+  // ── KPIs globales
+  const validDias = rows.filter(r => r.dias_inv != null && isFinite(r.dias_inv) && r.dias_inv > 0 && r.dias_inv < 366
+    && ['bien','sobrestock','gestionar','quiebre'].includes(r.estado));
+  const diasProm = validDias.length ? (validDias.reduce((a,r) => a + r.dias_inv, 0) / validDias.length) : 0;
+
+  // ── Sobrestock ≥60d
+  const sobre60 = rows.filter(r => (r.estado==='sobrestock'||r.estado==='gestionar') && (r.dias_inv==null||r.dias_inv>=60));
+  const capInmov = sobre60.reduce((a,r) => a+(r.inv_valorizado||0), 0);
+  const udsExceso = sobre60.reduce((a,r) => {
+    const ex = r.estado==='gestionar' ? (r.inv_actual||0) : Math.max(0,(r.inv_actual||0)-Math.ceil((r.prom_vta||0)*30));
+    return a+ex;
+  }, 0);
+
+  // ── Sin movimiento
+  const sinMov = rows.filter(r => r.estado==='sin_movimiento');
+  const sinMovVal = sinMov.reduce((a,r) => a+(r.inv_valorizado||0), 0);
+
+  // ── Sin stock (quiebre)
+  const sinStock = rows.filter(r => r.estado==='sin_stock');
+
+  // ── Días por tienda
+  const storeOrder = ['STF 15','STF 30','STF 51','STF 82','STF 93'];
+  const storeDias = {};
+  storeOrder.forEach(s => {
+    const sr = rows.filter(r => r.store===s && r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366
+      && ['bien','sobrestock','gestionar','quiebre'].includes(r.estado));
+    storeDias[s] = sr.length ? sr.reduce((a,r)=>a+r.dias_inv,0)/sr.length : null;
+  });
+
+  // ── Top 5 marcas capital inmovilizado
+  const marcaMap = {};
+  sobre60.forEach(r => {
+    const k = r.brand||'(Sin marca)';
+    if(!marcaMap[k]) marcaMap[k]=0;
+    marcaMap[k]+=(r.inv_valorizado||0);
+  });
+  const top5marcas = Object.entries(marcaMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // ── Top 5 SKUs sin stock con ventas
+  const top5sinstock = sinStock.sort((a,b)=>(b.prom_vta||0)-(a.prom_vta||0)).slice(0,5);
+
+  // ── Formatters
+  const fmtM2 = v => {
+    if(v>=1e9) return '$'+(v/1e9).toFixed(1)+'B';
+    if(v>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
+    return '$'+Math.round(v).toLocaleString('es-CO');
+  };
+  const fmtN = v => Math.round(v).toLocaleString('es-CO');
+  const storeEmoji = s => ({'STF 15':'🔵','STF 30':'🟣','STF 51':'🟡','STF 82':'🟢','STF 93':'🩷'}[s]||'⚪');
+
+  // ── Construir cuerpo del correo
+  const sep = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+
+  const storeLines = storeOrder
+    .filter(s => storeDias[s] != null)
+    .map(s => `${storeEmoji(s)} ${s}: ${storeDias[s].toFixed(1)} días`)
+    .join('\n');
+
+  const top5marcasLines = top5marcas.length
+    ? top5marcas.map(([m,v],i) => `  ${i+1}. ${m}: ${fmtM2(v)}`).join('\n')
+    : '  Sin datos';
+
+  const top5sinstockLines = top5sinstock.length
+    ? top5sinstock.map(r => `  • ${(r.product||r.sku||'').slice(0,40)} (${r.store}) — ${(r.prom_vta||0).toFixed(1)} uds/mes`).join('\n')
+    : '  Sin SKUs en quiebre total ✅';
+
+  const cuerpo =
+`Hola equipo,
+
+Les compartimos el informe de inventario correspondiente a la Semana ${semana} de ${hoy.getFullYear()}. A continuación los principales indicadores:
+
+${sep}
+📅 DÍAS PROMEDIO DE INVENTARIO
+${sep}
+${diasProm.toFixed(1)} días (red completa)
+
+${sep}
+🏪 DÍAS DE INVENTARIO POR TIENDA
+${sep}
+${storeLines}
+
+${sep}
+⚠️ SOBRESTOCK ≥ 60 DÍAS
+${sep}
+📦 SKUs en sobrestock: ${fmtN(sobre60.length)}
+💰 Capital inmovilizado: ${fmtM2(capInmov)}
+📬 Unidades en exceso: ${fmtN(udsExceso)}
+
+Top 5 marcas con mayor capital inmovilizado:
+${top5marcasLines}
+
+${sep}
+⏸️ INVENTARIO SIN MOVIMIENTO
+${sep}
+🗂️ SKUs parados: ${fmtN(sinMov.length)}
+💰 Valor: ${fmtM2(sinMovVal)}
+
+${sep}
+💀 SIN STOCK CON VENTAS ACTIVAS
+${sep}
+SKUs en quiebre total: ${fmtN(sinStock.length)}
+
+Top 5 por volumen de venta:
+${top5sinstockLines}
+
+${sep}
+🔗 DASHBOARD INTERACTIVO
+${sep}
+Pueden consultar el detalle completo por tienda, categoría y proveedor en el siguiente enlace:
+👉 https://racuna-beep.github.io/fithub-rotacion/dias_inventario.html
+
+${sep}
+Quedamos atentos a cualquier consulta o comentario.
+
+Cordialmente,
+Rodrigo Acuña
+Director de Compras | Fithub`;
+
+  const asunto = encodeURIComponent(`📊 Reporte Inventario | Semana ${semana} — Fithub`);
+  const para = encodeURIComponent('jabib@fithub.com.co,cristina@fithub.com.co,jorge@fithub.com.co,loraine@fithub.com.co,edwin@fithub.com.co,andrea@fithub.com.co,angie@fithub.com.co,mauro@fithub.com.co,alex@fithub.com.co,ricardo@fithub.com.co,lino@fithub.com.co');
+  const cc = encodeURIComponent('racuna@fithub.com.co');
+  const body = encodeURIComponent(cuerpo);
+
+  // Abrir Gmail con el correo pre-llenado
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${para}&cc=${cc}&su=${asunto}&body=${body}`;
+  window.open(gmailUrl, '_blank');
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} // siempre datos frescos al recargar
