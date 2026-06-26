@@ -329,25 +329,29 @@
     </div>
     <div class="sb-section-label">NAVEGACIÓN</div>
     <button class="sb-btn active" data-tab="resumen">
-      <span class="sb-icon">📊</span><span class="sb-label">Resumen</span>
+      <span class="sb-icon">📊</span><span class="sb-label">Overview</span>
     </button>
     <button class="sb-btn" data-tab="alertas">
       <span class="sb-icon">⚠️</span><span class="sb-label">Alertas</span>
       <span class="sb-badge" id="cnt-alertas">0</span>
     </button>
-    <button class="sb-btn" data-tab="provmarcas">
-      <span class="sb-icon">🏭</span><span class="sb-label">Proveedores &amp; Marcas</span>
-    </button>
     <button class="sb-btn" data-tab="detalle">
-      <span class="sb-icon">📋</span><span class="sb-label">Detalle</span>
+      <span class="sb-icon">🔍</span><span class="sb-label">Explorar</span>
       <span class="sb-badge" id="cnt-detalle">0</span>
     </button>
     <button class="sb-btn" data-tab="plan">
-      <span class="sb-icon">🎯</span><span class="sb-label">Plan de Ataque</span>
+      <span class="sb-icon">🎯</span><span class="sb-label">Plan de Acción</span>
       <span class="sb-badge sb-badge-purple" id="cnt-plan">0</span>
     </button>
+    <button class="sb-btn" data-tab="provmarcas">
+      <span class="sb-icon">💰</span><span class="sb-label">Capital por Marca</span>
+    </button>
+    <button class="sb-btn" data-tab="sinmovimiento">
+      <span class="sb-icon">⏸️</span><span class="sb-label">Sin Movimiento</span>
+      <span class="sb-badge" id="cnt-sinmov-tab">0</span>
+    </button>
     <button class="sb-btn" data-tab="transferencias">
-      <span class="sb-icon">🔁</span><span class="sb-label">Transferencias</span>
+      <span class="sb-icon">🔁</span><span class="sb-label">Mover Stock</span>
       <span class="sb-badge sb-badge-cyan" id="cnt-transf">0</span>
     </button>
 
@@ -456,15 +460,7 @@
 
   <!-- ALERTAS -->
   <div class="tab-panel" id="panel-alertas">
-    <div class="alert-cols">
-      <div class="alert-col" style="border-top:3px solid #8b5cf6">
-        <div class="alert-col-hdr">
-          <h4 style="color:#8b5cf6">🔵 Sobrestock (≥60d)</h4>
-          <span class="badge-cnt" id="cnt-ss" style="background:rgba(139,92,246,0.15);color:#a78bfa">0</span>
-        </div>
-        <div class="alert-col-desc">Exceso de inventario. Evaluar devolución o promoción.</div>
-        <div class="alert-col-body" id="body-list-sobrestock"><div id="list-sobrestock"></div></div>
-      </div>
+    <div class="alert-cols" style="grid-template-columns:1fr 1fr">
       <div class="alert-col" style="border-top:3px solid #f43f5e">
         <div class="alert-col-hdr">
           <h4 style="color:#f43f5e">⚠️ Gestionar (&gt; Vida Útil)</h4>
@@ -472,14 +468,6 @@
         </div>
         <div class="alert-col-desc">Inventario supera vida útil. Riesgo de vencimiento.</div>
         <div class="alert-col-body" id="body-list-gestionar"><div id="list-gestionar"></div></div>
-      </div>
-      <div class="alert-col" style="border-top:3px solid #60a5fa">
-        <div class="alert-col-hdr">
-          <h4 style="color:#60a5fa">⏸️ Sin Movimiento</h4>
-          <span class="badge-cnt" id="cnt-sm" style="background:rgba(96,165,250,0.15);color:#60a5fa">0</span>
-        </div>
-        <div class="alert-col-desc">Tiene inventario pero sin ventas — revisar o discontinuar.</div>
-        <div class="alert-col-body" id="body-list-sin_movimiento"><div id="list-sin_movimiento"></div></div>
       </div>
       <div class="alert-col" style="border-top:3px solid #dc2626">
         <div class="alert-col-hdr">
@@ -490,93 +478,42 @@
         <div class="alert-col-body" id="body-list-sin_stock"><div id="list-sin_stock"></div></div>
       </div>
       <!-- IDs ocultos para compatibilidad con renderAlerts_counts -->
+      <span id="cnt-ss" style="display:none">0</span>
+      <span id="cnt-sm" style="display:none">0</span>
       <span id="cnt-q" style="display:none">0</span>
       <span id="cnt-nv" style="display:none">0</span>
+      <div id="body-list-sobrestock" style="display:none"><div id="list-sobrestock"></div></div>
+      <div id="body-list-sin_movimiento" style="display:none"><div id="list-sin_movimiento"></div></div>
     </div>
   </div>
 
-  <!-- PROVEEDORES & MARCAS (unificado) -->
+  <!-- MARCAS (sobrestock ≥60d) -->
   <div class="tab-panel" id="panel-provmarcas">
-    <!-- Sub-tabs internos -->
-    <div style="display:flex;gap:6px;margin-bottom:20px;border-bottom:2px solid #e8e4de;padding-bottom:0">
-      <button class="pm-sub-btn active" data-sub="proveedores" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:#FF6B00;border-bottom:2px solid #FF6B00;margin-bottom:-2px">🏭 Proveedores</button>
-      <button class="pm-sub-btn" data-sub="marcas" style="padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-2px">🏷️ Marcas</button>
-    </div>
-
-    <!-- Panel Proveedores -->
-    <div class="pm-sub-panel active" id="sub-proveedores">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- Top Sobrestock -->
-        <div class="card">
-          <div class="card-header" style="margin-bottom:16px">
-            <h3>📦 Top 20 Proveedores con más Sobrestock</h3>
-            <div style="display:flex;gap:8px">
-              <button id="btn-exp-prov" style="background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">⬇ Excel</button>
-              <input class="search-input" id="f-search-prov" placeholder="Buscar…" style="min-width:140px;font-size:12px;padding:5px 8px"/>
-            </div>
-          </div>
-          <div id="prov-chart-sobre" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
-        </div>
-        <!-- Top Sin Movimiento -->
-        <div class="card">
-          <div class="card-header" style="margin-bottom:16px">
-            <h3>⏸️ Top 20 Proveedores Sin Movimiento</h3>
-          </div>
-          <div id="prov-chart-sinmov" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
-        </div>
+    <!-- Header + controles -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <h2 style="font-size:16px;font-weight:800;color:#1e293b;margin:0">📦 Sobrestock por Marca <span style="font-size:13px;font-weight:500;color:#8b5cf6">≥ 60 días</span></h2>
+        <p style="font-size:11px;color:#64748b;margin-top:3px">SKUs con inventario excedente — ordenados por capital inmovilizado · <span id="cnt-marca"></span></p>
       </div>
-      <!-- Tabla detalle proveedores (colapsable) -->
-      <details style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0">
-        <summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;list-style:none;display:flex;align-items:center;gap:8px">
-          <span>▶</span> Ver tabla detallada de proveedores <span id="cnt-prov" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:4px"></span>
-        </summary>
-        <div style="padding:0 16px 16px">
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead><tr id="prov-thead"></tr></thead>
-              <tbody id="prov-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <!-- Panel Marcas -->
-    <div class="pm-sub-panel" id="sub-marcas" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- Top Sobrestock Marcas -->
-        <div class="card">
-          <div class="card-header" style="margin-bottom:16px">
-            <h3>📦 Top 20 Marcas con más Sobrestock</h3>
-            <div style="display:flex;gap:8px">
-              <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">⬇ Excel</button>
-              <input class="search-input" id="f-search-marca" placeholder="Buscar…" style="min-width:140px;font-size:12px;padding:5px 8px"/>
-            </div>
-          </div>
-          <div id="marca-chart-sobre" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
-        </div>
-        <!-- Top Sin Movimiento Marcas -->
-        <div class="card">
-          <div class="card-header" style="margin-bottom:16px">
-            <h3>⏸️ Top 20 Marcas Sin Movimiento</h3>
-          </div>
-          <div id="marca-chart-sinmov" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px"></div>
-        </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:#64748b;font-weight:600">Ordenar:</span>
+        <button id="btn-marca-sort-cap" onclick="marcaSortByCapital()" style="background:#8b5cf6;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">💰 Capital Inmovilizado ↓</button>
+        <button id="btn-marca-sort-dias" onclick="marcaSortByDias()" style="background:#f0ede8;color:#475569;border:1px solid #e8e4de;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">📅 Días Inv</button>
+        <button id="btn-marca-sort-skus" onclick="marcaSortBySkus()" style="background:#f0ede8;color:#475569;border:1px solid #e8e4de;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600">📦 # SKUs</button>
+        <input class="search-input" id="f-search-marca" placeholder="Buscar marca…" style="min-width:150px;font-size:12px;padding:6px 10px"/>
+        <button id="btn-exp-marca" style="background:var(--green);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">⬇ Excel</button>
       </div>
-      <!-- Tabla detalle marcas (colapsable) -->
-      <details style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:0">
-        <summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;list-style:none;display:flex;align-items:center;gap:8px">
-          <span>▶</span> Ver tabla detallada de marcas <span id="cnt-marca" style="font-weight:400;font-size:12px;color:var(--muted);margin-left:4px"></span>
-        </summary>
-        <div style="padding:0 16px 16px">
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:12px">
-              <thead><tr id="marca-thead"></tr></thead>
-              <tbody id="marca-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </details>
+    </div>
+    <!-- Acordeón marcas -->
+    <div id="marca-accordion"></div>
+    <!-- IDs legacy para compatibilidad con código existente -->
+    <div style="display:none">
+      <div id="prov-chart-sobre"></div><div id="prov-chart-sinmov"></div>
+      <span id="cnt-prov"></span>
+      <table><thead><tr id="prov-thead"></tr></thead><tbody id="prov-tbody"></tbody></table>
+      <div id="marca-chart-sobre"></div><div id="marca-chart-sinmov"></div>
+      <table><thead><tr id="marca-thead"></tr></thead><tbody id="marca-tbody"></tbody></table>
+      <input id="f-search-prov"/><button id="btn-exp-prov"></button>
     </div>
   </div>
 
@@ -685,6 +622,42 @@
       </div>
     </div>
   </div>
+  <!-- SIN MOVIMIENTO -->
+  <div class="tab-panel" id="panel-sinmovimiento">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-size:18px;font-weight:800;color:#94a3b8;margin:0">⏸️ Sin Movimiento</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Tienen inventario pero sin ventas — revisar o discontinuar · <span id="cnt-sinmov-detail"></span></p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="search-input" id="f-search-sinmov" placeholder="Buscar producto, SKU…" style="min-width:200px;background:#f0ede8;border:1px solid #e8e4de;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px"/>
+        <button id="btn-exp-sinmov" style="background:var(--green);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Excel</button>
+      </div>
+    </div>
+    <!-- KPIs rápidos -->
+    <div id="sinmov-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+    <!-- Tabla -->
+    <div style="background:#fff;border:1px solid #e8e4de;border-radius:10px;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+              <th style="padding:10px 12px;text-align:left;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('product')" id="smh-product">Producto / SKU ↕</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('store')" id="smh-store">Tienda ↕</th>
+              <th style="padding:10px 12px;text-align:left;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('brand')" id="smh-brand">Marca ↕</th>
+              <th style="padding:10px 12px;text-align:left;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('supplier')" id="smh-supplier">Proveedor ↕</th>
+              <th style="padding:10px 12px;text-align:left;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('category')" id="smh-category">Categoría ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortSinmov('inv_valorizado')" id="smh-inv_valorizado">Val. Inv ↕</th>
+              <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortSinmov('inv_actual')" id="smh-inv_actual">Inv. Actual ↕</th>
+              <th style="padding:10px 12px;text-align:center;color:#64748b">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="sinmov-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   </div><!-- /panels-wrap -->
   </div><!-- /main-content -->
 </div><!-- /app -->
@@ -1715,82 +1688,314 @@ function exportProvCSV() {
   a.href=url; a.download='proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
-// ── RENDER MARCAS ────────────────────────────────────────────────────────────
-function renderMarcas(rows) {
-  const term = searchMarcaTerm.toLowerCase();
-  const map = {};
-  rows.forEach(r => {
-    const k = r.brand || '(Sin marca)';
-    if (!map[k]) map[k] = { brand:k, supplier:r.supplier||'', skus:0, inv:0, inv_val:0, diasSum:0, diasN:0,
-      sobrestock:0, gestionar:0, sinmov:0 };
-    const m = map[k];
-    m.skus++; m.inv += r.inv_actual||0; m.inv_val += r.inv_valorizado||0;
-    if (r.estado==='sobrestock')     m.sobrestock++;
-    if (r.estado==='gestionar')      m.gestionar++;
-    if (r.estado==='sin_movimiento') m.sinmov++;
-    const valid = ['bien','sobrestock','gestionar','quiebre','sin_movimiento'];
-    if (r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>=0 && r.dias_inv<366 && valid.includes(r.estado)) {
-      m.diasSum += r.dias_inv; m.diasN++;
-    }
+// ── RENDER MARCAS (Acordeón Sobrestock ≥60d) ────────────────────────────────
+let marcaAccordionSort = 'capital'; // 'capital' | 'dias' | 'skus'
+
+function marcaSortByCapital() {
+  marcaAccordionSort = 'capital';
+  ['btn-marca-sort-cap','btn-marca-sort-dias','btn-marca-sort-skus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = id === 'btn-marca-sort-cap' ? '#8b5cf6' : '#f0ede8';
+    el.style.color = id === 'btn-marca-sort-cap' ? '#fff' : '#475569';
+    el.style.border = id === 'btn-marca-sort-cap' ? 'none' : '1px solid #e8e4de';
   });
-  let data = Object.values(map).map(d=>({...d, dias_prom: d.diasN ? d.diasSum/d.diasN : null}));
-  if (term) data = data.filter(d=>d.brand.toLowerCase().includes(term));
+  renderMarcas(lastRows);
+}
+function marcaSortByDias() {
+  marcaAccordionSort = 'dias';
+  ['btn-marca-sort-cap','btn-marca-sort-dias','btn-marca-sort-skus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = id === 'btn-marca-sort-dias' ? '#8b5cf6' : '#f0ede8';
+    el.style.color = id === 'btn-marca-sort-dias' ? '#fff' : '#475569';
+    el.style.border = id === 'btn-marca-sort-dias' ? 'none' : '1px solid #e8e4de';
+  });
+  renderMarcas(lastRows);
+}
+function marcaSortBySkus() {
+  marcaAccordionSort = 'skus';
+  ['btn-marca-sort-cap','btn-marca-sort-dias','btn-marca-sort-skus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = id === 'btn-marca-sort-skus' ? '#8b5cf6' : '#f0ede8';
+    el.style.color = id === 'btn-marca-sort-skus' ? '#fff' : '#475569';
+    el.style.border = id === 'btn-marca-sort-skus' ? 'none' : '1px solid #e8e4de';
+  });
+  renderMarcas(lastRows);
+}
+
+function renderMarcas(rows) {
+  const term = (document.getElementById('f-search-marca')?.value || '').toLowerCase();
+
+  // Filtrar: sobrestock ≥60d o gestionar ≥60d
+  const ss60 = rows.filter(r =>
+    (r.estado === 'sobrestock' || r.estado === 'gestionar' || r.estado === 'sin_movimiento') &&
+    (r.dias_inv == null || r.dias_inv >= 60)
+  );
+
+  // Agrupar por marca
+  const marcaMap = {};
+  ss60.forEach(r => {
+    const k = r.brand || '(Sin marca)';
+    if (!marcaMap[k]) marcaMap[k] = { brand: k, inv_val: 0, diasSum: 0, diasN: 0, rows: [] };
+    const m = marcaMap[k];
+    m.inv_val += r.inv_valorizado || 0;
+    if (r.dias_inv != null && isFinite(r.dias_inv) && r.dias_inv >= 0) { m.diasSum += r.dias_inv; m.diasN++; }
+    m.rows.push(r);
+  });
+
+  let marcas = Object.values(marcaMap).map(m => ({ ...m, dias_prom: m.diasN ? m.diasSum / m.diasN : null }));
+  if (term) marcas = marcas.filter(m => m.brand.toLowerCase().includes(term));
+
+  // Ordenar marcas según criterio activo
+  if (marcaAccordionSort === 'capital') marcas.sort((a,b) => b.inv_val - a.inv_val);
+  else if (marcaAccordionSort === 'dias') marcas.sort((a,b) => (b.dias_prom||0) - (a.dias_prom||0));
+  else marcas.sort((a,b) => b.rows.length - a.rows.length);
 
   const cntEl = document.getElementById('cnt-marca');
-  if (cntEl) cntEl.textContent = data.length + ' marcas';
+  if (cntEl) cntEl.textContent = marcas.length + ' marcas · ' + ss60.length.toLocaleString('es-CO') + ' SKUs';
 
-  const renderBarChart = (elId, items, valFn, labelFn, color, limit=20) => {
-    const el = document.getElementById(elId); if (!el) return;
-    const top = [...items].sort((a,b)=>valFn(b)-valFn(a)).slice(0,limit);
-    const max = valFn(top[0]) || 1;
-    el.innerHTML = top.map(d => {
-      const val = valFn(d);
-      const pct = (val/max*100).toFixed(1);
-      const name = d.brand||'';
-      const short = name.length > 28 ? name.substring(0,26)+'…' : name;
-      return `<div style="display:flex;align-items:center;gap:10px;min-height:28px">
-        <span style="min-width:180px;max-width:180px;font-size:11px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0" title="${escH(name)}">${escH(short)}</span>
-        <div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden;position:relative">
-          <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.3s;display:flex;align-items:center;padding-left:8px;min-width:28px">
-            <span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${val}</span>
+  const diasColor = v => v == null ? '#64748b' : v >= 180 ? '#ef4444' : v >= 90 ? '#f97316' : '#8b5cf6';
+  const estadoColor = s => ({ 'sobrestock':'#8b5cf6','gestionar':'#f43f5e','sin_movimiento':'#94a3b8' }[s] || '#64748b');
+  const estadoLabel = s => ({ 'sobrestock':'🔵 Sobrestock','gestionar':'⚠️ Gestionar','sin_movimiento':'⏸️ Sin Mov.' }[s] || s);
+  const storeColor = s => ({ 'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899' }[s] || '#64748b');
+
+  const accordion = document.getElementById('marca-accordion');
+  if (!accordion) return;
+
+  if (!marcas.length) {
+    accordion.innerHTML = `<div style="background:#fff;border:1px solid #e8e4de;border-radius:10px;padding:40px;text-align:center;color:#94a3b8">
+      <div style="font-size:28px;margin-bottom:10px">✅</div>
+      <div style="font-size:14px;font-weight:600">Sin marcas con sobrestock ≥ 60 días</div>
+      <div style="font-size:12px;margin-top:4px">Ajusta los filtros del dashboard para ver más datos</div>
+    </div>`;
+    return;
+  }
+
+  // Rank total para barra de capital
+  const maxCap = marcas[0].inv_val || 1;
+
+  accordion.innerHTML = marcas.map((m, idx) => {
+    const capPct = (m.inv_val / maxCap * 100).toFixed(1);
+    const skusSorted = [...m.rows].sort((a,b) => (b.inv_valorizado||0) - (a.inv_valorizado||0));
+    const uid = 'marca_acc_' + idx;
+
+    // Cálculo Uds a gestionar = inv_actual - ceil(prom_vta * 30)
+    const totalUdsGestionar = skusSorted.reduce((acc, r) => {
+      const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0) * 30));
+      return acc + exceso;
+    }, 0);
+
+    const skuRows = skusSorted.map(r => {
+      const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
+      const sc = storeColor(r.store);
+      const ec = estadoColor(r.estado);
+      const el = estadoLabel(r.estado);
+      return `<tr style="border-bottom:1px solid #f5f3ef;transition:background 0.1s" onmouseover="this.style.background='#fdf9f5'" onmouseout="this.style.background=''">
+        <td style="padding:8px 12px 8px 20px;font-size:12px;color:#1e293b;min-width:220px">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${escH(r.product||r.sku||'')}">${escH((r.product||r.sku||'').slice(0,34))}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:1px">${escH(r.sku||'')}</div>
+        </td>
+        <td style="padding:8px 10px;text-align:center">
+          <span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;background:${sc}20;color:${sc};border:1px solid ${sc}40">${r.store||'—'}</span>
+        </td>
+        <td style="padding:8px 10px;font-size:11px;color:#475569;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.supplier||'—')}</td>
+        <td style="padding:8px 10px;text-align:right;color:#d97706;font-weight:700;font-size:12px;white-space:nowrap">${r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—'}</td>
+        <td style="padding:8px 10px;text-align:right;color:#64748b;font-size:12px">${r.prom_vta!=null?fmt(r.prom_vta):'—'}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;font-size:13px;color:${diasColor(r.dias_inv)}">${r.dias_inv!=null?r.dias_inv.toFixed(0)+'d':'—'}</td>
+        <td style="padding:8px 10px;text-align:right;color:#64748b;font-size:12px">${r.inv_actual!=null?fmt(r.inv_actual):'—'}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:700;font-size:12px;color:${exceso>0?'#ef4444':'#94a3b8'}">${exceso>0?fmt(exceso):'—'}</td>
+        <td style="padding:8px 10px;text-align:center">
+          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${ec}20;color:${ec}">${el}</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div style="background:#fff;border:1px solid #e8e4de;border-radius:10px;margin-bottom:8px;overflow:hidden">
+      <!-- Header acordeón -->
+      <div onclick="toggleMarcaAcc('${uid}')" style="display:flex;align-items:center;gap:16px;padding:14px 16px;cursor:pointer;transition:background 0.15s;user-select:none"
+        onmouseover="this.style.background='#fdf9f5'" onmouseout="this.style.background=''">
+        <!-- Rank + toggle -->
+        <span style="font-size:11px;font-weight:800;color:#94a3b8;min-width:22px;text-align:center">#${idx+1}</span>
+        <span id="icon-${uid}" style="color:#94a3b8;font-size:11px;flex-shrink:0">▶</span>
+        <!-- Marca nombre -->
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(m.brand)}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${m.rows.length} SKU${m.rows.length!==1?'s':''} · ${[...new Set(m.rows.map(r=>r.store))].join(', ')}</div>
+        </div>
+        <!-- Barra capital -->
+        <div style="flex:2;min-width:120px;max-width:320px">
+          <div style="height:8px;background:#f0ede8;border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${capPct}%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);border-radius:4px;transition:width 0.3s"></div>
+          </div>
+          <div style="font-size:10px;color:#8b5cf6;font-weight:700;margin-top:3px">${m.inv_val>0?'$'+Math.round(m.inv_val).toLocaleString('es-CO'):'—'}</div>
+        </div>
+        <!-- Stats chips -->
+        <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          <div style="text-align:center;min-width:52px">
+            <div style="font-size:15px;font-weight:800;color:${diasColor(m.dias_prom)}">${m.dias_prom!=null?m.dias_prom.toFixed(0)+'d':'—'}</div>
+            <div style="font-size:9px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase">Días prom</div>
+          </div>
+          <div style="text-align:center;min-width:52px">
+            <div style="font-size:15px;font-weight:800;color:#ef4444">${totalUdsGestionar>0?fmt(totalUdsGestionar):'0'}</div>
+            <div style="font-size:9px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase">Uds gestión</div>
           </div>
         </div>
-        <span style="font-size:10px;color:#94a3b8;min-width:28px;text-align:right;flex-shrink:0">${labelFn(d)}</span>
-      </div>`;
-    }).join('') || '<p style="color:#94a3b8;font-size:12px;padding:8px">Sin datos</p>';
-  };
+      </div>
+      <!-- Cuerpo (inicialmente oculto) -->
+      <div id="${uid}" style="display:none;border-top:1px solid #f0ede8">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f8f6f2">
+                <th style="padding:7px 12px 7px 20px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;white-space:nowrap">SKU · Producto</th>
+                <th style="padding:7px 10px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8">Tienda</th>
+                <th style="padding:7px 10px;text-align:left;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8">Proveedor</th>
+                <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#d97706;white-space:nowrap">💰 Val. Inv</th>
+                <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;white-space:nowrap">Prom. Vta</th>
+                <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8b5cf6;white-space:nowrap">Días Inv</th>
+                <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;white-space:nowrap">Inv. Actual</th>
+                <th style="padding:7px 10px;text-align:right;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#ef4444;white-space:nowrap">Uds Gestión</th>
+                <th style="padding:7px 10px;text-align:center;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8">Estado</th>
+              </tr>
+            </thead>
+            <tbody>${skuRows}</tbody>
+            <tfoot>
+              <tr style="background:#f8f6f2;border-top:2px solid #e8e4de">
+                <td colspan="3" style="padding:8px 12px 8px 20px;font-size:11px;font-weight:700;color:#334155">TOTAL ${escH(m.brand)}</td>
+                <td style="padding:8px 10px;text-align:right;font-weight:800;color:#d97706;font-size:12px">${m.inv_val>0?'$'+Math.round(m.inv_val).toLocaleString('es-CO'):'—'}</td>
+                <td></td>
+                <td style="padding:8px 10px;text-align:right;font-weight:700;color:${diasColor(m.dias_prom)};font-size:12px">${m.dias_prom!=null?m.dias_prom.toFixed(0)+'d avg':'—'}</td>
+                <td style="padding:8px 10px;text-align:right;font-weight:700;color:#64748b;font-size:12px">${fmt(m.rows.reduce((a,r)=>a+(r.inv_actual||0),0))}</td>
+                <td style="padding:8px 10px;text-align:right;font-weight:800;color:#ef4444;font-size:12px">${totalUdsGestionar>0?fmt(totalUdsGestionar):'—'}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
-  renderBarChart('marca-chart-sobre', data.filter(d=>(d.sobrestock+d.gestionar)>0), d=>d.sobrestock+d.gestionar, d=>fmtM(d.inv_val), '#8b5cf6');
-  renderBarChart('marca-chart-sinmov', data.filter(d=>d.sinmov>0), d=>d.sinmov, d=>`${d.skus} SKUs`, '#60a5fa');
+function toggleMarcaAcc(uid) {
+  const el = document.getElementById(uid);
+  const icon = document.getElementById('icon-' + uid);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (icon) icon.textContent = open ? '▶' : '▼';
+}
 
-  data.sort((a,b)=>{
-    const va=a[marcaSortCol], vb=b[marcaSortCol];
-    if(va==null) return 1; if(vb==null) return -1;
-    return (typeof va==='number' ? va-vb : String(va).localeCompare(String(vb))) * marcaSortDir;
+
+// ── RENDER SIN MOVIMIENTO ────────────────────────────────────────────────────
+let smSortCol = 'inv_valorizado', smSortDir = -1;
+
+function sortSinmov(col) {
+  if (smSortCol === col) smSortDir *= -1; else { smSortCol = col; smSortDir = -1; }
+  ['product','store','brand','supplier','category','inv_valorizado','inv_actual'].forEach(c => {
+    const el = document.getElementById('smh-' + c); if (!el) return;
+    el.innerHTML = el.innerHTML.replace(/ [↕↓↑]$/, '') + (smSortCol === c ? (smSortDir === -1 ? ' ↓' : ' ↑') : ' ↕');
+    el.style.color = smSortCol === c ? '#FF6B00' : (c === 'inv_valorizado' ? '#f59e0b' : '#64748b');
   });
-  document.getElementById('marca-thead').innerHTML = `
-    <tr style="background:#f0ede8">
-      <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="brand">Marca${marcaSortCol==='brand'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;cursor:pointer" data-mcol="skus">SKUs${marcaSortCol==='skus'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7c3aed;cursor:pointer" data-mcol="sobrestock">Sobrestock${marcaSortCol==='sobrestock'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#60a5fa;cursor:pointer" data-mcol="sinmov">Sin Mov.${marcaSortCol==='sinmov'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
-      <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#d97706;cursor:pointer" data-mcol="inv_val">Val. Inv${marcaSortCol==='inv_val'?(marcaSortDir===-1?' ↓':' ↑'):' ↕'}</th>
+  renderSinMovimiento(lastRows);
+}
+
+function renderSinMovimiento(rows) {
+  const term = (document.getElementById('f-search-sinmov')?.value || '').toLowerCase();
+
+  let data = rows.filter(r => r.estado === 'sin_movimiento');
+  if (term) data = data.filter(r =>
+    (r.product || '').toLowerCase().includes(term) ||
+    (r.sku || '').toLowerCase().includes(term) ||
+    (r.brand || '').toLowerCase().includes(term) ||
+    (r.supplier || '').toLowerCase().includes(term) ||
+    (r.category || '').toLowerCase().includes(term)
+  );
+
+  // Badge sidebar
+  const cntTab = document.getElementById('cnt-sinmov-tab');
+  if (cntTab) cntTab.textContent = rows.filter(r => r.estado === 'sin_movimiento').length.toLocaleString('es-CO');
+
+  const cntDet = document.getElementById('cnt-sinmov-detail');
+  if (cntDet) cntDet.textContent = data.length.toLocaleString('es-CO') + ' SKUs';
+
+  // KPIs
+  const totalVal  = data.reduce((a, r) => a + (r.inv_valorizado || 0), 0);
+  const totalUds  = data.reduce((a, r) => a + (r.inv_actual || 0), 0);
+  const stores    = new Set(data.map(r => r.store)).size;
+  const suppliers = new Set(data.map(r => r.supplier)).size;
+  const kpisEl = document.getElementById('sinmov-kpis');
+  if (kpisEl) kpisEl.innerHTML = [
+    { label: 'SKUs Sin Movimiento', val: data.length.toLocaleString('es-CO'), sub: 'sin ventas registradas', color: '#94a3b8' },
+    { label: 'Capital Inmovilizado', val: '$' + Math.round(totalVal).toLocaleString('es-CO'), sub: 'valor inventario', color: '#f59e0b' },
+    { label: 'Unidades en Stock', val: Math.round(totalUds).toLocaleString('es-CO'), sub: 'uds sin rotación', color: '#64748b' },
+    { label: 'Tiendas afectadas', val: stores, sub: 'con SKUs sin mov.', color: '#3b82f6' },
+    { label: 'Proveedores', val: suppliers, sub: 'con SKUs parados', color: '#8b5cf6' },
+  ].map(k => `<div class="kpi" style="border-left-color:${k.color}">
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-value" style="font-size:22px;color:${k.color}">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+
+  // Sort
+  data.sort((a, b) => {
+    const va = a[smSortCol], vb = b[smSortCol];
+    if (va == null) return 1; if (vb == null) return -1;
+    return (typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'es')) * smSortDir;
+  });
+
+  const storeColor = s => ({ 'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899' }[s] || '#64748b');
+
+  const tbody = document.getElementById('sinmov-tbody');
+  if (!tbody) return;
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:32px;text-align:center;color:#94a3b8">Sin SKUs sin movimiento con los filtros actuales</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map((r, i) => {
+    const sc = storeColor(r.store);
+    const rowBg = i % 2 === 0 ? '#ffffff' : '#fafaf9';
+    return `<tr style="background:${rowBg};border-bottom:1px solid #f0ede8;transition:background 0.1s"
+      onmouseover="this.style.background='#fdf9f5'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:10px 12px;font-size:12px;max-width:240px">
+        <div style="font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(r.product||r.sku||'')}">${escH((r.product||r.sku||'').slice(0,36))}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:1px">${escH(r.sku||'')}</div>
+      </td>
+      <td style="padding:10px 12px;text-align:center">
+        <span style="display:inline-block;padding:2px 9px;border-radius:5px;font-size:11px;font-weight:700;background:${sc}20;color:${sc};border:1px solid ${sc}40">${r.store||'—'}</span>
+      </td>
+      <td style="padding:10px 12px;font-size:12px;color:#475569;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.brand||'—')}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#64748b;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.supplier||'—')}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#64748b;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.category||'—')}</td>
+      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;font-size:12px;white-space:nowrap">${r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—'}</td>
+      <td style="padding:10px 12px;text-align:right;color:#64748b;font-size:12px">${r.inv_actual!=null?fmt(r.inv_actual):'—'}</td>
+      <td style="padding:10px 12px;text-align:center">
+        <span style="display:inline-flex;gap:4px">
+          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);white-space:nowrap">🗑️ Discontinuar</span>
+          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(245,158,11,0.1);color:#d97706;border:1px solid rgba(245,158,11,0.2);white-space:nowrap">🔍 Revisar</span>
+        </span>
+      </td>
     </tr>`;
-  document.querySelectorAll('#marca-thead th[data-mcol]').forEach(th=>{
-    th.addEventListener('click',()=>{
-      const col=th.getAttribute('data-mcol');
-      if(marcaSortCol===col) marcaSortDir*=-1; else{marcaSortCol=col;marcaSortDir=-1;}
-      renderMarcas(lastRows);
-    });
-  });
-  document.getElementById('marca-tbody').innerHTML = data.length ? data.map(d=>`
-    <tr style="border-bottom:1px solid #f0ede8" class="hover-row">
-      <td style="padding:10px 16px;font-weight:600;color:#1e293b;font-size:12px">${escH(d.brand)}<div style="font-size:10px;color:#94a3b8">${escH(d.supplier)}</div></td>
-      <td style="padding:10px 12px;text-align:right;color:#64748b">${fmt(d.skus)}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed">${(d.sobrestock+d.gestionar)||'—'}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#60a5fa">${d.sinmov||'—'}</td>
-      <td style="padding:10px 16px;text-align:right;font-weight:700;color:#d97706">${d.inv_val?fmtM(d.inv_val):'—'}</td>
-    </tr>`).join('') : '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8">Sin resultados</td></tr>';
+  }).join('');
+}
+
+// ── EXPORT SIN MOVIMIENTO ─────────────────────────────────────────────────────
+function exportSinMovExcel() {
+  const data = lastRows.filter(r => r.estado === 'sin_movimiento')
+    .sort((a, b) => (b.inv_valorizado||0) - (a.inv_valorizado||0));
+  const wsData = [['SKU','Producto','Tienda','Marca','Proveedor','Categoría','Val. Inv','Inv. Actual','Estado']];
+  data.forEach(r => wsData.push([r.sku||'',r.product||'',r.store||'',r.brand||'',r.supplier||'',r.category||'',r.inv_valorizado||0,r.inv_actual||0,r.estado||'']));
+  if (typeof XLSX !== 'undefined') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Sin Movimiento');
+    XLSX.writeFile(wb, 'sin_movimiento_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  }
 }
 
 // ── RENDER TRANSFERENCIAS ─────────────────────────────────────────────────────
@@ -1989,24 +2194,7 @@ function exportProvExcel() {
   XLSX.writeFile(wb,'proveedores_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
-function exportMarcaExcel() {
-  const map={};
-  lastRows.forEach(r=>{
-    const k=r.brand||'(Sin marca)';
-    if(!map[k]) map[k]={brand:k,skus:0,inv:0,inv_val:0,diasSum:0,diasN:0};
-    map[k].skus++; map[k].inv+=r.inv_actual||0; map[k].inv_val+=r.inv_valorizado||0;
-    const valid=['bien','sobrestock','gestionar','quiebre'];
-    if(r.dias_inv!=null&&isFinite(r.dias_inv)&&r.dias_inv>0&&r.dias_inv<366&&valid.includes(r.estado)){map[k].diasSum+=r.dias_inv;map[k].diasN++;}
-  });
-  const data=Object.values(map).map(d=>({...d,dias_prom:d.diasN?d.diasSum/d.diasN:null})).sort((a,b)=>(b.inv||0)-(a.inv||0));
-  const wsData=[['Marca','Cant. SKUs','Stock Actual (uds)','Dias Inv. Promedio','Inv. Valorizado']];
-  data.forEach(d=>wsData.push([d.brand,d.skus,d.inv,d.dias_prom!=null?+d.dias_prom.toFixed(1):null,d.inv_val||0]));
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols']=[{wch:28},{wch:12},{wch:18},{wch:18},{wch:20}];
-  XLSX.utils.book_append_sheet(wb,ws,'Marcas');
-  XLSX.writeFile(wb,'marcas_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
-}
+// exportMarcaExcel definida más abajo (sobrestock ≥60d por SKU)
 
 // ── NOTAS CSS ─────────────────────────────────────────────────────────────────
 
@@ -2330,12 +2518,17 @@ function render() {
   if (tab === 'detalle')       { currentPage = 1; renderTable(rows); }
   if (tab === 'plan')          renderPlan(rows);
   if (tab === 'transferencias') renderTransferencias(rows);
+  if (tab === 'sinmovimiento') renderSinMovimiento(rows);
 
   // Always update counts
   // Update plan badge
   const planRows = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar');
   const cntPlan = document.getElementById('cnt-plan');
   if(cntPlan) cntPlan.textContent = planRows.length.toLocaleString('es-CO');
+
+  // Update sin movimiento badge
+  const cntSinmovTab = document.getElementById('cnt-sinmov-tab');
+  if(cntSinmovTab) cntSinmovTab.textContent = rows.filter(r=>r.estado==='sin_movimiento').length.toLocaleString('es-CO');
 
   renderAlerts_counts(rows);
 }
@@ -2347,7 +2540,7 @@ function renderAlerts_counts(rows) {
   const so  = rows.filter(r=>r.estado==='sobrestock').length;
   const ge  = rows.filter(r=>r.estado==='gestionar').length;
   const el  = id => document.getElementById(id);
-  if(el('cnt-alertas')) el('cnt-alertas').textContent = ss0 + sm + so + ge;
+  if(el('cnt-alertas')) el('cnt-alertas').textContent = ss0 + ge;  // solo gestionar + sin stock
   if(el('cnt-ss0'))     el('cnt-ss0').textContent = ss0;
   if(el('cnt-sm'))      el('cnt-sm').textContent  = sm;
   if(el('cnt-ss'))      el('cnt-ss').textContent  = so + ge;
@@ -2371,6 +2564,7 @@ document.querySelectorAll('.sb-btn').forEach(btn=>{
     if (t === 'transferencias') renderTransferencias(lastRows);
     if (t === 'provmarcas')     { renderProveedores(lastRows); renderMarcas(lastRows); }
     if (t === 'detalle')        { currentPage = 1; renderTable(lastRows); }
+    if (t === 'sinmovimiento')  renderSinMovimiento(lastRows);
   });
 });
 
@@ -2433,7 +2627,29 @@ document.getElementById('btn-plan-export').addEventListener('click',exportPlanXL
 document.getElementById('btn-exp-prov').addEventListener('click',exportProvExcel);
 document.getElementById('btn-exp-marca').addEventListener('click',exportMarcaExcel);
 document.getElementById('btn-exp-transf').addEventListener('click',exportTransfExcel);
+document.getElementById('btn-exp-sinmov').addEventListener('click',exportSinMovExcel);
 document.getElementById('f-search-marca').addEventListener('input',e=>{ searchMarcaTerm=e.target.value; renderMarcas(lastRows); });
+document.getElementById('f-search-sinmov').addEventListener('input',e=>{ renderSinMovimiento(lastRows); });
+// exportMarcaExcel — exporta los SKUs sobrestock ≥60d con todas las columnas
+function exportMarcaExcel() {
+  const ss60 = lastRows.filter(r =>
+    (r.estado === 'sobrestock' || r.estado === 'gestionar' || r.estado === 'sin_movimiento') &&
+    (r.dias_inv == null || r.dias_inv >= 60)
+  ).sort((a,b) => (b.inv_valorizado||0) - (a.inv_valorizado||0));
+  const ws_data = [['Marca','SKU','Producto','Tienda','Proveedor','Valor Inv','Prom. Vta','Días Inv','Inv. Actual','Uds a Gestionar','Estado']];
+  ss60.forEach(r => {
+    const exceso = Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
+    ws_data.push([r.brand||'',r.sku||'',r.product||'',r.store||'',r.supplier||'',
+      r.inv_valorizado||0, r.prom_vta||0, r.dias_inv!=null?r.dias_inv:0,
+      r.inv_actual||0, exceso, r.estado||'']);
+  });
+  if (typeof XLSX !== 'undefined') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Sobrestock Marcas');
+    XLSX.writeFile(wb, 'sobrestock_marcas_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  }
+}
 document.getElementById('btn-refresh').addEventListener('click',()=>{
   try { sessionStorage.removeItem(SESSION_KEY); } catch(e){}
   DATA=[];loadData();
