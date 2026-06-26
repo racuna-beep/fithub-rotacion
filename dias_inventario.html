@@ -1780,11 +1780,12 @@ function renderMarcas(rows) {
     const uid = 'marca_acc_' + idx;
 
     // Cálculo Uds a gestionar:
+    // prom_vta está en unidades/mes (mensual)
     // - gestionar: todo el inv_actual (supera vida útil → gestionar todo)
-    // - sobrestock/sin_movimiento: exceso sobre 30d de venta
+    // - sobrestock: exceso sobre 2 meses de cobertura (60d objetivo)
     const calcExceso = r => {
       if (r.estado === 'gestionar') return r.inv_actual || 0;
-      return Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0) * 30));
+      return Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0) * 2));
     };
 
     const totalUdsGestionar = skusSorted.reduce((acc, r) => acc + calcExceso(r), 0);
@@ -2642,7 +2643,7 @@ function exportMarcaExcel() {
   ss60.forEach(r => {
     const exceso = r.estado === 'gestionar'
       ? (r.inv_actual || 0)
-      : Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*30));
+      : Math.max(0, (r.inv_actual||0) - Math.ceil((r.prom_vta||0)*2));
     ws_data.push([r.brand||'',r.sku||'',r.product||'',r.store||'',r.supplier||'',
       r.inv_valorizado||0, r.prom_vta||0, r.dias_inv!=null?r.dias_inv:0,
       r.inv_actual||0, exceso, r.estado||'']);
@@ -2699,7 +2700,7 @@ function generarCorreoSemanal() {
   const sobre60 = rows.filter(r => (r.estado==='sobrestock'||r.estado==='gestionar') && (r.dias_inv==null||r.dias_inv>=60));
   const capInmov = sobre60.reduce((a,r) => a+(r.inv_valorizado||0), 0);
   const udsExceso = sobre60.reduce((a,r) => {
-    const ex = r.estado==='gestionar' ? (r.inv_actual||0) : Math.max(0,(r.inv_actual||0)-Math.ceil((r.prom_vta||0)*30));
+    const ex = r.estado==='gestionar' ? (r.inv_actual||0) : Math.max(0,(r.inv_actual||0)-Math.ceil((r.prom_vta||0)*2));
     return a+ex;
   }, 0);
 
