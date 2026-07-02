@@ -670,6 +670,27 @@ function detectMonths(headers) {
   return found;
 }
 
+// ─── FIELD FINDER (robusto: ignora tildes, espacios, guiones y mayúsculas) ──
+const _fieldKeyCache = {};
+function _normKey(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function findField(raw, target) {
+  if (_fieldKeyCache[target] !== undefined) {
+    const k = _fieldKeyCache[target];
+    return k && raw[k] != null ? raw[k] : '';
+  }
+  const t = _normKey(target);
+  for (const key of Object.keys(raw)) {
+    if (_normKey(key) === t) {
+      _fieldKeyCache[target] = key;
+      return raw[key] != null ? raw[key] : '';
+    }
+  }
+  _fieldKeyCache[target] = null;
+  return '';
+}
+
 // ─── NORMALIZE ROW ─────────────────────────────────────────────────────────
 function normalizeRow(raw, months) {
   const r = {};
@@ -679,8 +700,8 @@ function normalizeRow(raw, months) {
   r.supplier = raw['suppliers'] || raw['supplier'] || raw['Proveedor'] || '';
   r.brand    = raw['Brand'] || raw['brand'] || raw['Marca'] || '';
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
-  r.category    = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || '';
-  r.sub_category = raw['Sub_Category'] || raw['sub_category'] || raw['SubCategoria'] || raw['Subcategoria'] || '';
+  r.category    = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || findField(raw, 'categoria') || findField(raw, 'categories') || '';
+  r.sub_category = raw['Sub_Category'] || raw['sub_category'] || raw['SubCategoria'] || raw['Subcategoria'] || findField(raw, 'subcategoria') || findField(raw, 'subcategory') || findField(raw, 'subcategories') || '';
   // Históricos — todos los meses nombrados
   r.vta_enero      = parseNum(raw['Venta Enero']      ?? raw['Vta. Enero']      ?? 0);
   r.inv_enero      = parseNum(raw['Inv. prom Enero']                             ?? 0);
@@ -1947,14 +1968,15 @@ function renderProveedores(rows) {
   });
 
   let data = Object.values(map).map(d => {
-    // rot_prom del mes actual: Vta/Inv ponderado (consistente con KPI)
-    const rot_prom = d.inv_prom > 0 ? d.vta_mes / d.inv_prom : null;
-    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     // meses históricos: promedio de promedios (no tenemos vta/inv histórico por mes)
     const monthAvgs = {};
     ROT_MONTHS.forEach(m => {
       monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
     });
+    // rot_prom: promedio de los meses con datos (consistente con las columnas mostradas)
+    const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
+    const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
+    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     return { ...d, ...monthAvgs, rot_prom, dias };
   });
 
@@ -2019,13 +2041,14 @@ function exportProvCSV() {
     });
   });
   const data = Object.values(map).map(d => {
-    // rot_prom: Vta/Inv ponderado — evita distorsión de SKUs con inv~0
-    const rot_prom = d.inv_prom > 0 ? d.vta_mes / d.inv_prom : null;
-    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     const monthAvgs = {};
     ROT_MONTHS.forEach(m => {
       monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
     });
+    // rot_prom: promedio de los meses con datos (consistente con la tabla)
+    const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
+    const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
+    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
     return { ...d, ...monthAvgs, rot_prom, dias };
   }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
 
