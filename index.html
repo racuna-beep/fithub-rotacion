@@ -578,6 +578,8 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
+const DASH_VERSION = 'v2026-07-02.1 (fix subcategoría + revisión completa)';
+console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
 const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbyKMEBfU6Ad1EvSTCvnuBQ_aNZ9VP8z-MyJ_nr2inqeGWX-UYkOlyLeq8yykPPedecEkw/exec';
 
 // ─── STATE ─────────────────────────────────────────────────────────────────
@@ -765,7 +767,7 @@ async function loadData() {
   }, 400);
 
   try {
-    // Fetch con timeout de 20s — evita que se quede colgado indefinidamente
+    // Fetch con timeout de 45s — evita que se quede colgado indefinidamente
     let raw;
     try {
       const controller = new AbortController();
@@ -830,7 +832,7 @@ async function loadData() {
     document.getElementById('meta-skus').textContent = new Set(DATA.map(r => r.sku)).size.toLocaleString('es-CO');
     document.getElementById('meta-mes').textContent = ROT_LABELS[ROT_LABELS.length - 1];
     const now = new Date().toLocaleString('es-CO', {dateStyle:'short', timeStyle:'short'});
-    document.getElementById('last-update').textContent = 'Cargado: ' + now;
+    document.getElementById('last-update').textContent = 'Cargado: ' + now + ' · ' + DASH_VERSION;
 
     // Update chart titles with current month
     const curLabel = ROT_LABELS[ROT_LABELS.length - 1];
@@ -1022,7 +1024,7 @@ function filterData() {
 const fmt = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 const fmtMoney = n => (n == null || isNaN(n)) ? '—' : '$' + n.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 const fmtDec = n => (n == null || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const escapeHtml = s => String(s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const escapeHtml = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const avgBy = (rows, key) => { let s = 0, n = 0; for (const r of rows) { const v = r[key]; if (v != null && v > 0) { const vc = Math.min(v, ROT_CAP); s += vc; n++; } } return n ? s / n : 0; };
 const tooltip = document.getElementById('tooltip');
 const showTip = (e, text) => { tooltip.textContent = text; tooltip.style.opacity = 1; tooltip.style.left = (e.pageX + 12) + 'px'; tooltip.style.top = (e.pageY - 10) + 'px'; };
@@ -1151,13 +1153,13 @@ function renderKPIs(rows) {
   const uniqueSkus = new Set(rows.map(r => r.sku)).size;
   const KPI_TIPS = {
     'Registros': 'Total de filas en el reporte. Un mismo SKU puede aparecer en varias tiendas.',
-    'Ventas del Mes': 'Suma de ventas del mes actual según el filtro aplicado.',
-    'Inv. Promedio': 'Capital inmovilizado promedio. Inventario que no se ha convertido en venta.',
-    'Rot. Prom': 'Rotación promedio del mes actual. Meta: ≥ 1.30 (el inventario se renueva más de una vez al mes).',
+    'Ventas del mes': 'Suma de ventas del mes actual según el filtro aplicado.',
+    'Inv. promedio': 'Capital inmovilizado promedio. Inventario que no se ha convertido en venta.',
+    [`Rot. prom ${curLabel}`]: 'Rotación promedio del mes actual (Vta total / Inv total). Meta: ≥ 1.30 (el inventario se renueva más de una vez al mes).',
     'Mejorando ↑': 'SKUs cuya rotación mejoró respecto al mes anterior. Tendencia positiva.',
     'Declinando ↓': 'SKUs cuya rotación empeoró respecto al mes anterior. Requieren atención.',
-    'Cumplen Meta': 'SKUs con rotación ≥ 1.30 en el mes actual.',
-    'No Cumplen': 'SKUs con rotación < 1.30. Incluye Vigilar (0.50–1.30) y Atacar (< 0.50).'
+    'Cumplen meta': 'SKUs con rotación ≥ 1.30 en el mes actual.',
+    'No cumplen': 'SKUs con rotación < 1.30. Incluye Vigilar (0.50–1.30) y Atacar (< 0.50).'
   };
   const kpis = [
     { label: 'Registros', val: fmt(totalSku), sub: `${fmt(uniqueSkus)} SKUs únicos`, cls: 'purple' },
@@ -1225,8 +1227,10 @@ function renderAlerts(rows) {
     const html = items.slice(0, limit).map(r => renderItem(r, tier)).join('') || empty;
     document.getElementById(id).innerHTML = html;
     const btn = document.querySelector(`button.show-more[data-list="${tier}"]`);
+    btn.dataset.total = items.length;
     if (items.length > limit) { btn.style.display = 'block'; btn.textContent = `Ver más (${(items.length - limit).toLocaleString()} restantes)`; }
-    else { btn.style.display = items.length > 50 ? 'block' : 'none'; }
+    else if (limit > 50 && items.length > 50) { btn.style.display = 'block'; btn.textContent = 'Mostrar menos'; }
+    else { btn.style.display = 'none'; }
   };
   renderList('list-top', tops, 'top');
   renderList('list-warn', warns, 'warn');
@@ -1265,7 +1269,8 @@ function renderDonut(svgId, data) {
   if (!total) { svg.innerHTML = '<text x="200" y="140" fill="#94a3b8" text-anchor="middle">Sin datos</text>'; return; }
   let angle = -Math.PI / 2;
   data.forEach(d => {
-    const slice = (d.value / total) * Math.PI * 2, a2 = angle + slice;
+    // Clamp: un slice de 360° exacto colapsa el arco SVG (inicio == fin) y no se dibuja
+    const slice = Math.min((d.value / total) * Math.PI * 2, Math.PI * 2 - 0.0001), a2 = angle + slice;
     const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
     const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
     const xi1 = cx + ir * Math.cos(angle), yi1 = cy + ir * Math.sin(angle);
@@ -1886,8 +1891,9 @@ function render() {
     renderBars('chart-delta', deltaData, '#3b82f6', v => (v >= 0 ? '+' : '') + v.toFixed(2), false, true);
   }
 
-  renderBars('chart-store', groupSum(rows, 'Store', 'vta_mes').map((d, i) => ({ ...d, color: PALETTE[i % PALETTE.length] })), '#3b82f6', fmtMoney, false, false);
-  renderBars('chart-cat', groupSum(rows, 'category', 'vta_mes').slice(0, 8).map((d, i) => ({ ...d, color: PALETTE[(i + 2) % PALETTE.length] })), '#8b5cf6', fmtMoney, false, false);
+  // chart-store / chart-cat fueron removidos del HTML — solo calcular si existen
+  if (document.getElementById('chart-store')) renderBars('chart-store', groupSum(rows, 'Store', 'vta_mes').map((d, i) => ({ ...d, color: PALETTE[i % PALETTE.length] })), '#3b82f6', fmtMoney, false, false);
+  if (document.getElementById('chart-cat')) renderBars('chart-cat', groupSum(rows, 'category', 'vta_mes').slice(0, 8).map((d, i) => ({ ...d, color: PALETTE[(i + 2) % PALETTE.length] })), '#8b5cf6', fmtMoney, false, false);
   // chart-top removed
 
   currentPage = 1;
@@ -1898,27 +1904,43 @@ function render() {
   renderAtaque(rows);
 }
 
-// ─── EXPORT CSV ────────────────────────────────────────────────────────────
+// ─── EXPORT XLSX (Detalle) ─────────────────────────────────────────────────
 function exportCSV() {
   const rows = lastRows;
   if (!rows.length) return;
-  const cols = ['Store','sku','brand','supplier','product','category',
+  const cols = ['Store','sku','brand','supplier','product','category','sub_category',
     ...ROT_MONTHS.map(m => m.key),'dias_calc','trend','tier','obs','Tipo de Pago','vta_mes','inv_prom'];
-  const labels = ['Tienda','SKU','Marca','Proveedor','Producto','Categoria',
+  const labels = ['Tienda','SKU','Marca','Proveedor','Producto','Categoria','Subcategoria',
     ...ROT_MONTHS.map(m => m.label),'Dias','Tendencia','Alerta','Estado','Tipo de Pago','Vta. Mes','Inv. Prom'];
+  const fname = 'rotacion_fithub_' + new Date().toISOString().slice(0,10);
+
+  if (typeof XLSX !== 'undefined') {
+    const wsData = [labels, ...rows.map(r => cols.map(c => {
+      const v = r[c];
+      if (v == null) return '';
+      if (typeof v === 'number') return parseFloat(v.toFixed(2));
+      return v;
+    }))];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = labels.map(l => ({ wch: Math.max(10, Math.min(30, l.length + 4)) }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Rotación');
+    XLSX.writeFile(wb, fname + '.xlsx');
+    return;
+  }
+  // Fallback CSV si la librería XLSX no cargó
   const esc = v => {
     if (v == null) return '';
     const s = String(v);
-    if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0) return '"' + s.replace(/"/g, '""') + '"';
+    if (s.indexOf(';') >= 0 || s.indexOf('"') >= 0) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   };
-  const lines = [labels.join(',')];
-  rows.forEach(r => lines.push(cols.map(c => esc(r[c])).join(',')));
-  const bom = '\uFEFF';
-  const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const lines = [labels.join(';')];
+  rows.forEach(r => lines.push(cols.map(c => esc(typeof r[c] === 'number' ? String(r[c]).replace('.', ',') : r[c])).join(';')));
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url;
-  a.download = 'rotacion_fithub_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = fname + '.csv';
   a.click(); URL.revokeObjectURL(url);
 }
 
@@ -2040,7 +2062,7 @@ function exportProvCSV() {
       }
     });
   });
-  const data = Object.values(map).map(d => {
+  let data = Object.values(map).map(d => {
     const monthAvgs = {};
     ROT_MONTHS.forEach(m => {
       monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
@@ -2052,19 +2074,42 @@ function exportProvCSV() {
     return { ...d, ...monthAvgs, rot_prom, dias };
   }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
 
+  // Respetar la búsqueda activa (igual que la tabla visible)
+  const term = provSearchTerm.toLowerCase().trim();
+  if (term) data = data.filter(d => (d.supplier + ' ' + d.brand).toLowerCase().includes(term));
+  if (!data.length) return;
+
   const headers = ['Proveedor','Marca','SKUs','Ventas Mes',...ROT_MONTHS.map(m=>m.label),'Promedio','Dias','Obs','Tipo'];
-  const esc = v => { if (v==null) return ''; const s=String(v); if (s.indexOf(',')>=0||s.indexOf('"')>=0) return '"'+s.replace(/"/g,'""')+'"'; return s; };
-  const lines = [headers.join(',')];
+  const fname = 'proveedores_rotacion_' + new Date().toISOString().slice(0,10);
+
+  if (typeof XLSX !== 'undefined') {
+    const wsData = [headers, ...data.map(d => [
+      d.supplier, d.brand, d.skus, d.vta_mes,
+      ...ROT_MONTHS.map(m => d[m.key] != null ? parseFloat(d[m.key].toFixed(2)) : ''),
+      d.rot_prom != null ? parseFloat(d.rot_prom.toFixed(2)) : '',
+      d.dias != null ? parseFloat(d.dias.toFixed(2)) : '',
+      d.obs || '', d.tipo || ''
+    ])];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [30,20,8,14, ...ROT_MONTHS.map(()=>9), 10,8,12,10].map(w => ({wch: w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
+    XLSX.writeFile(wb, fname + '.xlsx');
+    return;
+  }
+  // Fallback CSV si la librería XLSX no cargó
+  const esc = v => { if (v==null) return ''; const s=String(v); if (s.indexOf(';')>=0||s.indexOf('"')>=0) return '"'+s.replace(/"/g,'""')+'"'; return s; };
+  const lines = [headers.join(';')];
   data.forEach(d => {
-    const row = [d.supplier, d.brand, d.skus, d.vta_mes,
-      ...ROT_MONTHS.map(m => d[m.key] != null ? d[m.key].toFixed(2) : ''),
-      d.rot_prom != null ? d.rot_prom.toFixed(2) : '', d.dias != null ? d.dias.toFixed(2) : '', d.obs, d.tipo];
-    lines.push(row.map(esc).join(','));
+    const row = [d.supplier, d.brand, d.skus, String(d.vta_mes).replace('.', ','),
+      ...ROT_MONTHS.map(m => d[m.key] != null ? d[m.key].toFixed(2).replace('.', ',') : ''),
+      d.rot_prom != null ? d.rot_prom.toFixed(2).replace('.', ',') : '', d.dias != null ? d.dias.toFixed(2).replace('.', ',') : '', d.obs, d.tipo];
+    lines.push(row.map(esc).join(';'));
   });
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url;
-  a.download = 'proveedores_rotacion_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = fname + '.csv';
   a.click(); URL.revokeObjectURL(url);
 }
 
@@ -2405,11 +2450,18 @@ function exportAtacarCSV() {
   const atacar = base.filter(r => r.tier === 'crit')
     .sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0));
   if (!atacar.length) return;
+  if (typeof XLSX === 'undefined') {
+    showError('No se pudo cargar la librería de Excel (CDN bloqueado). Recarga la página o revisa tu conexión.');
+    return;
+  }
+
+  const curLabel = ROT_LABELS[ROT_LABELS.length - 1];
+  const histMonths = ROT_MONTHS.slice(0, -1); // todos los meses excepto el actual
 
   const wsData = [
     ['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto',
-     'Inv. Actual','Val. Inv (Costo)','Rot. Mayo','Días','Tendencia','Estado','Obs','Tipo de Pago',
-     'Vta. Mayo','Inv. Prom Mayo','Rot. Enero','Rot. Febrero','Rot. Marzo','Rot. Abril']
+     'Inv. Actual','Val. Inv (Costo)',`Rot. ${curLabel}`,'Días','Tendencia','Estado','Obs','Tipo de Pago',
+     `Vta. ${curLabel}`,`Inv. Prom ${curLabel}`, ...histMonths.map(m => `Rot. ${m.label}`)]
   ];
   atacar.forEach(r => {
     const rot = r[CURRENT_MONTH_KEY] || 0;
@@ -2424,10 +2476,7 @@ function exportAtacarCSV() {
       r.tier === 'ok' ? 'OK' : r.tier === 'warn' ? 'Vigilar' : r.tier === 'crit' ? 'Atacar' : 'Nuevo',
       r.obs || '', r['Tipo de Pago'] || '',
       r.vta_mes || '', r.inv_prom || '',
-      r.vta_enero > 0 && r.inv_enero > 0 ? parseFloat((r.vta_enero/r.inv_enero).toFixed(2)) : '',
-      r.vta_febrero > 0 && r.inv_febrero > 0 ? parseFloat((r.vta_febrero/r.inv_febrero).toFixed(2)) : '',
-      r.vta_marzo > 0 && r.inv_marzo > 0 ? parseFloat((r.vta_marzo/r.inv_marzo).toFixed(2)) : '',
-      r.vta_abril > 0 && r.inv_abril > 0 ? parseFloat((r.vta_abril/r.inv_abril).toFixed(2)) : ''
+      ...histMonths.map(m => r[m.key] != null && r[m.key] > 0 ? parseFloat(r[m.key].toFixed(2)) : '')
     ]);
   });
 
@@ -2435,7 +2484,7 @@ function exportAtacarCSV() {
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Column widths
-  ws['!cols'] = [20,20,12,10,25,18,12,35,12,16,10,8,12,10,12,14,14,14,10,10,10,10].map(w => ({wch: w}));
+  ws['!cols'] = [20,20,12,10,25,18,12,35,12,16,10,8,12,10,12,14,14,14, ...histMonths.map(() => 10)].map(w => ({wch: w}));
 
   // Header style (row 0)
   const range = XLSX.utils.decode_range(ws['!ref']);
@@ -2497,7 +2546,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click
 }));
 document.querySelectorAll('.show-more').forEach(btn => btn.addEventListener('click', () => {
   const tier = btn.getAttribute('data-list');
-  if (alertLimits[tier] >= 5000) alertLimits[tier] = 50; else alertLimits[tier] += 200;
+  const total = parseInt(btn.dataset.total || '0', 10);
+  if (alertLimits[tier] >= total || alertLimits[tier] >= 5000) alertLimits[tier] = 50;
+  else alertLimits[tier] += 200;
   renderAlerts(lastRows);
 }));
 
@@ -2523,7 +2574,7 @@ document.addEventListener('mouseout', e => {
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 loadData();
-// Safety timeout: si a los 25s aún no cargó, mostrar error y liberar pantalla
+// Safety timeout: si a los 55s aún no cargó, mostrar error y liberar pantalla
 setTimeout(() => {
   const ls = document.getElementById('loading-screen');
   if (ls && ls.style.display !== 'none') {
