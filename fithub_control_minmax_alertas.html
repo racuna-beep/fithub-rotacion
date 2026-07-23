@@ -214,13 +214,21 @@ let EXTRA_HEADERS = [];
 let lastSync = null;
 
 function buildGvizUrl(){
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler=handleGvizResponse&gid=${GID}&headers=1&_=${Date.now()}`;
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:handleGvizResponse&gid=${GID}&headers=1&_=${Date.now()}`;
 }
+// fallback shim in case Google ever ignores the custom responseHandler and calls its default
+window.google = window.google || {};
+window.google.visualization = window.google.visualization || {};
+window.google.visualization.Query = window.google.visualization.Query || {};
+window.google.visualization.Query.setResponse = function(resp){ handleGvizResponse(resp); };
 
 function showLoadError(msg){
   document.getElementById('ldText').style.display = 'none';
   document.getElementById('ldError').style.display = 'block';
-  document.getElementById('ldErrorMsg').textContent = msg;
+  const hint = location.protocol==='file:'
+    ? ' Este archivo se abrió directo desde el disco (file://). Para conectar con Google Sheets necesita estar alojado en un servidor (súbelo a tu GitHub Pages, igual que tus otros dashboards, o ábrelo desde un servidor local).'
+    : '';
+  document.getElementById('ldErrorMsg').textContent = msg + hint;
   document.getElementById('loading').style.display = 'flex';
 }
 
