@@ -372,6 +372,7 @@
     <div class="filter-group"><label>Proveedor</label><select id="f-supplier"><option value="">Todos</option></select></div>
     <div class="filter-group"><label>Categoría</label><select id="f-category"><option value="">Todas</option></select></div>
     <div class="filter-group"><label>Subcategoría</label><select id="f-subcategory"><option value="">Todas</option></select></div>
+    <div class="filter-group"><label>Portafolio</label><select id="f-portafolio"><option value="">Todos</option></select></div>
     <div class="filter-group"><label>Estado</label><select id="f-obs"><option value="">Todos</option></select></div>
     <div class="filter-group"><label>Tendencia</label><select id="f-trend">
       <option value="">Todas</option>
@@ -578,7 +579,7 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const DASH_VERSION = 'v2026-07-02.2 (orden Val. Inv en Plan de Ataque)';
+const DASH_VERSION = 'v2026-08-05.2 (filtro Portafolio + fetch sin AbortSignal)';
 console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
 const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbyKMEBfU6Ad1EvSTCvnuBQ_aNZ9VP8z-MyJ_nr2inqeGWX-UYkOlyLeq8yykPPedecEkw/exec';
 
@@ -704,6 +705,8 @@ function normalizeRow(raw, months) {
   r.product  = raw['product'] || raw['Product'] || raw['Producto'] || '';
   r.category    = raw['categories'] || raw['category'] || raw['Categoría'] || raw['Categoria'] || raw['categoria'] || raw['Category'] || raw['CATEGORIA'] || findField(raw, 'categoria') || findField(raw, 'categories') || '';
   r.sub_category = raw['Sub_Category'] || raw['sub_category'] || raw['SubCategoria'] || raw['Subcategoria'] || findField(raw, 'subcategoria') || findField(raw, 'subcategory') || findField(raw, 'subcategories') || '';
+  // Portafolio: Activo / Depurado (columna is_available_to_purchase)
+  r.portafolio = String(raw['is_available_to_purchase'] ?? raw['Is_available_to_purchase'] ?? findField(raw, 'is_available_to_purchase') ?? '').trim();
   // Históricos — todos los meses nombrados
   r.vta_enero      = parseNum(raw['Venta Enero']      ?? raw['Vta. Enero']      ?? 0);
   r.inv_enero      = parseNum(raw['Inv. prom Enero']                             ?? 0);
@@ -770,11 +773,17 @@ async function loadData() {
     // Fetch con timeout de 45s — evita que se quede colgado indefinidamente
     let raw;
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      // Timeout de 45s vía Promise.race — compatible con entornos que no soportan AbortSignal
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('__TIMEOUT__')), 45000);
+      });
       let res;
       try {
-        res = await fetch(SHEET_CSV_URL, { cache: 'no-store', signal: controller.signal });
+        res = await Promise.race([
+          fetch(SHEET_CSV_URL, { cache: 'no-store' }),
+          timeoutPromise
+        ]);
       } finally {
         clearTimeout(timeoutId);
       }
@@ -784,7 +793,7 @@ async function loadData() {
       raw = await res.json();
     } catch(e) {
       clearInterval(loaderInterval);
-      if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado (45s). El Apps Script está tardando mucho — intenta de nuevo.');
+      if (e.name === 'AbortError' || e.message === '__TIMEOUT__') throw new Error('Tiempo de espera agotado (45s). El Apps Script está tardando mucho — intenta de nuevo.');
       throw new Error('No se pudo conectar con Apps Script: ' + e.message);
     }
     if (!Array.isArray(raw) || !raw.length) throw new Error('El Sheet está vacío o sin datos.');
@@ -941,6 +950,7 @@ function repopulateFilters() {
   populateSelect('f-category', DATA.map(r => r.category), 'Todas');
   populateSelect('f-subcategory', DATA.map(r => r.sub_category), 'Todas');
   populateSelect('f-obs', DATA.map(r => r.obs), 'Todos');
+  populateSelect('f-portafolio', DATA.map(r => r.portafolio), 'Todos');
   populateSelect('f-pago', DATA.map(r => r['Tipo de Pago']), 'Todos');
 }
 
@@ -951,6 +961,7 @@ function updateCascadeFilters() {
   const brand    = document.getElementById('f-brand').value;
   const supplier = document.getElementById('f-supplier').value;
   const obs      = document.getElementById('f-obs').value;
+  const portafolio = document.getElementById('f-portafolio').value;
   const pago     = document.getElementById('f-pago').value;
   const tier     = document.getElementById('f-tier').value;
   const trend    = document.getElementById('f-trend').value;
@@ -962,6 +973,7 @@ function updateCascadeFilters() {
     if (brand    && r.brand !== brand)           return false;
     if (supplier && r.supplier !== supplier)     return false;
     if (obs      && r.obs !== obs)               return false;
+    if (portafolio && r.portafolio !== portafolio) return false;
     if (pago     && r['Tipo de Pago'] !== pago)  return false;
     if (tier     && r.tier  && r.tier !== tier)   return false;
     if (trend    && r.trend && r.trend !== trend) return false;
@@ -1002,6 +1014,7 @@ function getFilters() {
     category: document.getElementById('f-category').value,
     sub_category: document.getElementById('f-subcategory').value,
     obs: document.getElementById('f-obs').value,
+    portafolio: document.getElementById('f-portafolio').value,
     trend: document.getElementById('f-trend').value,
     tier: document.getElementById('f-tier').value,
     'Tipo de Pago': document.getElementById('f-pago').value,
@@ -2506,7 +2519,7 @@ function exportAtacarCSV() {
 
 
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
-['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
+['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-portafolio', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
   document.getElementById(id).addEventListener('change', () => { updateCascadeFilters(); render(); }));
 document.getElementById('btn-export').addEventListener('click', exportCSV);
 document.getElementById('btn-export-atacar').addEventListener('click', exportAtacarCSV);
@@ -2526,7 +2539,7 @@ document.getElementById('search-prov').addEventListener('input', e => {
   renderProveedores(lastRows);
 });
 document.getElementById('btn-reset').addEventListener('click', () => {
-  ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
+  ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-portafolio', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('search').value = ''; searchTerm = '';
   repopulateFilters(); render();
 });
