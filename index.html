@@ -177,11 +177,13 @@
     border: 1px solid #1e2d3d; border-radius: 8px; max-height: 280px; overflow-y: auto; min-width: 100%;
     width: max-content; max-width: 300px; padding: 6px; box-shadow: 0 12px 30px rgba(0,0,0,0.5); }
   .ms.open .ms-panel { display: block; }
-  .ms-opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer; border-radius: 6px;
-    font-size: 13px; color: var(--text); }
-  .ms-opt:hover { background: #1a2332; }
-  .ms-opt input { accent-color: var(--orange); flex-shrink: 0; }
-  .ms-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Mayor especificidad para ganarle a .filter-group label / .filter-group input */
+  .filter-group .ms .ms-opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer;
+    border-radius: 6px; font-size: 13px; color: var(--text); text-transform: none; letter-spacing: normal; font-weight: 400; }
+  .filter-group .ms .ms-opt:hover { background: #1a2332; }
+  .filter-group .ms .ms-opt input { width: 14px; height: 14px; padding: 0; margin: 0; flex-shrink: 0;
+    accent-color: var(--orange); background: none; border: none; }
+  .filter-group .ms .ms-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ms-clear { padding: 5px 8px; font-size: 11px; color: var(--muted); cursor: pointer;
     border-bottom: 1px solid #1e2d3d; margin-bottom: 4px; }
   .ms-clear:hover { color: var(--orange); }
@@ -604,7 +606,7 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const DASH_VERSION = 'v2026-08-05.7 (validador de encabezados + Cierre en PDF)';
+const DASH_VERSION = 'v2026-08-05.8 (fix CSS opciones multiselect)';
 // Meta de rotación para el Estado (Cumple / No cumple)
 const OBS_META = 1.30;
 console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
