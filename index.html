@@ -394,6 +394,7 @@
 
   <div class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="resumen" role="tab">📊 Resumen</button>
+    <button class="tab-btn" data-tab="cierre" role="tab">📝 Cierre de Mes</button>
     <button class="tab-btn" data-tab="alertas" role="tab">⚠️ Alertas <span class="tab-badge" id="tab-cnt-alerts">0</span></button>
     <button class="tab-btn" data-tab="proveedores" role="tab">🏭 Proveedores</button>
     <button class="tab-btn" data-tab="detalle" role="tab">📋 Detalle <span class="tab-badge" id="tab-cnt-detail">0</span></button>
@@ -436,6 +437,17 @@
     <!-- Tabla resumen por estado -->
     
 
+  </div>
+
+  <div class="tab-panel" id="panel-cierre" role="tabpanel">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 id="cierre-title" style="font-size:18px;font-weight:800;color:#f1f5f9;margin:0">📝 Cierre de Mes</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Informe narrativo generado automáticamente con los datos cargados · respeta los filtros activos</p>
+      </div>
+      <button id="btn-copy-cierre" style="background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📋 Copiar texto</button>
+    </div>
+    <div id="cierre-content" style="max-width:900px"></div>
   </div>
 
   <div class="tab-panel" id="panel-alertas" role="tabpanel">
@@ -579,7 +591,9 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const DASH_VERSION = 'v2026-08-05.2 (filtro Portafolio + fetch sin AbortSignal)';
+const DASH_VERSION = 'v2026-08-05.4 (pestaña Cierre de Mes)';
+// Meta de rotación para el Estado (Cumple / No cumple)
+const OBS_META = 1.30;
 console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
 const SHEET_CSV_URL = 'https://script.google.com/macros/s/AKfycbyKMEBfU6Ad1EvSTCvnuBQ_aNZ9VP8z-MyJ_nr2inqeGWX-UYkOlyLeq8yykPPedecEkw/exec';
 
@@ -733,9 +747,6 @@ function normalizeRow(raw, months) {
   r.vta_diciembre  = parseNum(raw['Venta Diciembre']  ?? raw['Vta. Diciembre']  ?? 0);
   r.inv_diciembre  = parseNum(raw['Inv. prom Diciembre']                         ?? 0);
   // vta_mes / inv_prom se asignan automáticamente al mes actual después de normalizeRow
-  const _obsRaw = String(raw['Obs'] || raw['obs'] || raw['Estado'] || '').trim();
-  const _obsMap = { 'cumple': 'Cumple', 'no cumple': 'No cumple', 'nuevo': 'Nuevo', 'atacar': 'No cumple' };
-  r.obs = _obsMap[_obsRaw.toLowerCase()] || _obsRaw;
   r['Tipo de Pago'] = raw['Tipo de Pago'] || raw['tipo_pago'] || '';
   r.inv_actual = raw['Inventario Actual'] != null ? raw['Inventario Actual'] : null;
   r.val_inv = raw['Valorizado Inventario Actual (Costo Sin IVA)'] != null ? Number(raw['Valorizado Inventario Actual (Costo Sin IVA)']) : null;
@@ -744,6 +755,17 @@ function normalizeRow(raw, months) {
   months.forEach(m => {
     r[m.key] = parseNum(raw[m.key]);
   });
+
+  // ── Estado calculado por el dashboard (ya no se lee la columna Obs del Sheet) ──
+  // Nuevo:     sin rotación en ningún mes anterior al actual (recién aparece)
+  // Cumple:    rotación del mes actual ≥ OBS_META (1.30)
+  // No cumple: rotación del mes actual < 1.30, en cero o sin dato (teniendo historial)
+  const _curKey = months.length ? months[months.length - 1].key : null;
+  const _hasHist = months.slice(0, -1).some(m => r[m.key] != null && r[m.key] !== 0);
+  const _curRot = _curKey ? r[_curKey] : null;
+  if (!_hasHist) r.obs = 'Nuevo';
+  else if (_curRot != null && _curRot >= OBS_META) r.obs = 'Cumple';
+  else r.obs = 'No cumple';
 
   return r;
 }
@@ -1854,11 +1876,213 @@ function renderTable(rows) {
 }
 
 // ─── MAIN RENDER ───────────────────────────────────────────────────────────
+// ─── CIERRE DE MES (informe narrativo) ─────────────────────────────────────
+let CIERRE_TEXT = '';
+function renderCierre(rows) {
+  const el = document.getElementById('cierre-content');
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<p style="color:#64748b">Sin datos con los filtros actuales.</p>'; CIERRE_TEXT = ''; return; }
+
+  const curM = ROT_MONTHS[ROT_MONTHS.length - 1];
+  const prevM = ROT_MONTHS.length >= 2 ? ROT_MONTHS[ROT_MONTHS.length - 2] : null;
+  const curLabel = curM.label, prevLabel = prevM ? prevM.label : null;
+
+  // Rotación global ponderada (Vta total / Inv total) — misma fórmula que el KPI
+  const wRot = (m) => {
+    const vtaK = m.vtaKey || 'vta_mes', invK = m.invKey || 'inv_prom';
+    const vta = rows.reduce((a, r) => a + (r[vtaK] || 0), 0);
+    const inv = rows.reduce((a, r) => a + (r[invK] || 0), 0);
+    return { rot: inv > 0 ? vta / inv : null, vta, inv };
+  };
+  const cur = wRot(curM);
+  const prev = prevM ? wRot(prevM) : { rot: null, vta: 0, inv: 0 };
+  const deltaPct = (cur.rot != null && prev.rot != null && prev.rot > 0) ? ((cur.rot - prev.rot) / prev.rot * 100) : null;
+
+  // Estados y tendencias
+  const n = rows.length;
+  const cumple = rows.filter(r => r.obs === 'Cumple').length;
+  const noCumple = rows.filter(r => r.obs === 'No cumple').length;
+  const nuevos = rows.filter(r => r.obs === 'Nuevo').length;
+  const mejorando = rows.filter(r => r.trend === 'mejorando').length;
+  const declinando = rows.filter(r => r.trend === 'declinando').length;
+  const pctOf = v => (v / n * 100).toFixed(1).replace('.', ',') + '%';
+
+  // Por tienda: rotación ponderada mes actual y delta vs anterior
+  const stores = {};
+  rows.forEach(r => {
+    const s = r.Store || '—';
+    if (!stores[s]) stores[s] = { vtaC: 0, invC: 0, vtaP: 0, invP: 0 };
+    stores[s].vtaC += r[curM.vtaKey || 'vta_mes'] || 0;
+    stores[s].invC += r[curM.invKey || 'inv_prom'] || 0;
+    if (prevM) { stores[s].vtaP += r[prevM.vtaKey || 'vta_mes'] || 0; stores[s].invP += r[prevM.invKey || 'inv_prom'] || 0; }
+  });
+  const storeArr = Object.entries(stores).map(([name, v]) => ({
+    name,
+    rot: v.invC > 0 ? v.vtaC / v.invC : null,
+    rotPrev: v.invP > 0 ? v.vtaP / v.invP : null,
+  })).filter(s => s.rot != null).map(s => ({ ...s, delta: (s.rotPrev != null && s.rotPrev > 0) ? s.rot - s.rotPrev : null }));
+  storeArr.sort((a, b) => b.rot - a.rot);
+  const bestStore = storeArr[0], worstStore = storeArr[storeArr.length - 1];
+  const withDelta = storeArr.filter(s => s.delta != null);
+  const bestDelta = withDelta.length ? [...withDelta].sort((a, b) => b.delta - a.delta)[0] : null;
+  const worstDelta = withDelta.length ? [...withDelta].sort((a, b) => a.delta - b.delta)[0] : null;
+
+  // Categorías (promedio simple de SKUs, mín. 3 SKUs)
+  const catMap = {};
+  rows.forEach(r => {
+    const c = r.category || '—';
+    const v = r[curM.key];
+    if (!catMap[c]) catMap[c] = { sum: 0, n: 0, skus: 0 };
+    catMap[c].skus++;
+    if (v != null && v > 0) { catMap[c].sum += Math.min(v, typeof ROT_CAP !== 'undefined' ? ROT_CAP : 999); catMap[c].n++; }
+  });
+  const catArr = Object.entries(catMap).filter(([, v]) => v.skus >= 3 && v.n > 0)
+    .map(([name, v]) => ({ name, rot: v.sum / v.n, skus: v.skus })).sort((a, b) => b.rot - a.rot);
+  const topCats = catArr.slice(0, 3), lowCats = catArr.slice(-3).reverse();
+
+  // Proveedores: promedio del mes actual, relevantes por venta
+  const supMap = {};
+  rows.forEach(r => {
+    const s = r.supplier || '—';
+    if (!supMap[s]) supMap[s] = { sum: 0, n: 0, vta: 0, val: 0, skus: 0, nuevos: 0 };
+    supMap[s].skus++;
+    supMap[s].vta += r.vta_mes || 0;
+    supMap[s].val += r.val_inv || 0;
+    if (r.obs === 'Nuevo') supMap[s].nuevos++;
+    const v = r[curM.key];
+    if (v != null) { supMap[s].sum += v; supMap[s].n++; }
+  });
+  const supArr = Object.entries(supMap).map(([name, v]) => ({
+    name, rot: v.n ? v.sum / v.n : null, vta: v.vta, val: v.val, skus: v.skus, allNew: v.nuevos === v.skus
+  })).filter(s => s.rot != null && !s.allNew);
+  const supCrit = supArr.filter(s => s.rot < OBS_META && s.val > 0).sort((a, b) => b.val - a.val).slice(0, 3);
+  const supTop = supArr.filter(s => s.vta > 0).sort((a, b) => b.rot - a.rot).slice(0, 3);
+
+  // Inventario en riesgo
+  const critRows = rows.filter(r => r.tier === 'crit' && r.obs !== 'Nuevo');
+  const critVal = critRows.reduce((a, r) => a + (r.val_inv || 0), 0);
+  const depRows = rows.filter(r => r.portafolio === 'Depurado' && (r.val_inv || 0) > 0);
+  const depVal = depRows.reduce((a, r) => a + (r.val_inv || 0), 0);
+
+  // Filtros activos
+  const f = getFilters();
+  const filtLabels = { Store: 'Tienda', brand: 'Marca', supplier: 'Proveedor', category: 'Categoría', sub_category: 'Subcategoría', obs: 'Estado', portafolio: 'Portafolio', trend: 'Tendencia', tier: 'Alerta', 'Tipo de Pago': 'Tipo de Pago' };
+  const activeF = Object.entries(f).filter(([, v]) => v).map(([k, v]) => `${filtLabels[k] || k}: ${v}`);
+  if (searchTerm.trim()) activeF.push('Búsqueda: "' + searchTerm.trim() + '"');
+
+  const dirWord = deltaPct == null ? '' : deltaPct >= 0 ? 'subió' : 'bajó';
+  const dirColor = deltaPct == null ? '#94a3b8' : deltaPct >= 0 ? '#10b981' : '#ef4444';
+  const fmtD = v => v == null ? '—' : fmtDec(v);
+  const fmtPct1 = v => v == null ? '—' : Math.abs(v).toFixed(1).replace('.', ',') + '%';
+
+  // ── Construcción de secciones (texto plano + HTML en paralelo) ──
+  const T = [];
+  const S = [];
+
+  const title = `CIERRE DE ${curLabel.toUpperCase()} · Rotación de Inventario Fithub`;
+  document.getElementById('cierre-title').textContent = `📝 Cierre de ${curLabel}`;
+  T.push(title);
+  T.push('Generado: ' + new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }));
+  if (activeF.length) T.push('Filtros activos: ' + activeF.join(' · '));
+  T.push('');
+
+  if (activeF.length) S.push(`<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#f59e0b">⚠️ Informe generado con filtros activos: ${activeF.map(escapeHtml).join(' · ')}</div>`);
+
+  // 1. Resumen ejecutivo
+  let ej = `La rotación global de <b>${curLabel}</b> cerró en <b style="color:${dirColor}">${fmtD(cur.rot)}</b>`;
+  let ejT = `RESUMEN EJECUTIVO\nLa rotación global de ${curLabel} cerró en ${fmtD(cur.rot)}`;
+  if (prevLabel && prev.rot != null) {
+    ej += `, ${deltaPct >= 0 ? '▲' : '▼'} <b style="color:${dirColor}">${fmtPct1(deltaPct)}</b> frente a ${prevLabel} (${fmtD(prev.rot)})`;
+    ejT += `, ${dirWord} ${fmtPct1(deltaPct)} frente a ${prevLabel} (${fmtD(prev.rot)})`;
+  }
+  const metaTxt = cur.rot != null ? (cur.rot >= OBS_META ? `por encima de la meta de ${fmtDec(OBS_META)}` : `por debajo de la meta de ${fmtDec(OBS_META)}`) : '';
+  ej += `, ${metaTxt}. Se analizaron <b>${fmt(n)}</b> registros: <b style="color:#10b981">${fmt(cumple)}</b> cumplen meta (${pctOf(cumple)}), <b style="color:#ef4444">${fmt(noCumple)}</b> no cumplen (${pctOf(noCumple)}) y <b style="color:#f59e0b">${fmt(nuevos)}</b> son nuevos (${pctOf(nuevos)}). En tendencia, ${fmt(mejorando)} SKUs vienen mejorando y ${fmt(declinando)} declinando.`;
+  ejT += `, ${metaTxt}. Se analizaron ${fmt(n)} registros: ${fmt(cumple)} cumplen meta (${pctOf(cumple)}), ${fmt(noCumple)} no cumplen (${pctOf(noCumple)}) y ${fmt(nuevos)} son nuevos (${pctOf(nuevos)}). En tendencia, ${fmt(mejorando)} SKUs vienen mejorando y ${fmt(declinando)} declinando.`;
+  S.push(secHtml('📌 Resumen ejecutivo', `<p>${ej}</p>`));
+  T.push(ejT); T.push('');
+
+  // 2. Tiendas
+  if (storeArr.length) {
+    let st = `La mejor rotación del mes la tuvo <b style="color:#10b981">${escapeHtml(bestStore.name)}</b> (${fmtD(bestStore.rot)}) y la más baja <b style="color:#ef4444">${escapeHtml(worstStore.name)}</b> (${fmtD(worstStore.rot)}).`;
+    let stT = `TIENDAS\nMejor rotación: ${bestStore.name} (${fmtD(bestStore.rot)}). Más baja: ${worstStore.name} (${fmtD(worstStore.rot)}).`;
+    if (bestDelta && worstDelta && prevLabel) {
+      st += ` Frente a ${prevLabel}, la que más avanzó fue <b>${escapeHtml(bestDelta.name)}</b> (${bestDelta.delta >= 0 ? '+' : ''}${fmtD(bestDelta.delta)}) y la que más retrocedió <b>${escapeHtml(worstDelta.name)}</b> (${fmtD(worstDelta.delta)}).`;
+      stT += ` Frente a ${prevLabel}, la que más avanzó fue ${bestDelta.name} (${bestDelta.delta >= 0 ? '+' : ''}${fmtD(bestDelta.delta)}) y la que más retrocedió ${worstDelta.name} (${fmtD(worstDelta.delta)}).`;
+    }
+    const stList = storeArr.map(s => `${escapeHtml(s.name)}: <b>${fmtD(s.rot)}</b>${s.delta != null ? ` <span style="color:${s.delta >= 0 ? '#10b981' : '#ef4444'};font-size:11px">(${s.delta >= 0 ? '+' : ''}${fmtD(s.delta)})</span>` : ''}`).join(' · ');
+    S.push(secHtml('🏬 Tiendas', `<p>${st}</p><p style="font-size:12px;color:#94a3b8;margin-top:8px">${stList}</p>`));
+    T.push(stT);
+    T.push(storeArr.map(s => `- ${s.name}: ${fmtD(s.rot)}${s.delta != null ? ` (${s.delta >= 0 ? '+' : ''}${fmtD(s.delta)} vs mes anterior)` : ''}`).join('\n'));
+    T.push('');
+  }
+
+  // 3. Categorías
+  if (catArr.length) {
+    const liTop = topCats.map(c => `<li><b style="color:#10b981">${escapeHtml(c.name)}</b> — ${fmtD(c.rot)} (${c.skus} SKUs)</li>`).join('');
+    const liLow = lowCats.map(c => `<li><b style="color:#ef4444">${escapeHtml(c.name)}</b> — ${fmtD(c.rot)} (${c.skus} SKUs)</li>`).join('');
+    S.push(secHtml('📦 Categorías', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><p style="font-size:12px;color:#64748b;margin-bottom:6px">Mejor rotación</p><ul style="margin:0;padding-left:18px">${liTop}</ul></div><div><p style="font-size:12px;color:#64748b;margin-bottom:6px">Peor rotación</p><ul style="margin:0;padding-left:18px">${liLow}</ul></div></div>`));
+    T.push('CATEGORÍAS');
+    T.push('Mejor rotación: ' + topCats.map(c => `${c.name} (${fmtD(c.rot)})`).join(', '));
+    T.push('Peor rotación: ' + lowCats.map(c => `${c.name} (${fmtD(c.rot)})`).join(', '));
+    T.push('');
+  }
+
+  // 4. Proveedores
+  if (supTop.length || supCrit.length) {
+    let ph = '';
+    let pt = ['PROVEEDORES'];
+    if (supTop.length) {
+      ph += `<p style="font-size:12px;color:#64748b;margin-bottom:6px">Destacados del mes</p><ul style="margin:0 0 12px 0;padding-left:18px">${supTop.map(s => `<li><b style="color:#10b981">${escapeHtml(s.name)}</b> — rotación ${fmtD(s.rot)} · venta ${fmtMoney(s.vta)}</li>`).join('')}</ul>`;
+      pt.push('Destacados: ' + supTop.map(s => `${s.name} (rot. ${fmtD(s.rot)}, venta ${fmtMoney(s.vta)})`).join('; '));
+    }
+    if (supCrit.length) {
+      ph += `<p style="font-size:12px;color:#64748b;margin-bottom:6px">Requieren conversación (baja rotación con inventario valorizado alto)</p><ul style="margin:0;padding-left:18px">${supCrit.map(s => `<li><b style="color:#ef4444">${escapeHtml(s.name)}</b> — rotación ${fmtD(s.rot)} · ${fmtMoney(s.val)} en inventario · ${s.skus} SKUs</li>`).join('')}</ul>`;
+      pt.push('Requieren conversación: ' + supCrit.map(s => `${s.name} (rot. ${fmtD(s.rot)}, ${fmtMoney(s.val)} en inventario)`).join('; '));
+    }
+    S.push(secHtml('🏭 Proveedores', ph));
+    T.push(pt.join('\n')); T.push('');
+  }
+
+  // 5. Inventario en riesgo
+  let ir = `Hay <b style="color:#ef4444">${fmt(critRows.length)}</b> SKUs en estado crítico (rotación &lt; 0,50) que concentran <b style="color:#ef4444">${fmtMoney(critVal)}</b> de inventario valorizado.`;
+  let irT = `INVENTARIO EN RIESGO\n${fmt(critRows.length)} SKUs en estado crítico (rotación < 0,50) concentran ${fmtMoney(critVal)} de inventario valorizado.`;
+  if (depRows.length) {
+    ir += ` Además, quedan <b style="color:#f59e0b">${fmt(depRows.length)}</b> SKUs depurados con inventario por <b style="color:#f59e0b">${fmtMoney(depVal)}</b> — candidatos a devolución con proveedor.`;
+    irT += ` Además, quedan ${fmt(depRows.length)} SKUs depurados con inventario por ${fmtMoney(depVal)} — candidatos a devolución con proveedor.`;
+  }
+  S.push(secHtml('⚠️ Inventario en riesgo', `<p>${ir}</p>`));
+  T.push(irT); T.push('');
+
+  // 6. Acciones recomendadas
+  const acts = [];
+  if (worstStore && cur.rot != null && worstStore.rot < OBS_META) acts.push(`Priorizar plan de rotación en <b>${escapeHtml(worstStore.name)}</b> (${fmtD(worstStore.rot)}, bajo la meta).`);
+  if (lowCats.length) acts.push(`Revisar surtido y exhibición de <b>${escapeHtml(lowCats[0].name)}</b>, la categoría con peor rotación (${fmtD(lowCats[0].rot)}).`);
+  if (supCrit.length) acts.push(`Agendar conversación con <b>${escapeHtml(supCrit[0].name)}</b>: ${fmtMoney(supCrit[0].val)} inmovilizados con rotación ${fmtD(supCrit[0].rot)}.`);
+  if (depRows.length) acts.push(`Gestionar devolución de los <b>${fmt(depRows.length)}</b> SKUs depurados (${fmtMoney(depVal)}).`);
+  if (declinando > mejorando) acts.push(`Atención: hay más SKUs declinando (${fmt(declinando)}) que mejorando (${fmt(mejorando)}) — revisar pestaña Alertas.`);
+  if (acts.length) {
+    S.push(secHtml('✅ Acciones recomendadas', `<ol style="margin:0;padding-left:20px">${acts.map(a => `<li style="margin-bottom:6px">${a}</li>`).join('')}</ol>`));
+    T.push('ACCIONES RECOMENDADAS');
+    acts.forEach((a, i) => T.push(`${i + 1}. ${a.replace(/<[^>]+>/g, '')}`));
+  }
+
+  el.innerHTML = S.join('');
+  CIERRE_TEXT = T.join('\n');
+}
+
+function secHtml(title, body) {
+  return `<div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:18px 22px;margin-bottom:14px">
+    <h3 style="font-size:14px;font-weight:800;color:#f1f5f9;margin:0 0 10px 0">${title}</h3>
+    <div style="font-size:13px;line-height:1.7;color:#cbd5e1">${body}</div>
+  </div>`;
+}
+
 function render() {
   if (!DATA.length) return;
   const rows = filterData();
   lastRows = rows;
   renderInsights(rows);
+  renderCierre(rows);
   renderKPIs(rows);
   const alertCount = renderAlerts(rows);
   document.getElementById('tab-cnt-alerts').textContent = alertCount.toLocaleString();
@@ -1989,8 +2213,9 @@ function renderProveedores(rows) {
   const map = {};
   rows.forEach(r => {
     const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, inv_prom: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, nuevos: 0, vta_mes: 0, inv_prom: 0, tipo: r['Tipo de Pago'] || '', months: {} };
     map[key].skus++;
+    if (r.obs === 'Nuevo') map[key].nuevos++;
     map[key].vta_mes += r.vta_mes || 0;
     map[key].inv_prom += r.inv_prom || 0;
     ROT_MONTHS.forEach(m => {
@@ -2012,7 +2237,10 @@ function renderProveedores(rows) {
     const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
     const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
     const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
-    return { ...d, ...monthAvgs, rot_prom, dias };
+    // Obs del proveedor: calculado con la rotación del mes actual (no del primer SKU)
+    const curAvg = CURRENT_MONTH_KEY ? monthAvgs[CURRENT_MONTH_KEY] : null;
+    const obs = (d.nuevos === d.skus) ? 'Nuevo' : (curAvg != null && curAvg >= OBS_META ? 'Cumple' : 'No cumple');
+    return { ...d, ...monthAvgs, rot_prom, dias, obs };
   });
 
   // Filter by search
@@ -2063,8 +2291,9 @@ function exportProvCSV() {
   const map = {};
   rows.forEach(r => {
     const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, vta_mes: 0, inv_prom: 0, obs: r.obs, tipo: r['Tipo de Pago'] || '', months: {} };
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, nuevos: 0, vta_mes: 0, inv_prom: 0, tipo: r['Tipo de Pago'] || '', months: {} };
     map[key].skus++;
+    if (r.obs === 'Nuevo') map[key].nuevos++;
     map[key].vta_mes += r.vta_mes || 0;
     map[key].inv_prom += r.inv_prom || 0;
     ROT_MONTHS.forEach(m => {
@@ -2084,7 +2313,10 @@ function exportProvCSV() {
     const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
     const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
     const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
-    return { ...d, ...monthAvgs, rot_prom, dias };
+    // Obs del proveedor: calculado con la rotación del mes actual (no del primer SKU)
+    const curAvg = CURRENT_MONTH_KEY ? monthAvgs[CURRENT_MONTH_KEY] : null;
+    const obs = (d.nuevos === d.skus) ? 'Nuevo' : (curAvg != null && curAvg >= OBS_META ? 'Cumple' : 'No cumple');
+    return { ...d, ...monthAvgs, rot_prom, dias, obs };
   }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
 
   // Respetar la búsqueda activa (igual que la tabla visible)
@@ -2538,6 +2770,22 @@ document.getElementById('search-prov').addEventListener('input', e => {
   provSearchTerm = e.target.value;
   renderProveedores(lastRows);
 });
+document.getElementById('btn-copy-cierre').addEventListener('click', async () => {
+  if (!CIERRE_TEXT) return;
+  const btn = document.getElementById('btn-copy-cierre');
+  try {
+    await navigator.clipboard.writeText(CIERRE_TEXT);
+  } catch (e) {
+    // Fallback para entornos sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = CIERRE_TEXT; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  const orig = btn.textContent;
+  btn.textContent = '✅ Copiado';
+  setTimeout(() => { btn.textContent = orig; }, 2000);
+});
+
 document.getElementById('btn-reset').addEventListener('click', () => {
   ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-portafolio', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('search').value = ''; searchTerm = '';
