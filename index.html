@@ -165,6 +165,26 @@
   .filter-group select, .filter-group input { background: var(--bg); border: 1px solid var(--border);
     color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; width: 100%; }
   .filter-group select:focus, .filter-group input:focus { outline: none; border-color: var(--orange); }
+  .ms { position: relative; width: 100%; }
+  .ms-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px;
+    width: 100%; min-width: 120px; cursor: pointer; text-align: left; font-family: inherit; }
+  .ms.has-sel .ms-btn { border-color: var(--orange); color: var(--orange); font-weight: 600; }
+  .ms.open .ms-btn { border-color: var(--orange); }
+  .ms-caret { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .ms-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ms-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 100; background: #111827;
+    border: 1px solid #1e2d3d; border-radius: 8px; max-height: 280px; overflow-y: auto; min-width: 100%;
+    width: max-content; max-width: 300px; padding: 6px; box-shadow: 0 12px 30px rgba(0,0,0,0.5); }
+  .ms.open .ms-panel { display: block; }
+  .ms-opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer; border-radius: 6px;
+    font-size: 13px; color: var(--text); }
+  .ms-opt:hover { background: #1a2332; }
+  .ms-opt input { accent-color: var(--orange); flex-shrink: 0; }
+  .ms-opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ms-clear { padding: 5px 8px; font-size: 11px; color: var(--muted); cursor: pointer;
+    border-bottom: 1px solid #1e2d3d; margin-bottom: 4px; }
+  .ms-clear:hover { color: var(--orange); }
   .btn-reset { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border);
     padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; height: 36px; }
   .btn-reset:hover { background: rgba(255,255,255,0.1); color: var(--text); }
@@ -363,31 +383,21 @@
   </header>
 
   <div id="error-banner"></div>
+  <div id="warn-banner" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.45);color:#f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;line-height:1.6"></div>
 
   <div class="insights" id="insights"></div>
 
   <div class="filters">
-    <div class="filter-group"><label>Tienda</label><select id="f-store"><option value="">Todas</option></select></div>
-    <div class="filter-group"><label>Marca</label><select id="f-brand"><option value="">Todas</option></select></div>
-    <div class="filter-group"><label>Proveedor</label><select id="f-supplier"><option value="">Todos</option></select></div>
-    <div class="filter-group"><label>Categoría</label><select id="f-category"><option value="">Todas</option></select></div>
-    <div class="filter-group"><label>Subcategoría</label><select id="f-subcategory"><option value="">Todas</option></select></div>
-    <div class="filter-group"><label>Portafolio</label><select id="f-portafolio"><option value="">Todos</option></select></div>
-    <div class="filter-group"><label>Estado</label><select id="f-obs"><option value="">Todos</option></select></div>
-    <div class="filter-group"><label>Tendencia</label><select id="f-trend">
-      <option value="">Todas</option>
-      <option value="mejorando">Mejorando</option>
-      <option value="estable">Estable</option>
-      <option value="declinando">Declinando</option>
-    </select></div>
-    <div class="filter-group"><label>Alerta</label><select id="f-tier">
-      <option value="">Todas</option>
-      <option value="ok">🟢 OK (≥ 1.30)</option>
-      <option value="warn">🟡 Vigilar (0.50–1.30)</option>
-      <option value="crit">🔴 Atacar (< 0.50)</option>
-      <option value="new">⚪ Nuevo</option>
-    </select></div>
-    <div class="filter-group"><label>Tipo de Pago</label><select id="f-pago"><option value="">Todos</option></select></div>
+    <div class="filter-group"><label>Tienda</label><div class="ms" id="f-store"></div></div>
+    <div class="filter-group"><label>Marca</label><div class="ms" id="f-brand"></div></div>
+    <div class="filter-group"><label>Proveedor</label><div class="ms" id="f-supplier"></div></div>
+    <div class="filter-group"><label>Categoría</label><div class="ms" id="f-category"></div></div>
+    <div class="filter-group"><label>Subcategoría</label><div class="ms" id="f-subcategory"></div></div>
+    <div class="filter-group"><label>Portafolio</label><div class="ms" id="f-portafolio"></div></div>
+    <div class="filter-group"><label>Estado</label><div class="ms" id="f-obs"></div></div>
+    <div class="filter-group"><label>Tendencia</label><div class="ms" id="f-trend"></div></div>
+    <div class="filter-group"><label>Alerta</label><div class="ms" id="f-tier"></div></div>
+    <div class="filter-group"><label>Tipo de Pago</label><div class="ms" id="f-pago"></div></div>
     <div class="filter-group"><label>Búsqueda</label><input id="search" type="text" placeholder="Producto, SKU…"/></div>
     <button class="btn-reset" id="btn-reset">Limpiar filtros</button>
   </div>
@@ -445,7 +455,10 @@
         <h2 id="cierre-title" style="font-size:18px;font-weight:800;color:#f1f5f9;margin:0">📝 Cierre de Mes</h2>
         <p style="font-size:12px;color:#64748b;margin-top:4px">Informe narrativo generado automáticamente con los datos cargados · respeta los filtros activos</p>
       </div>
-      <button id="btn-copy-cierre" style="background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📋 Copiar texto</button>
+      <div style="display:flex;gap:8px">
+        <button id="btn-copy-cierre" style="background:#3b82f6;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📋 Copiar texto</button>
+        <button id="btn-pdf-cierre" style="background:#f97316;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">🖨️ Exportar PDF</button>
+      </div>
     </div>
     <div id="cierre-content" style="max-width:900px"></div>
   </div>
@@ -591,7 +604,7 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const DASH_VERSION = 'v2026-08-05.4 (pestaña Cierre de Mes)';
+const DASH_VERSION = 'v2026-08-05.7 (validador de encabezados + Cierre en PDF)';
 // Meta de rotación para el Estado (Cumple / No cumple)
 const OBS_META = 1.30;
 console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
@@ -603,8 +616,6 @@ let ROT_MONTHS = []; // detected rotation month columns, e.g. ['rot_ene','rot_fe
 let ROT_LABELS = []; // human labels e.g. ['Enero','Febrero','Marzo','Abril']
 let CURRENT_MONTH_KEY = '';
 let PREV_MONTH_KEY = '';
-let sortCol = '';
-let sortDir = -1;
 let detSortCol = 'skus';
 let detSortDir = -1;
 let atkSortCol = 'valInv';
@@ -684,7 +695,78 @@ function detectMonths(headers) {
     }
   });
   found.sort((a, b) => a.order - b.order);
-  return found;
+  // Deduplicar: si dos encabezados apuntan al mismo mes, se toma el primero
+  const seen = new Set();
+  return found.filter(m => seen.has(m.month) ? false : (seen.add(m.month), true));
+}
+
+// ─── VALIDADOR DE ENCABEZADOS DEL SHEET ────────────────────────────────────
+function validateSheetHeaders(headers, months) {
+  const warns = [];
+  const hset = new Set(headers.map(h => String(h).trim().toLowerCase()));
+  const detected = new Set(months.map(m => m.month));
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // 1. Cada mes detectado debe tener sus columnas de Venta e Inv. prom
+  months.forEach(m => {
+    if (!hset.has('venta ' + m.month))
+      warns.push(`Se detectó "${m.key}" pero falta la columna "Venta ${cap(m.month)}" — las ventas de ${m.label} saldrán en cero.`);
+    if (!hset.has('inv. prom ' + m.month))
+      warns.push(`Se detectó "${m.key}" pero falta la columna "Inv. prom ${cap(m.month)}" — el inventario de ${m.label} saldrá en cero.`);
+  });
+
+  // 2. Venta/Inv de un mes SIN su Rot. Inventario — el patrón del bug de Julio
+  MONTH_ORDER.forEach(mes => {
+    if (detected.has(mes)) return;
+    const tiene = [];
+    if (hset.has('venta ' + mes)) tiene.push('Venta ' + cap(mes));
+    if (hset.has('inv. prom ' + mes)) tiene.push('Inv. prom ' + cap(mes));
+    if (tiene.length)
+      warns.push(`Existe "${tiene.join('" y "')}" pero NO se detectó "Rot. Inventario ${cap(mes)}" — probablemente la columna de rotación quedó con el nombre de otro mes. ${cap(mes)} no aparecerá en el dashboard hasta corregirlo.`);
+  });
+
+  // 3. Meses no consecutivos
+  const orders = months.map(m => m.order).sort((a, b) => a - b);
+  for (let i = 1; i < orders.length; i++) {
+    if (orders[i] - orders[i - 1] > 1) {
+      warns.push(`Los meses detectados no son consecutivos: falta "${cap(MONTH_ORDER[orders[i - 1] + 1])}" entre ${MONTH_MAP[MONTH_ORDER[orders[i - 1]]]} y ${MONTH_MAP[MONTH_ORDER[orders[i]]]}.`);
+      break;
+    }
+  }
+
+  // 4. Columnas base requeridas
+  const requeridas = [
+    { variants: ['store'], label: 'Store', afecta: 'el filtro y las gráficas por tienda' },
+    { variants: ['sku'], label: 'sku', afecta: 'la identificación de productos' },
+    { variants: ['product', 'producto'], label: 'product', afecta: 'los nombres de producto' },
+    { variants: ['suppliers', 'supplier', 'proveedor'], label: 'suppliers', afecta: 'la pestaña Proveedores' },
+    { variants: ['categories', 'category', 'categoría', 'categoria'], label: 'categories', afecta: 'la pestaña Detalle y el Plan de Ataque' },
+    { variants: ['tipo de pago'], label: 'Tipo de Pago', afecta: 'el filtro de tipo de pago' },
+    { variants: ['inventario actual'], label: 'Inventario Actual', afecta: 'las columnas de inventario' },
+    { variants: ['valorizado inventario actual (costo sin iva)'], label: 'Valorizado Inventario Actual (Costo Sin IVA)', afecta: 'el valorizado y el Plan de Ataque' },
+    { variants: ['is_available_to_purchase'], label: 'is_available_to_purchase', afecta: 'el filtro de Portafolio' },
+  ];
+  requeridas.forEach(req => {
+    if (!req.variants.some(v => hset.has(v)))
+      warns.push(`No encontré la columna "${req.label}" — ${req.afecta} quedará sin datos.`);
+  });
+
+  return warns;
+}
+
+function showWarnBanner(warns) {
+  const el = document.getElementById('warn-banner');
+  if (!el) return;
+  if (!warns || !warns.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div style="font-weight:800;margin-bottom:6px">⚠️ Revisa los encabezados del Google Sheet · ${warns.length} ${warns.length === 1 ? 'aviso' : 'avisos'}</div>
+        <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">${warns.map(w => '<li>' + escapeHtml(w) + '</li>').join('')}</ul>
+      </div>
+      <button onclick="document.getElementById('warn-banner').style.display='none'" style="background:none;border:none;color:#f59e0b;font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0">✕</button>
+    </div>`;
+  el.style.display = 'block';
 }
 
 // ─── FIELD FINDER (robusto: ignora tildes, espacios, guiones y mayúsculas) ──
@@ -824,12 +906,12 @@ async function loadData() {
     const headers = Object.keys(raw[0]);
     const months = detectMonths(headers);
     if (!months.length) throw new Error('No se encontraron columnas de rotación por mes.');
+    const headerWarns = validateSheetHeaders(headers, months);
 
     ROT_MONTHS = months;
     ROT_LABELS = months.map(m => m.label);
     CURRENT_MONTH_KEY = months[months.length - 1].key;
     PREV_MONTH_KEY = months.length >= 2 ? months[months.length - 2].key : null;
-    sortCol = CURRENT_MONTH_KEY;
 
     setLoaderText('Calculando métricas…', 85);
 
@@ -873,13 +955,11 @@ async function loadData() {
     document.getElementById('chart-delta-title').textContent = `Cambio ${prevLabel} → ${curLabel} por tienda`;
     document.getElementById('alert-title').textContent = `Alertas accionables · Rotación de ${curLabel}`;
 
-    // Rebuild dynamic table headers
-    buildTableHeaders();
-
     // Repopulate filter dropdowns
     repopulateFilters();
 
     hideError();
+    showWarnBanner(headerWarns);
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
 
@@ -923,82 +1003,40 @@ function trendOf(r) {
 }
 
 // ─── TABLE HEADERS ─────────────────────────────────────────────────────────
-function buildTableHeaders() {
-  const tr = document.getElementById('table-headers'); if (!tr) return;
-  const cols = [
-    { key: 'Store', label: 'Tienda' },
-    { key: 'sku', label: 'SKU' },
-    { key: 'brand', label: 'Marca' },
-    { key: 'supplier', label: 'Proveedor' },
-    { key: 'product', label: 'Producto' },
-    ...ROT_MONTHS.map(m => ({ key: m.key, label: m.label, num: true })),
-    { key: 'dias_calc', label: 'Días', num: true },
-    { key: 'trend', label: 'Tendencia' },
-    { key: 'tier', label: 'Alerta' },
-    { key: 'obs', label: 'Estado' },
-    { key: 'Tipo de Pago', label: 'Pago' },
-  ];
-  tr.innerHTML = cols.map(c =>
-    `<th data-col="${c.key}" ${c.num ? 'class="num"' : ''}>${c.label}</th>`
-  ).join('');
-  tr.querySelectorAll('th[data-col]').forEach(th =>
-    th.addEventListener('click', () => {
-      const col = th.getAttribute('data-col');
-      if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
-      renderTable(lastRows);
-    })
-  );
-}
-
 // ─── FILTER DROPDOWNS ──────────────────────────────────────────────────────
-function populateSelect(id, values, allLabel) {
-  const sel = document.getElementById(id);
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">${allLabel || 'Todos'}</option>`;
-  [...new Set(values)].filter(v => v).sort().forEach(v => {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    sel.appendChild(o);
-  });
-  // Keep current value if still valid
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
-  else sel.value = '';
-}
-
 function repopulateFilters() {
-  populateSelect('f-store', DATA.map(r => r.Store), 'Todas');
-  populateSelect('f-brand', DATA.map(r => r.brand), 'Todas');
-  populateSelect('f-supplier', DATA.map(r => r.supplier), 'Todos');
-  populateSelect('f-category', DATA.map(r => r.category), 'Todas');
-  populateSelect('f-subcategory', DATA.map(r => r.sub_category), 'Todas');
-  populateSelect('f-obs', DATA.map(r => r.obs), 'Todos');
-  populateSelect('f-portafolio', DATA.map(r => r.portafolio), 'Todos');
-  populateSelect('f-pago', DATA.map(r => r['Tipo de Pago']), 'Todos');
+  msSetOptions('f-store', DATA.map(r => r.Store));
+  msSetOptions('f-brand', DATA.map(r => r.brand));
+  msSetOptions('f-supplier', DATA.map(r => r.supplier));
+  msSetOptions('f-category', DATA.map(r => r.category));
+  msSetOptions('f-subcategory', DATA.map(r => r.sub_category));
+  msSetOptions('f-obs', DATA.map(r => r.obs));
+  msSetOptions('f-portafolio', DATA.map(r => r.portafolio));
+  msSetOptions('f-pago', DATA.map(r => r['Tipo de Pago']));
 }
 
 function updateCascadeFilters() {
   if (!DATA.length) return;
-  // Get current non-category filters
-  const store    = document.getElementById('f-store').value;
-  const brand    = document.getElementById('f-brand').value;
-  const supplier = document.getElementById('f-supplier').value;
-  const obs      = document.getElementById('f-obs').value;
-  const portafolio = document.getElementById('f-portafolio').value;
-  const pago     = document.getElementById('f-pago').value;
-  const tier     = document.getElementById('f-tier').value;
-  const trend    = document.getElementById('f-trend').value;
+  const store    = msValues('f-store');
+  const brand    = msValues('f-brand');
+  const supplier = msValues('f-supplier');
+  const obs      = msValues('f-obs');
+  const portafolio = msValues('f-portafolio');
+  const pago     = msValues('f-pago');
+  const tier     = msValues('f-tier');
+  const trend    = msValues('f-trend');
   const term     = searchTerm.toLowerCase().trim();
 
-  // Filter base data with current selections (except category)
+  // Base con las selecciones actuales (excepto categoría)
   const base = DATA.filter(r => {
-    if (store    && r.Store !== store)           return false;
-    if (brand    && r.brand !== brand)           return false;
-    if (supplier && r.supplier !== supplier)     return false;
-    if (obs      && r.obs !== obs)               return false;
-    if (portafolio && r.portafolio !== portafolio) return false;
-    if (pago     && r['Tipo de Pago'] !== pago)  return false;
-    if (tier     && r.tier  && r.tier !== tier)   return false;
-    if (trend    && r.trend && r.trend !== trend) return false;
+    if (store.length      && !store.includes(r.Store))              return false;
+    if (brand.length      && !brand.includes(r.brand))              return false;
+    if (supplier.length   && !supplier.includes(r.supplier))        return false;
+    if (obs.length        && !obs.includes(r.obs))                  return false;
+    if (portafolio.length && !portafolio.includes(r.portafolio))    return false;
+    if (pago.length       && !pago.includes(r['Tipo de Pago']))     return false;
+    if (tier.length       && r.tier  && !tier.includes(r.tier))     return false;
+    if (trend.length      && r.trend && !trend.includes(r.trend))   return false;
     if (term) {
       const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.Store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -1006,47 +1044,47 @@ function updateCascadeFilters() {
     return true;
   });
 
-  // Repopulate category based on filtered base
-  populateSelect('f-category', base.map(r => r.category), 'Todas');
-  const baseForSubCat = base.filter(r => !document.getElementById('f-category').value || r.category === document.getElementById('f-category').value);
-  populateSelect('f-subcategory', baseForSubCat.map(r => r.sub_category), 'Todas');
+  // Cascada: categorías y subcategorías según la base filtrada
+  msSetOptions('f-category', base.map(r => r.category));
+  const catSel = msValues('f-category');
+  const baseForSubCat = base.filter(r => !catSel.length || catSel.includes(r.category));
+  msSetOptions('f-subcategory', baseForSubCat.map(r => r.sub_category));
 
-  // Also cascade: if supplier selected, limit brands shown and vice versa
   const baseForBrand = DATA.filter(r => {
-    if (store    && r.Store !== store)       return false;
-    if (supplier && r.supplier !== supplier) return false;
+    if (store.length    && !store.includes(r.Store))       return false;
+    if (supplier.length && !supplier.includes(r.supplier)) return false;
     return true;
   });
-  populateSelect('f-brand', baseForBrand.map(r => r.brand), 'Todas');
+  msSetOptions('f-brand', baseForBrand.map(r => r.brand));
 
   const baseForSupplier = DATA.filter(r => {
-    if (store && r.Store !== store) return false;
-    if (brand && r.brand !== brand) return false;
+    if (store.length && !store.includes(r.Store)) return false;
+    if (brand.length && !brand.includes(r.brand)) return false;
     return true;
   });
-  populateSelect('f-supplier', baseForSupplier.map(r => r.supplier), 'Todos');
+  msSetOptions('f-supplier', baseForSupplier.map(r => r.supplier));
 }
 
 // ─── FILTER ────────────────────────────────────────────────────────────────
 function getFilters() {
   return {
-    Store: document.getElementById('f-store').value,
-    brand: document.getElementById('f-brand').value,
-    supplier: document.getElementById('f-supplier').value,
-    category: document.getElementById('f-category').value,
-    sub_category: document.getElementById('f-subcategory').value,
-    obs: document.getElementById('f-obs').value,
-    portafolio: document.getElementById('f-portafolio').value,
-    trend: document.getElementById('f-trend').value,
-    tier: document.getElementById('f-tier').value,
-    'Tipo de Pago': document.getElementById('f-pago').value,
+    Store: msValues('f-store'),
+    brand: msValues('f-brand'),
+    supplier: msValues('f-supplier'),
+    category: msValues('f-category'),
+    sub_category: msValues('f-subcategory'),
+    obs: msValues('f-obs'),
+    portafolio: msValues('f-portafolio'),
+    trend: msValues('f-trend'),
+    tier: msValues('f-tier'),
+    'Tipo de Pago': msValues('f-pago'),
   };
 }
 function filterData() {
   const f = getFilters();
   const term = searchTerm.toLowerCase().trim();
   return DATA.filter(r => {
-    for (const k in f) if (f[k] && r[k] !== f[k]) return false;
+    for (const k in f) if (f[k].length && !f[k].includes(r[k])) return false;
     if (term) {
       const hay = (r.product + ' ' + r.sku + ' ' + r.brand + ' ' + r.supplier + ' ' + r.Store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -1747,7 +1785,7 @@ function renderTable(rows) {
     return p.join(' ') || '—';
   };
 
-  if (rowCount) rowCount.textContent = rows.length.toLocaleString('es-CO') + ' SKUs';
+  if (rowCount) rowCount.textContent = rows.length.toLocaleString('es-CO') + ' registros · ' + new Set(rows.map(r => r.sku)).size.toLocaleString('es-CO') + ' SKUs únicos';
 
   // Group by category → subcategory
   const catMap = {};
@@ -1757,11 +1795,11 @@ function renderTable(rows) {
     if (!catMap[cat]) catMap[cat] = { skus: 0, vta: 0, inv: 0, mej: 0, dec: 0, est: 0, subs: {} };
     const c = catMap[cat];
     c.skus++; c.vta += r.vta_mes || 0; c.inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
+    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else if (r.trend === 'estable') c.est++;
     if (!c.subs[sub]) c.subs[sub] = { skus: 0, vta: 0, inv: 0, mej: 0, dec: 0, est: 0, rows: [] };
     const s = c.subs[sub];
     s.skus++; s.vta += r.vta_mes || 0; s.inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
+    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else if (r.trend === 'estable') s.est++;
     s.rows.push(r);
   });
 
@@ -1776,20 +1814,27 @@ function renderTable(rows) {
   });
   let html = '';
 
-  catRows.forEach(([cat, cg]) => {
+  catRows.forEach(([cat, cg], catIdx) => {
     const rot = cg.inv > 0 ? cg.vta / cg.inv : 0;
     const rc = rot >= 1.3 ? '#10b981' : rot >= 0.5 ? '#f59e0b' : '#ef4444';
-    const rowId = 'det-' + cat.replace(/[^a-zA-Z0-9]/g, '_');
+    const rowId = 'det-c' + catIdx;
     const resp = RESPONSABLES[cat] || '—';
     const rcolor = RESP_COLORS[resp] || '#64748b';
     const respHtml = '<span style="display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;background:' + rcolor + '22;color:' + rcolor + ';border:1px solid ' + rcolor + '44">' + resp + '</span>';
 
     // Sub rows
-    const subEntries = Object.entries(cg.subs).sort((a, b) => b[1].skus - a[1].skus);
-    const subHtml = subEntries.map(([sub, sg]) => {
+    const subEntries = Object.entries(cg.subs).sort((a, b) => {
+      const ag = a[1], bg = b[1];
+      const aR = ag.inv > 0 ? ag.vta / ag.inv : 0;
+      const bR = bg.inv > 0 ? bg.vta / bg.inv : 0;
+      if (detSortCol === 'rot')  return detSortDir * (bR - aR);
+      if (detSortCol === 'dias') return detSortDir * ((aR > 0 ? 30/aR : 999) - (bR > 0 ? 30/bR : 999));
+      return detSortDir * (bg.skus - ag.skus);
+    });
+    const subHtml = subEntries.map(([sub, sg], subIdx) => {
       const srot = sg.inv > 0 ? sg.vta / sg.inv : 0;
       const src = srot >= 1.3 ? '#10b981' : srot >= 0.5 ? '#f59e0b' : '#ef4444';
-      const subId = rowId + '_' + sub.replace(/[^a-zA-Z0-9]/g, '_');
+      const subId = rowId + '_s' + subIdx;
       const subKey = cat + '|' + sub;
       const sresp = RESPONSABLES[subKey] || resp;
       const srcolor = RESP_COLORS[sresp] || '#64748b';
@@ -1800,7 +1845,7 @@ function renderTable(rows) {
         .sort((a, b) => (a[CURRENT_MONTH_KEY] || 0) - (b[CURRENT_MONTH_KEY] || 0))
         .map(r => {
           const rr = r[CURRENT_MONTH_KEY] || 0;
-          const rd = rr > 0 ? (30/rr).toFixed(1) : '—';
+          const rd = rr > 0 ? (30/rr).toFixed(1).replace('.', ',') : '—';
           const rrC = rr >= 1.3 ? '#10b981' : rr >= 0.5 ? '#f59e0b' : '#ef4444';
           const tIcon = r.trend === 'mejorando' ? '<span style="color:#10b981">▲</span>' : r.trend === 'declinando' ? '<span style="color:#ef4444">▼</span>' : '<span style="color:#94a3b8">→</span>';
           const storeColor = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.Store] || '#64748b';
@@ -1878,10 +1923,13 @@ function renderTable(rows) {
 // ─── MAIN RENDER ───────────────────────────────────────────────────────────
 // ─── CIERRE DE MES (informe narrativo) ─────────────────────────────────────
 let CIERRE_TEXT = '';
+let CIERRE_SECS = [];
+let CIERRE_MONTH = '';
+let CIERRE_FILTERS = [];
 function renderCierre(rows) {
   const el = document.getElementById('cierre-content');
   if (!el) return;
-  if (!rows.length) { el.innerHTML = '<p style="color:#64748b">Sin datos con los filtros actuales.</p>'; CIERRE_TEXT = ''; return; }
+  if (!rows.length) { el.innerHTML = '<p style="color:#64748b">Sin datos con los filtros actuales.</p>'; CIERRE_TEXT = ''; CIERRE_SECS = []; return; }
 
   const curM = ROT_MONTHS[ROT_MONTHS.length - 1];
   const prevM = ROT_MONTHS.length >= 2 ? ROT_MONTHS[ROT_MONTHS.length - 2] : null;
@@ -1967,7 +2015,8 @@ function renderCierre(rows) {
   // Filtros activos
   const f = getFilters();
   const filtLabels = { Store: 'Tienda', brand: 'Marca', supplier: 'Proveedor', category: 'Categoría', sub_category: 'Subcategoría', obs: 'Estado', portafolio: 'Portafolio', trend: 'Tendencia', tier: 'Alerta', 'Tipo de Pago': 'Tipo de Pago' };
-  const activeF = Object.entries(f).filter(([, v]) => v).map(([k, v]) => `${filtLabels[k] || k}: ${v}`);
+  const activeF = Object.entries(f).filter(([, v]) => v.length).map(([k, v]) => `${filtLabels[k] || k}: ${v.join(', ')}`);
+  CIERRE_FILTERS = activeF;
   if (searchTerm.trim()) activeF.push('Búsqueda: "' + searchTerm.trim() + '"');
 
   const dirWord = deltaPct == null ? '' : deltaPct >= 0 ? 'subió' : 'bajó';
@@ -1978,6 +2027,8 @@ function renderCierre(rows) {
   // ── Construcción de secciones (texto plano + HTML en paralelo) ──
   const T = [];
   const S = [];
+  CIERRE_SECS = [];
+  CIERRE_MONTH = curLabel;
 
   const title = `CIERRE DE ${curLabel.toUpperCase()} · Rotación de Inventario Fithub`;
   document.getElementById('cierre-title').textContent = `📝 Cierre de ${curLabel}`;
@@ -2071,6 +2122,7 @@ function renderCierre(rows) {
 }
 
 function secHtml(title, body) {
+  CIERRE_SECS.push({ t: title, b: body });
   return `<div style="background:#111827;border:1px solid #1e2d3d;border-radius:12px;padding:18px 22px;margin-bottom:14px">
     <h3 style="font-size:14px;font-weight:800;color:#f1f5f9;margin:0 0 10px 0">${title}</h3>
     <div style="font-size:13px;line-height:1.7;color:#cbd5e1">${body}</div>
@@ -2454,14 +2506,14 @@ function renderAtaque(rows) {
     if (r.tier === 'crit') { c.skusAtacar++; c.valInv += r.val_inv || 0; }
     c.vta += r.vta_mes || 0;
     c.inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else c.est++;
+    if (r.trend === 'mejorando') c.mej++; else if (r.trend === 'declinando') c.dec++; else if (r.trend === 'estable') c.est++;
     if (!c.subs[sub]) c.subs[sub] = { skusTotal:0, skusAtacar:0, vta:0, inv:0, valInv:0, mej:0, dec:0, est:0 };
     const s = c.subs[sub];
     s.skusTotal++;
     if (r.tier === 'crit') { s.skusAtacar++; s.valInv += r.val_inv || 0; }
     s.vta += r.vta_mes || 0;
     s.inv += r.inv_prom || 0;
-    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else s.est++;
+    if (r.trend === 'mejorando') s.mej++; else if (r.trend === 'declinando') s.dec++; else if (r.trend === 'estable') s.est++;
   });
 
   const catRows = Object.entries(catMap)
@@ -2580,7 +2632,7 @@ function renderAtaque(rows) {
         .sort((a, b) => (b.val_inv || 0) - (a.val_inv || 0));
       const skuHtml = skuRows.map(r => {
         const rr = r[CURRENT_MONTH_KEY] || 0;
-        const rd = rr > 0 ? (30/rr).toFixed(1) : '—';
+        const rd = rr > 0 ? (30/rr).toFixed(1).replace('.', ',') : '—';
         const rc = rr >= 1.3 ? '#10b981' : rr >= 0.5 ? '#f59e0b' : '#ef4444';
         const tIcon = r.trend === 'mejorando' ? '<span style="color:#10b981">▲</span>' : r.trend === 'declinando' ? '<span style="color:#ef4444">▼</span>' : '<span style="color:#94a3b8">→</span>';
         const storeColor = {'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.Store] || '#64748b';
@@ -2751,8 +2803,88 @@ function exportAtacarCSV() {
 
 
 // ─── EVENT LISTENERS ───────────────────────────────────────────────────────
-['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-portafolio', 'f-trend', 'f-tier', 'f-pago'].forEach(id =>
-  document.getElementById(id).addEventListener('change', () => { updateCascadeFilters(); render(); }));
+// ─── MULTISELECT ───────────────────────────────────────────────────────────
+const MS_STATE = {};
+const MS_ONCHANGE = () => { updateCascadeFilters(); render(); };
+
+function initMS(id, allLabel, staticOpts) {
+  const host = document.getElementById(id);
+  if (!host) return;
+  MS_STATE[id] = { sel: new Set(), opts: staticOpts || [], allLabel, static: !!staticOpts };
+  host.innerHTML = '<button type="button" class="ms-btn"><span class="ms-label"></span><span class="ms-caret">▾</span></button><div class="ms-panel"></div>';
+  host.querySelector('.ms-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = host.classList.contains('open');
+    document.querySelectorAll('.ms.open').forEach(x => x.classList.remove('open'));
+    if (!wasOpen) host.classList.add('open');
+  });
+  host.querySelector('.ms-panel').addEventListener('click', e => e.stopPropagation());
+  renderMSPanel(id);
+  updateMSLabel(id);
+}
+
+function msValues(id) { return MS_STATE[id] ? [...MS_STATE[id].sel] : []; }
+
+function msSetOptions(id, values) {
+  const st = MS_STATE[id];
+  if (!st || st.static) return;
+  st.opts = [...new Set(values)].filter(v => v).sort().map(v => ({ v, l: v }));
+  // Mantener solo selecciones que sigan existiendo entre las opciones
+  const valid = new Set(st.opts.map(o => o.v));
+  [...st.sel].forEach(v => { if (!valid.has(v)) st.sel.delete(v); });
+  renderMSPanel(id);
+  updateMSLabel(id);
+}
+
+function renderMSPanel(id) {
+  const st = MS_STATE[id];
+  const panel = document.querySelector('#' + id + ' .ms-panel');
+  if (!st || !panel) return;
+  panel.innerHTML = '<div class="ms-clear">✕ Limpiar selección</div>' + st.opts.map((o, i) =>
+    `<label class="ms-opt"><input type="checkbox" data-i="${i}"${st.sel.has(o.v) ? ' checked' : ''}><span>${escapeHtml(o.l)}</span></label>`
+  ).join('');
+  panel.querySelector('.ms-clear').addEventListener('click', () => {
+    st.sel.clear(); renderMSPanel(id); updateMSLabel(id); MS_ONCHANGE();
+  });
+  panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const v = st.opts[Number(cb.getAttribute('data-i'))].v;
+      if (cb.checked) st.sel.add(v); else st.sel.delete(v);
+      updateMSLabel(id); MS_ONCHANGE();
+    });
+  });
+}
+
+function updateMSLabel(id) {
+  const st = MS_STATE[id];
+  const host = document.getElementById(id);
+  const lab = host ? host.querySelector('.ms-label') : null;
+  if (!st || !lab) return;
+  if (!st.sel.size) { lab.textContent = st.allLabel; host.classList.remove('has-sel'); }
+  else if (st.sel.size === 1) {
+    const v = [...st.sel][0];
+    const o = st.opts.find(o => o.v === v);
+    lab.textContent = o ? o.l : v;
+    host.classList.add('has-sel');
+  } else { lab.textContent = st.sel.size + ' seleccionados'; host.classList.add('has-sel'); }
+}
+
+function msClearAll() {
+  Object.keys(MS_STATE).forEach(id => { MS_STATE[id].sel.clear(); renderMSPanel(id); updateMSLabel(id); });
+}
+
+document.addEventListener('click', () => document.querySelectorAll('.ms.open').forEach(x => x.classList.remove('open')));
+
+initMS('f-store', 'Todas');
+initMS('f-brand', 'Todas');
+initMS('f-supplier', 'Todos');
+initMS('f-category', 'Todas');
+initMS('f-subcategory', 'Todas');
+initMS('f-portafolio', 'Todos');
+initMS('f-obs', 'Todos');
+initMS('f-trend', 'Todas', [{ v: 'mejorando', l: 'Mejorando' }, { v: 'estable', l: 'Estable' }, { v: 'declinando', l: 'Declinando' }]);
+initMS('f-tier', 'Todas', [{ v: 'ok', l: '🟢 OK (≥ 1.30)' }, { v: 'warn', l: '🟡 Vigilar (0.50–1.30)' }, { v: 'crit', l: '🔴 Atacar (< 0.50)' }, { v: 'new', l: '⚪ Nuevo' }]);
+initMS('f-pago', 'Todos');
 document.getElementById('btn-export').addEventListener('click', exportCSV);
 document.getElementById('btn-export-atacar').addEventListener('click', exportAtacarCSV);
 document.querySelectorAll('.sort-toggle').forEach(btn => {
@@ -2770,6 +2902,54 @@ document.getElementById('search-prov').addEventListener('input', e => {
   provSearchTerm = e.target.value;
   renderProveedores(lastRows);
 });
+function exportCierrePDF() {
+  if (!CIERRE_SECS.length) return;
+  // Adaptar colores del tema oscuro a impresión sobre blanco (los semánticos se conservan)
+  const darkToPrint = [['#cbd5e1', '#334155'], ['#94a3b8', '#556274'], ['#f1f5f9', '#0f172a'], ['#e2e8f0', '#1e293b'], ['#475569', '#64748b']];
+  const secs = CIERRE_SECS.map(s => {
+    let b = s.b;
+    darkToPrint.forEach(([d, p]) => { b = b.split(d).join(p); });
+    return `<section><h2>${s.t}</h2><div class="body">${b}</div></section>`;
+  }).join('');
+  const filtNote = CIERRE_FILTERS.length ? `<div class="filtros">⚠️ Informe generado con filtros activos: ${CIERRE_FILTERS.map(escapeHtml).join(' · ')}</div>` : '';
+  const fecha = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+  const w = window.open('', '_blank');
+  if (!w) { alert('El navegador bloqueó la ventana emergente. Permite pop-ups en este sitio para exportar el PDF.'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cierre de ${CIERRE_MONTH} · Rotación de Inventario Fithub</title><style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #fff; padding: 34px 42px; font-size: 13px; line-height: 1.65; }
+    .brandbar { height: 8px; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 4px; margin-bottom: 18px; }
+    header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px; gap: 20px; }
+    .logo { font-size: 27px; font-weight: 900; color: #f97316; letter-spacing: -0.5px; line-height: 1.1; }
+    .logo small { display: block; font-size: 9.5px; font-weight: 700; color: #64748b; letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
+    h1 { font-size: 18px; color: #0f172a; text-align: right; }
+    .meta { font-size: 11px; color: #64748b; text-align: right; margin-top: 3px; }
+    section { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; page-break-inside: avoid; }
+    h2 { font-size: 13.5px; color: #0f172a; margin-bottom: 8px; border-left: 3px solid #f97316; padding-left: 9px; }
+    .body { color: #334155; }
+    ul, ol { padding-left: 20px; }
+    li { margin-bottom: 3px; }
+    .filtros { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 8px; padding: 8px 12px; font-size: 11px; margin-bottom: 12px; }
+    footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; }
+    .no-print { position: fixed; top: 12px; right: 12px; }
+    .no-print button { background: #f97316; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(249,115,22,0.35); }
+    @media print { .no-print { display: none; } body { padding: 0; } }
+  </style></head><body>
+    <div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button></div>
+    <div class="brandbar"></div>
+    <header>
+      <div class="logo">FITHUB<small>Abastecimiento · BI &amp; Supply Chain</small></div>
+      <div><h1>Cierre de ${CIERRE_MONTH} · Rotación de Inventario</h1><div class="meta">Generado: ${fecha}</div></div>
+    </header>
+    ${filtNote}
+    ${secs}
+    <footer><span>Dashboard Rotación de Inventario · Fithub</span><span>${DASH_VERSION}</span></footer>
+    <scr` + `ipt>setTimeout(() => window.print(), 500);</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
+}
+document.getElementById('btn-pdf-cierre').addEventListener('click', exportCierrePDF);
+
 document.getElementById('btn-copy-cierre').addEventListener('click', async () => {
   if (!CIERRE_TEXT) return;
   const btn = document.getElementById('btn-copy-cierre');
@@ -2787,14 +2967,18 @@ document.getElementById('btn-copy-cierre').addEventListener('click', async () =>
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
-  ['f-store', 'f-brand', 'f-supplier', 'f-category', 'f-subcategory', 'f-obs', 'f-portafolio', 'f-trend', 'f-tier', 'f-pago'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('search').value = ''; searchTerm = '';
+  msClearAll();
+  document.getElementById('search').value = ''; document.getElementById('search2').value = ''; searchTerm = '';
   repopulateFilters(); render();
 });
 let searchTimer;
 ['search', 'search2'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     clearTimeout(searchTimer);
+    // Sincronizar el otro buscador (ambos filtran lo mismo)
+    const other = id === 'search' ? 'search2' : 'search';
+    const otherEl = document.getElementById(other);
+    if (otherEl) otherEl.value = e.target.value;
     searchTimer = setTimeout(() => { searchTerm = e.target.value; render(); }, 200);
   });
 });
