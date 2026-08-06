@@ -408,6 +408,10 @@
           <div class="ms-wrap" id="ms-tipoprod"></div>
         </div>
         <div class="filter-group">
+          <span class="filter-label">PARETO</span>
+          <div class="ms-wrap" id="ms-pareto"></div>
+        </div>
+        <div class="filter-group">
           <span class="filter-label">BÚSQUEDA</span>
           <input class="search-input" id="f-search" type="text" placeholder="Producto, SKU…"/>
         </div>
@@ -668,7 +672,7 @@
 
 <script>
 const APPS_URL = 'https://script.google.com/macros/s/AKfycbxYviXTx6D9aq3Hxp4gK_jCaxFlJv-G-OM9Of6o7eo8DraHrxSwHv_UzyG1G1gHPUJK0g/exec';
-const SESSION_KEY = 'fithub_dias_inv_cache_v6';
+const SESSION_KEY = 'fithub_dias_inv_cache_v7';
 
 // Se detectan automaticamente desde los datos al cargar
 let VENTA_MONTHS = [];
@@ -788,6 +792,7 @@ function normalise(raw, keyMap) {
     sub_category:  str(g('sub categories') ?? g('sub_category') ?? g('subcategoría') ?? g('subcategoria')),
     tipo_pago:     str(g('tipo de pago') ?? g('tipo_pago') ?? g('tipopago')),
     tipo_producto: str(g('tipo de producto') ?? g('tipo_producto') ?? g('tipoproducto')),
+    pareto:        (() => { const v = str(g('pareto')).toLowerCase(); if (v === 'si' || v === 'sí') return 'Si'; if (v === 'no') return 'No'; return v ? str(g('pareto')) : 'No'; })(),
     inv_valorizado: numFast(g('total inv a costo') ?? g('inventario actual valorizado') ?? g('inv valorizado')),
     inv_actual:    inv,
     dias_inv:      dias,
@@ -883,6 +888,7 @@ async function loadData() {
     msCreate('ms-estado',   'Todos',  onFC);
     msCreate('ms-pago',     'Todos',  onFC);
     msCreate('ms-tipoprod', 'Todos',  onFC);
+    msCreate('ms-pareto',   'Todos',  onFC);
     repopulateFilters();
     render();
 
@@ -1013,6 +1019,7 @@ function repopulateFilters() {
   msSetOptions('ms-estado',   ['nuevo','sin_stock','quiebre','bien','sobrestock','gestionar','sin_movimiento']);
   msSetOptions('ms-pago',     DATA.map(r=>r.tipo_pago));
   msSetOptions('ms-tipoprod', DATA.map(r=>r.tipo_producto));
+  msSetOptions('ms-pareto',   DATA.map(r=>r.pareto));
 }
 
 function cascadeFilters() {
@@ -1041,6 +1048,7 @@ function filterRows() {
   const estados = msGetSelected('ms-estado');
   const pagos   = msGetSelected('ms-pago');
   const tiposProd = msGetSelected('ms-tipoprod');
+  const paretos = msGetSelected('ms-pareto');
   const term    = searchTerm.toLowerCase();
   const subcats = msGetSelected('ms-subcat');
   return DATA.filter(r => {
@@ -1052,6 +1060,7 @@ function filterRows() {
     if (estados.size && !estados.has(r.estado))         return false;
     if (pagos.size   && !pagos.has(r.tipo_pago))        return false;
     if (tiposProd.size && !tiposProd.has(r.tipo_producto)) return false;
+    if (paretos.size && !paretos.has(r.pareto))        return false;
     if (term) {
       const hay = (r.product+' '+r.sku+' '+r.brand+' '+r.supplier+' '+r.store).toLowerCase();
       if (!hay.includes(term)) return false;
@@ -1612,7 +1621,8 @@ function renderTable(rows) {
         return '<tr style="background:#f8f6f2">'+
           '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
           ' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span>'+
-          ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
+          ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span>'+
+          (r.pareto==='Si'?' <span title="Pareto" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(234,179,8,0.18);color:#b45309;border:1px solid rgba(234,179,8,0.45);margin-left:4px">★ P</span>':'')+'</td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
@@ -2157,17 +2167,17 @@ function exportTransfExcel() {
 
 // ── EXPORT EXCEL ─────────────────────────────────────────────────────────────
 function exportExcel(rows, filename) {
-  const headers = ['Tienda','SKU','Marca','Proveedor','Producto','Categoría','Subcategoría','Inv. Actual','Dias Inv','Vida Util','Prom Vta YTD','Estado','Nota'];
+  const headers = ['Tienda','SKU','Marca','Proveedor','Producto','Categoría','Subcategoría','Pareto','Inv. Actual','Dias Inv','Vida Util','Prom Vta YTD','Estado','Nota'];
   const wsData = [headers];
   rows.forEach(r => wsData.push([
     r.store, r.sku, r.brand, r.supplier, r.product, r.category, r.sub_category||'',
-    r.inv_actual, r.dias_inv, r.vida_util, r.prom_vta, r.estado,
+    r.pareto||'', r.inv_actual, r.dias_inv, r.vida_util, r.prom_vta, r.estado,
     NOTAS[r.store+'|'+r.sku] || ''
   ]));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   // Column widths
-  ws['!cols'] = [10,14,18,22,30,18,12,10,10,14,12,20].map(w=>({wch:w}));
+  ws['!cols'] = [10,14,18,22,30,18,12,8,10,10,14,12,20].map(w=>({wch:w}));
   // Header style via cell refs
   const range = XLSX.utils.decode_range(ws['!ref']);
   for (let C = range.s.c; C <= range.e.c; C++) {
@@ -2282,7 +2292,7 @@ function renderPlan(rows){
       const skuHtml=sg.rows.sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0)).map(r=>{
         const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
         return'<tr style="background:#f8f6f2">'+
-          '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span></td>'+
+          '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span><span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span>'+(r.pareto==='Si'?' <span title="Pareto" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(234,179,8,0.18);color:#b45309;border:1px solid rgba(234,179,8,0.45);margin-left:4px">★ P</span>':'')+'</td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
@@ -2608,7 +2618,7 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 // ── FILTER EVENTS ─────────────────────────────────────────────────────────────
 // Multi-select onChange already wired in msCreate
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago','ms-tipoprod'].forEach(msClear);
+  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago','ms-tipoprod','ms-pareto'].forEach(msClear);
   document.getElementById('f-search').value=''; searchTerm='';
   repopulateFilters(); render();
 });
