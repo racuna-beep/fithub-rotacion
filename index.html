@@ -144,6 +144,11 @@
     display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
   .btn-update:hover { background: #ea6f10; }
   .btn-update:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; }
+  .btn-report { background: transparent; color: var(--blue); border: 1px solid var(--blue);
+    padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+  .btn-report:hover { background: rgba(59,130,246,0.12); }
+  .btn-report:disabled { border-color: var(--border); color: var(--muted); cursor: not-allowed; }
   #error-banner { display: none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
     border-radius: 8px; padding: 10px 16px; font-size: 13px; color: #fca5a5; margin-bottom: 12px; }
 
@@ -374,11 +379,16 @@
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span id="last-update" style="font-size:10px;color:#3b4f65"></span>
-          <button class="btn-update" id="btn-update" onclick="loadData()">
-            <span class="icon">🔄</span>
-            <span class="spin">⏳</span>
-            Actualizar datos
-          </button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-report" id="btn-report" onclick="generarInformeCorreo()" title="Genera un resumen del reporte con los filtros aplicados y lo abre en tu cliente de correo">
+              📧 Informe por correo
+            </button>
+            <button class="btn-update" id="btn-update" onclick="loadData()">
+              <span class="icon">🔄</span>
+              <span class="spin">⏳</span>
+              Actualizar datos
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1093,6 +1103,90 @@ function filterData() {
     }
     return true;
   });
+}
+
+// ─── INFORME POR CORREO ────────────────────────────────────────────────────
+function generarInformeCorreo() {
+  if (!DATA.length) { alert('Primero carga los datos del dashboard.'); return; }
+  const rows = filterData();
+  if (!rows.length) { alert('No hay registros con los filtros aplicados.'); return; }
+
+  const curLabel = ROT_LABELS[ROT_LABELS.length - 1] || 'Mes actual';
+  const hoy = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // KPIs (misma lógica que renderKPIs)
+  const totalVta = rows.reduce((a, r) => a + (r.vta_mes || 0), 0);
+  const totalInv = rows.reduce((a, r) => a + (r.inv_prom || 0), 0);
+  const rotProm = totalInv > 0 ? totalVta / totalInv : 0;
+  const diasProm = rotProm > 0 ? 30 / rotProm : null;
+  const cumple = rows.filter(r => r.obs === 'Cumple').length;
+  const noCumple = rows.filter(r => r.obs === 'No cumple').length;
+  const mejorando = rows.filter(r => r.trend === 'mejorando').length;
+  const declinando = rows.filter(r => r.trend === 'declinando').length;
+  const criticos = rows.filter(r => r.tier === 'crit');
+  const uniqueSkus = new Set(rows.map(r => r.sku)).size;
+  const pct = n => rows.length ? ((n / rows.length) * 100).toFixed(1) + '%' : '0%';
+
+  // Filtros aplicados
+  const f = getFilters();
+  const FILTRO_NOMBRES = { Store: 'Tienda', brand: 'Marca', supplier: 'Proveedor', category: 'Categoría',
+    sub_category: 'Subcategoría', obs: 'Estado', portafolio: 'Portafolio', trend: 'Tendencia',
+    tier: 'Alerta', 'Tipo de Pago': 'Tipo de Pago' };
+  const filtrosActivos = Object.entries(f)
+    .filter(([, v]) => v.length)
+    .map(([k, v]) => `- ${FILTRO_NOMBRES[k] || k}: ${v.join(', ')}`);
+  if (searchTerm && searchTerm.trim()) filtrosActivos.push(`- Búsqueda: "${searchTerm.trim()}"`);
+
+  // Top 5 críticos por inventario inmovilizado
+  const topCriticos = criticos.slice().sort((a, b) => (b.inv_prom || 0) - (a.inv_prom || 0)).slice(0, 5);
+
+  const L = [];
+  L.push(`Buen día,`);
+  L.push(``);
+  L.push(`Comparto el resumen del Dashboard de Rotación Fithub con corte a ${curLabel} (generado el ${hoy}).`);
+  L.push(``);
+  if (filtrosActivos.length) {
+    L.push(`FILTROS APLICADOS`);
+    L.push(...filtrosActivos);
+    L.push(``);
+  }
+  L.push(`INDICADORES CLAVE`);
+  L.push(`- Registros: ${fmt(rows.length)} (${fmt(uniqueSkus)} SKUs únicos)`);
+  L.push(`- Ventas del mes: ${fmtMoney(totalVta)}`);
+  L.push(`- Inventario promedio: ${fmtMoney(totalInv)}`);
+  L.push(`- Rotación promedio ${curLabel}: ${fmtDec(rotProm)}${diasProm ? ` (${fmtDec(diasProm)} días)` : ''} · meta 1.30`);
+  L.push(`- Cumplen meta: ${fmt(cumple)} (${pct(cumple)})`);
+  L.push(`- No cumplen: ${fmt(noCumple)} (${pct(noCumple)})`);
+  L.push(`- Tendencia: ${fmt(mejorando)} mejorando / ${fmt(declinando)} declinando`);
+  L.push(``);
+  L.push(`ALERTAS CRÍTICAS (Atacar < 0.50): ${fmt(criticos.length)} SKUs`);
+  if (topCriticos.length) {
+    L.push(`Top por capital inmovilizado:`);
+    topCriticos.forEach((r, i) => {
+      const rot = r[CURRENT_MONTH_KEY] != null ? fmtDec(r[CURRENT_MONTH_KEY]) : '0,00';
+      L.push(`${i + 1}. ${r.product} (${r.sku}) · ${r.Store} · Rot: ${rot} · Inv: ${fmtMoney(r.inv_prom)}`);
+    });
+  }
+  L.push(``);
+  L.push(`Pueden ver el reporte completo e interactivo aquí:`);
+  L.push(`https://racuna-beep.github.io/fithub-rotacion/`);
+  L.push(``);
+  L.push(`Saludos,`);
+  L.push(``);
+  L.push(`Rodrigo Acuña M.`);
+  L.push(`Abastecimiento BI & Supply Chain · Fithub`);
+
+  const asunto = `Informe Rotación Fithub · ${curLabel} 2026 · Corte ${hoy}`;
+  const cuerpo = L.join('\n');
+  const link = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+  if (link.length > 7500) {
+    // Fallback: cuerpo muy largo para mailto → copiar al portapapeles
+    navigator.clipboard.writeText(`${asunto}\n\n${cuerpo}`).then(() =>
+      alert('El informe es muy extenso para abrirlo directo en el correo. Se copió al portapapeles: pégalo en un correo nuevo.'));
+    return;
+  }
+  window.location.href = link;
 }
 
 // ─── UTILS ─────────────────────────────────────────────────────────────────
