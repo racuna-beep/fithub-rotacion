@@ -1180,13 +1180,62 @@ function generarInformeCorreo() {
   const cuerpo = L.join('\n');
   const link = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
 
-  if (link.length > 7500) {
-    // Fallback: cuerpo muy largo para mailto → copiar al portapapeles
-    navigator.clipboard.writeText(`${asunto}\n\n${cuerpo}`).then(() =>
-      alert('El informe es muy extenso para abrirlo directo en el correo. Se copió al portapapeles: pégalo en un correo nuevo.'));
+  // Chrome bloquea mailto: con URLs largas (~2.000 caracteres). Si cabe, abrimos directo.
+  if (link.length <= 1800) {
+    const a = document.createElement('a');
+    a.href = link;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     return;
   }
-  window.location.href = link;
+
+  // Informe extenso → modal con el texto listo para copiar o abrir en correo web
+  mostrarModalInforme(asunto, cuerpo);
+}
+
+function mostrarModalInforme(asunto, cuerpo) {
+  const old = document.getElementById('informe-modal');
+  if (old) old.remove();
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+  const modal = document.createElement('div');
+  modal.id = 'informe-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:640px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,0.6)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:15px;font-weight:800;color:var(--text)">📧 Informe listo para enviar</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">El informe es extenso, así que puedes copiarlo o abrirlo en tu correo web.</div>
+        </div>
+        <button onclick="document.getElementById('informe-modal').remove()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+      </div>
+      <div style="padding:14px 20px;overflow:auto;flex:1">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Asunto</div>
+        <div style="font-size:12.5px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:12px">${escapeHtml(asunto)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Cuerpo del correo</div>
+        <textarea id="informe-texto" readonly style="width:100%;height:260px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-size:12px;font-family:'Segoe UI',sans-serif;line-height:1.6;resize:vertical">${escapeHtml(cuerpo)}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--border)">
+        <button id="btn-copiar-informe" style="background:var(--orange);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">📋 Copiar informe</button>
+        <a href="${gmailUrl}" target="_blank" rel="noopener" style="background:transparent;color:var(--blue);border:1px solid var(--blue);padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">Abrir en Gmail</a>
+        <a href="${outlookUrl}" target="_blank" rel="noopener" style="background:transparent;color:var(--blue);border:1px solid var(--blue);padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">Abrir en Outlook</a>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.getElementById('btn-copiar-informe').addEventListener('click', function () {
+    const ta = document.getElementById('informe-texto');
+    ta.select();
+    const done = () => { this.textContent = '✅ Copiado'; setTimeout(() => { this.textContent = '📋 Copiar informe'; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText('Asunto: ' + asunto + '\n\n' + cuerpo).then(done).catch(() => { document.execCommand('copy'); done(); });
+    } else { document.execCommand('copy'); done(); }
+  });
 }
 
 // ─── UTILS ─────────────────────────────────────────────────────────────────
