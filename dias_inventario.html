@@ -974,6 +974,34 @@ const RESPONSABLES = {
 };
 const RESP_COLORS = { 'Edwin':'#175cd3', 'Lore':'#ba24d5', 'Jorge':'#6941c6', 'Angie':'#079455' };
 
+// Clave real (tal como viene de la hoja) de la columna de inventario de cierre.
+let CIERRE_KEY = null, CIERRE_MES = '', RAW_HEADERS = [];
+const _sinAcentos = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Busca la columna del inventario al cierre del último mes completo.
+// Tolerante al nombre: "Inventario Julio", "Inv. Julio", "Stock cierre julio",
+// "Inventario al cierre de Julio", "Inventario mes anterior", etc.
+function detectCierreColumn(rawRows) {
+  CIERRE_KEY = null; CIERRE_MES = '';
+  if (!rawRows.length) return;
+  RAW_HEADERS = Object.keys(rawRows[0]);
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const mesActual = MESES[new Date().getMonth()];
+  const ultima = VENTA_LABELS.length ? _sinAcentos(VENTA_LABELS[VENTA_LABELS.length - 1]) : '';
+  const parcial = ultima === mesActual;
+  const idxRef = VENTA_LABELS.length - (parcial ? 2 : 1);
+  CIERRE_MES = idxRef >= 0 ? VENTA_LABELS[idxRef] : '';
+  const mesRef = _sinAcentos(CIERRE_MES);
+
+  const tieneInv = t => /\b(inv|inventario|stock|existencia|existencias|saldo)\b/.test(t);
+  // 1) columna que nombre explícitamente el mes de referencia
+  let hit = mesRef && RAW_HEADERS.find(k => { const t = _sinAcentos(k); return tieneInv(t) && t.includes(mesRef); });
+  // 2) columna genérica de cierre / mes anterior
+  if (!hit) hit = RAW_HEADERS.find(k => { const t = _sinAcentos(k);
+    return tieneInv(t) && /(cierre|mes anterior|ultimo mes|mes pasado|anterior)/.test(t); });
+  CIERRE_KEY = hit || null;
+}
+
 function detectVentaColumns(rawRows) {
   if (!rawRows.length) return;
   const keys = Object.keys(rawRows[0]);
@@ -1175,15 +1203,10 @@ function normalise(raw, keyMap) {
   // ── INVENTARIO DEL ÚLTIMO MES COMPLETO (columna nueva en la hoja) ──
   // Resuelve automáticamente la pregunta "¿tenía stock ese mes?" para los SKUs
   // marcados En Ruptura, en vez de tener que confirmarlos uno por uno a mano.
-  const mesRef = ultimaEsParcial
+  const mesRef = CIERRE_MES || (ultimaEsParcial
     ? (VENTA_LABELS[VENTA_LABELS.length - 2] || '')
-    : (VENTA_LABELS[VENTA_LABELS.length - 1] || '');
-  const mr = mesRef.toLowerCase();
-  const invCierre = numFast(
-    (mr ? (g('inventario ' + mr) ?? g('inv ' + mr) ?? g('stock ' + mr) ?? g('inventario cierre ' + mr)) : null)
-    ?? g('inventario cierre mes') ?? g('inventario mes anterior') ?? g('inv mes anterior')
-    ?? g('inventario ultimo mes') ?? g('inventario último mes') ?? g('stock cierre mes')
-  );
+    : (VENTA_LABELS[VENTA_LABELS.length - 1] || ''));
+  const invCierre = CIERRE_KEY ? numFast(raw[CIERRE_KEY]) : null;
 
   const rupturaInfo = detectarRuptura(ventasCompletas);
   let promVtaAjustado = null, diasAjustado = null, ajusteFavorable = false;
@@ -1358,6 +1381,7 @@ async function loadData() {
 
     setLoader('Detectando columnas…', 55);
     detectVentaColumns(raw);
+    detectCierreColumn(raw);
 
     setLoader('Procesando ' + raw.length.toLocaleString('es-CO') + ' filas…', 60);
     DATA = await processInChunks(raw, 2000, pct => setLoader('Procesando filas…', pct));
@@ -2964,14 +2988,26 @@ function renderPlan(rows){
   const conDato=sobre.filter(r=>r.inv_cierre_mes!=null).length;
   const fuenteEl=document.getElementById('ruptura-fuente');
   if(fuenteEl){
-    if(conDato>0){
+    if(CIERRE_KEY && conDato>0){
       fuenteEl.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(7,148,85,0.08);border:1px solid rgba(7,148,85,0.25);color:var(--st-bien);padding:5px 11px;border-radius:7px;font-weight:600">'+
-        'Resuelto automáticamente con la columna «Inventario '+escH(mesRef)+'» de la hoja · '+fmt(conDato)+' SKUs con dato</span>'+
-        '<span style="color:var(--muted);margin-left:8px">Los botones solo hacen falta si quieres corregir un caso puntual.</span>';
+        'Resuelto con la columna «'+escH(CIERRE_KEY)+'» de la hoja · '+fmt(conDato)+' SKUs con dato</span>'+
+        '<span style="color:var(--muted);margin-left:8px">Los botones solo aparecen donde falta el dato.</span>';
+    } else if(CIERRE_KEY){
+      fuenteEl.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(220,104,3,0.08);border:1px solid rgba(220,104,3,0.25);color:var(--st-alerta);padding:5px 11px;border-radius:7px;font-weight:600">'+
+        'Columna «'+escH(CIERRE_KEY)+'» encontrada, pero sin valores numéricos</span>'+
+        '<span style="color:var(--muted);margin-left:8px">Revisa que tenga números (no fórmulas con error ni celdas vacías).</span>';
     } else {
+      const cand=RAW_HEADERS.filter(k=>/inv|stock|exist|saldo/i.test(k));
       fuenteEl.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(220,104,3,0.08);border:1px solid rgba(220,104,3,0.25);color:var(--st-alerta);padding:5px 11px;border-radius:7px;font-weight:600">'+
         'Verificación manual</span>'+
-        '<span style="color:var(--muted);margin-left:8px">Agrega en la hoja una columna llamada <b>Inventario '+escH(mesRef||'&lt;mes&gt;')+'</b> con el inventario al cierre de ese mes y esta sección se completará sola.</span>';
+        '<span style="color:var(--muted);margin-left:8px">Agrega en la hoja una columna <b>Inventario '+escH(mesRef||'&lt;mes&gt;')+'</b> con el inventario al cierre de ese mes.</span>'+
+        '<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted);font-size:11px">No la detecta · ver columnas que llegaron de la hoja</summary>'+
+        '<div style="padding:8px 4px;color:var(--muted);line-height:1.6;font-size:11px">'+
+        'Mes de referencia detectado: <b>'+escH(mesRef||'—')+'</b><br>'+
+        'Columnas con «inv/stock» recibidas: '+(cand.length?cand.map(c=>'<code>'+escH(c)+'</code>').join(', '):'<i>ninguna</i>')+'<br>'+
+        'Si tu columna no está en esa lista, el Apps Script no la está enviando: revisa el rango que publica. '+
+        'Si está pero no la toma, renómbrala a <b>Inventario '+escH(mesRef||'')+'</b> y pulsa «Actualizar datos».'+
+        '</div></details>';
     }
   }
   const thCierre=document.getElementById('th-inv-cierre');
