@@ -925,26 +925,20 @@
     </div>
     <!-- KPIs rápidos -->
     <div id="sinmov-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-    <!-- Tabla -->
-    <div style="background:#fff;border:1px solid #e6e2db;border-radius:10px;overflow:hidden">
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:#faf9f7;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
-              <th style="padding:10px 12px;text-align:left;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('product')" id="smh-product">Producto / SKU ↕</th>
-              <th style="padding:10px 12px;text-align:center;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('store')" id="smh-store">Tienda ↕</th>
-              <th style="padding:10px 12px;text-align:left;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('brand')" id="smh-brand">Marca ↕</th>
-              <th style="padding:10px 12px;text-align:left;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('supplier')" id="smh-supplier">Proveedor ↕</th>
-              <th style="padding:10px 12px;text-align:left;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('category')" id="smh-category">Categoría ↕</th>
-              <th style="padding:10px 12px;text-align:right;color:#dc6803;cursor:pointer;user-select:none" onclick="sortSinmov('inv_valorizado')" id="smh-inv_valorizado">Val. Inv ↕</th>
-              <th style="padding:10px 12px;text-align:right;color:#667085;cursor:pointer;user-select:none" onclick="sortSinmov('inv_actual')" id="smh-inv_actual">Inv. Actual ↕</th>
-              <th style="padding:10px 12px;text-align:center;color:#667085">Acción</th>
-            </tr>
-          </thead>
-          <tbody id="sinmov-tbody"></tbody>
-        </table>
+    <!-- Controles de agrupación -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint)">Ordenar proveedores por</span>
+      <div style="display:inline-flex;background:#f0ede8;border:1px solid var(--border);border-radius:8px;padding:3px" id="sm-order">
+        <button class="tf-scope active" data-smorder="valor">Capital inmovilizado</button>
+        <button class="tf-scope" data-smorder="skus">Cantidad de SKUs</button>
+        <button class="tf-scope" data-smorder="nombre">Nombre</button>
       </div>
+      <div style="flex:1"></div>
+      <button id="sm-expand" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">Expandir todo</button>
+      <button id="sm-collapse" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">Contraer todo</button>
     </div>
+    <!-- Grupos por proveedor -->
+    <div id="sinmov-groups" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
 
   </div><!-- /panels-wrap -->
@@ -2377,6 +2371,8 @@ function sortSinmov(col) {
   renderSinMovimiento(lastRows);
 }
 
+const SM = { order: 'valor', closed: new Set(), allClosed: false };
+
 function renderSinMovimiento(rows) {
   const term = (document.getElementById('f-search-sinmov')?.value || '').toLowerCase();
 
@@ -2389,74 +2385,125 @@ function renderSinMovimiento(rows) {
     (r.category || '').toLowerCase().includes(term)
   );
 
-  // Badge sidebar
   const cntTab = document.getElementById('cnt-sinmov-tab');
   if (cntTab) cntTab.textContent = rows.filter(r => r.estado === 'sin_movimiento').length.toLocaleString('es-CO');
 
-  const cntDet = document.getElementById('cnt-sinmov-detail');
-  if (cntDet) cntDet.textContent = data.length.toLocaleString('es-CO') + ' SKUs';
+  // ── Agrupar por proveedor ──
+  const groups = {};
+  data.forEach(r => {
+    const k = r.supplier || '(Sin proveedor)';
+    if (!groups[k]) groups[k] = { supplier: k, rows: [], valor: 0, uds: 0, tiendas: new Set(), marcas: new Set() };
+    const g = groups[k];
+    g.rows.push(r); g.valor += r.inv_valorizado || 0; g.uds += r.inv_actual || 0;
+    if (r.store) g.tiendas.add(r.store); if (r.brand) g.marcas.add(r.brand);
+  });
+  const list = Object.values(groups).sort((a, b) =>
+    SM.order === 'skus'   ? b.rows.length - a.rows.length :
+    SM.order === 'nombre' ? a.supplier.localeCompare(b.supplier, 'es') :
+                            b.valor - a.valor);
 
-  // KPIs
-  const totalVal  = data.reduce((a, r) => a + (r.inv_valorizado || 0), 0);
-  const totalUds  = data.reduce((a, r) => a + (r.inv_actual || 0), 0);
-  const stores    = new Set(data.map(r => r.store)).size;
-  const suppliers = new Set(data.map(r => r.supplier)).size;
+  const cntDet = document.getElementById('cnt-sinmov-detail');
+  if (cntDet) cntDet.textContent = data.length.toLocaleString('es-CO') + ' SKUs en ' + list.length + ' proveedores';
+
+  // ── KPIs ──
+  const totalVal = data.reduce((a, r) => a + (r.inv_valorizado || 0), 0);
+  const totalUds = data.reduce((a, r) => a + (r.inv_actual || 0), 0);
+  const top = list.length ? [...list].sort((a, b) => b.valor - a.valor)[0] : null;
   const kpisEl = document.getElementById('sinmov-kpis');
   if (kpisEl) kpisEl.innerHTML = [
-    { label: 'SKUs sin movimiento', val: data.length.toLocaleString('es-CO'), sub: 'sin ventas registradas', color: '#98a2b3' },
-    { label: 'Capital inmovilizado', val: '$' + Math.round(totalVal).toLocaleString('es-CO'), sub: 'valor inventario', color: '#dc6803' },
-    { label: 'Unidades en stock', val: Math.round(totalUds).toLocaleString('es-CO'), sub: 'uds sin rotación', color: '#667085' },
-    { label: 'Tiendas afectadas', val: stores, sub: 'con SKUs sin mov.', color: '#175cd3' },
-    { label: 'Proveedores', val: suppliers, sub: 'con SKUs parados', color: '#6941c6' },
+    { label: 'SKUs sin movimiento', val: data.length.toLocaleString('es-CO'), sub: 'sin ventas registradas', color: 'var(--st-quieto)' },
+    { label: 'Capital inmovilizado', val: '$' + Math.round(totalVal).toLocaleString('es-CO'), sub: 'valor del inventario parado', color: 'var(--st-alerta)' },
+    { label: 'Unidades en stock', val: Math.round(totalUds).toLocaleString('es-CO'), sub: 'uds sin rotación', color: 'var(--st-quieto)' },
+    { label: 'Proveedores', val: list.length, sub: 'con SKUs parados', color: 'var(--st-quieto)' },
+    { label: 'Mayor concentración', val: top ? '$' + Math.round(top.valor).toLocaleString('es-CO') : '—',
+      sub: top ? top.supplier.slice(0, 26) : 'sin datos', color: 'var(--st-quiebre)' },
   ].map(k => `<div class="kpi" style="border-top-color:${k.color}">
     <div class="kpi-label">${k.label}</div>
     <div class="kpi-value" style="font-size:22px">${k.val}</div>
     <div class="kpi-sub">${k.sub}</div>
   </div>`).join('');
 
-  // Sort
-  data.sort((a, b) => {
-    const va = a[smSortCol], vb = b[smSortCol];
-    if (va == null) return 1; if (vb == null) return -1;
-    return (typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'es')) * smSortDir;
-  });
+  const wrap = document.getElementById('sinmov-groups');
+  if (!wrap) return;
 
-  const storeColor = s => ({ 'STF 15':'#175cd3','STF 30':'#6941c6','STF 51':'#dc6803','STF 82':'#079455','STF 93':'#ba24d5' }[s] || '#667085');
-
-  const tbody = document.getElementById('sinmov-tbody');
-  if (!tbody) return;
-
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="padding:32px;text-align:center;color:#98a2b3">Sin SKUs sin movimiento con los filtros actuales</td></tr>';
+  if (!list.length) {
+    wrap.innerHTML = `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center">
+      <div style="font-size:15px;font-weight:650;color:#344054">${term ? 'Ningún SKU coincide con la búsqueda' : 'No hay SKUs sin movimiento'}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px">${term ? 'Prueba con otro producto, marca o proveedor.' : 'Todos los SKUs de la selección tienen ventas registradas.'}</div></div>`;
     return;
   }
 
-  tbody.innerHTML = data.map((r, i) => {
-    const sc = storeColor(r.store);
-    const rowBg = i % 2 === 0 ? '#ffffff' : '#fafaf9';
-    return `<tr style="background:${rowBg};border-bottom:1px solid #faf9f7;transition:background 0.1s"
-      onmouseover="this.style.background='#fdf9f5'" onmouseout="this.style.background='${rowBg}'">
-      <td style="padding:10px 12px;font-size:12px;max-width:240px">
-        <div style="font-weight:600;color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(r.product||r.sku||'')}">${escH((r.product||r.sku||'').slice(0,36))}</div>
-        <div style="font-size:10px;color:#98a2b3;margin-top:1px">${escH(r.sku||'')}</div>
-      </td>
-      <td style="padding:10px 12px;text-align:center">
-        <span style="display:inline-block;padding:2px 9px;border-radius:5px;font-size:11px;font-weight:700;background:${sc}20;color:${sc};border:1px solid ${sc}40">${r.store||'—'}</span>
-      </td>
-      <td style="padding:10px 12px;font-size:12px;color:#475569;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.brand||'—')}</td>
-      <td style="padding:10px 12px;font-size:11px;color:#667085;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.supplier||'—')}</td>
-      <td style="padding:10px 12px;font-size:11px;color:#667085;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.category||'—')}</td>
-      <td style="padding:10px 12px;text-align:right;font-weight:700;color:#d97706;font-size:12px;white-space:nowrap">${r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—'}</td>
-      <td style="padding:10px 12px;text-align:right;color:#667085;font-size:12px">${r.inv_actual!=null?fmt(r.inv_actual):'—'}</td>
-      <td style="padding:10px 12px;text-align:center">
-        <span style="display:inline-flex;gap:4px">
-          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(239,68,68,0.1);color:#d92d20;border:1px solid rgba(239,68,68,0.2);white-space:nowrap">🗑️ Discontinuar</span>
-          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(245,158,11,0.1);color:#d97706;border:1px solid rgba(245,158,11,0.2);white-space:nowrap">🔍 Revisar</span>
-        </span>
-      </td>
-    </tr>`;
+  const storeColor = st => STORE_COLOR[st] || '#667085';
+  const maxVal = list[0] ? Math.max(...list.map(g => g.valor), 1) : 1;
+
+  wrap.innerHTML = list.map(g => {
+    const gid = 'sm-' + g.supplier.replace(/[^a-zA-Z0-9]/g, '_');
+    const open = !SM.closed.has(gid);
+    const pct = (g.valor / maxVal * 100).toFixed(1);
+    const rws = [...g.rows].sort((a, b) => {
+      const va = a[smSortCol], vb = b[smSortCol];
+      if (va == null) return 1; if (vb == null) return -1;
+      return (typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'es')) * smSortDir;
+    });
+    const body = rws.map(r => {
+      const sc = storeColor(r.store);
+      return `<tr class="hover-row" style="border-top:1px solid var(--line);background:#fff">
+        <td style="padding:8px 12px 8px 34px;font-size:12px;max-width:280px">
+          <div style="font-weight:600;color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(r.product||r.sku||'')}">${escH((r.product||r.sku||'').slice(0,42))}</div>
+          <div style="font-size:10px;color:#98a2b3;margin-top:1px">${escH(r.sku||'')}</div></td>
+        <td style="padding:8px 12px;text-align:center"><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${sc}1a;color:${sc}">${r.store||'—'}</span></td>
+        <td style="padding:8px 12px;font-size:12px;color:#475569;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.brand||'—')}</td>
+        <td style="padding:8px 12px;font-size:11px;color:#667085;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(r.category||'—')}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--st-alerta);font-size:12px;white-space:nowrap">${r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—'}</td>
+        <td style="padding:8px 12px;text-align:right;color:#667085;font-size:12px">${r.inv_actual!=null?fmt(r.inv_actual):'—'}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="card" style="padding:0;overflow:hidden">
+      <div class="sm-grp" data-g="${gid}" style="display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;background:#fff">
+        <span style="color:#98a2b3;font-size:11px;width:10px">${open ? '▼' : '▶'}</span>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13.5px;font-weight:700;color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(g.supplier)}">${escH(g.supplier)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${g.rows.length} SKUs · ${g.marcas.size} marcas · ${g.tiendas.size} tiendas</div>
+        </div>
+        <div style="width:120px;height:6px;background:var(--line);border-radius:3px;overflow:hidden;flex-shrink:0" title="Peso sobre el proveedor con más capital parado">
+          <div style="height:100%;width:${pct}%;background:var(--st-alerta);border-radius:3px"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;min-width:120px">
+          <div style="font-size:15px;font-weight:700;color:var(--st-alerta);font-variant-numeric:tabular-nums">$${Math.round(g.valor).toLocaleString('es-CO')}</div>
+          <div style="font-size:10px;color:var(--faint)">${fmt(Math.round(g.uds))} uds paradas</div>
+        </div>
+      </div>
+      <div id="${gid}" style="display:${open ? 'block' : 'none'}">
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:6px 12px 6px 34px;text-align:left;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Producto · SKU</th>
+            <th style="padding:6px 12px;text-align:center;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Tienda</th>
+            <th style="padding:6px 12px;text-align:left;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Marca</th>
+            <th style="padding:6px 12px;text-align:left;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Categoría</th>
+            <th style="padding:6px 12px;text-align:right;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Val. inv.</th>
+            <th style="padding:6px 12px;text-align:right;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.7px">Inv. actual</th>
+          </tr></thead><tbody>${body}</tbody></table></div>
+      </div></div>`;
   }).join('');
+
+  wrap.querySelectorAll('.sm-grp').forEach(el => el.addEventListener('click', () => {
+    const g = el.dataset.g;
+    SM.closed.has(g) ? SM.closed.delete(g) : SM.closed.add(g);
+    renderSinMovimiento(lastRows);
+  }));
 }
+
+// Controles de agrupación
+document.querySelectorAll('#sm-order .tf-scope').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#sm-order .tf-scope').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); SM.order = b.dataset.smorder; renderSinMovimiento(lastRows);
+}));
+document.getElementById('sm-expand').addEventListener('click', () => { SM.closed.clear(); renderSinMovimiento(lastRows); });
+document.getElementById('sm-collapse').addEventListener('click', () => {
+  document.querySelectorAll('#sinmov-groups .sm-grp').forEach(el => SM.closed.add(el.dataset.g));
+  renderSinMovimiento(lastRows);
+});
 
 // ── EXPORT SIN MOVIMIENTO ─────────────────────────────────────────────────────
 function exportSinMovExcel() {
@@ -2476,7 +2523,7 @@ function exportSinMovExcel() {
 const STORE_COLOR = { 'STF 15':'#175cd3','STF 30':'#6941c6','STF 51':'#dc6803','STF 82':'#079455','STF 93':'#ba24d5' };
 
 // ── TRANSFERENCIAS: NIVELACIÓN DE INVENTARIO ─────────────────────────────────
-const TF = { scope: 'Bogotá', vista: 'destino', search: '', sel: new Set(), qty: {}, open: new Set() };
+const TF = { scope: 'Bogotá', vista: 'destino', search: '', sel: new Set(), qty: {}, closed: new Set() };
 const TF_MIN_DIAS_ORIGEN = 45;   // la tienda que envía debe tener al menos esta cobertura (o estar en sobrestock/sin mov.)
 const TF_MAX_DIAS_DESTINO = 15;  // la tienda que recibe debe estar por debajo de esta cobertura (o en quiebre/sin stock)
 const TF_RESERVA_ORIGEN = 30;    // la tienda que envía nunca queda con menos de esta cobertura
@@ -2672,7 +2719,7 @@ function renderTransferencias(rows) {
       const u = list.reduce((a, s) => a + tfQty(s), 0), v = list.reduce((a, s) => a + tfQty(s) * (s.valor / (s.uds||1)), 0);
       const crit = list.filter(s => s.urg === 'critica').length;
       const gid = 'tfg-' + st.replace(/[^a-zA-Z0-9]/g, '_');
-      const open = !TF.open.size || TF.open.has(gid);
+      const open = !TF.closed.has(gid);
       const c = STORE_COLOR[st] || '#667085';
       return `<div class="card" style="padding:0;overflow:hidden;border-left:4px solid ${c}">
         <div class="tf-grp" data-g="${gid}" style="display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;background:#fff">
@@ -2704,11 +2751,9 @@ function renderTransferencias(rows) {
   }));
   cardsEl.querySelectorAll('.tf-grp').forEach(el => el.addEventListener('click', () => {
     const g = el.dataset.g;
-    if (!TF.open.size) Object.keys(groups_ids(cardsEl)).forEach(x => TF.open.add(x));
-    TF.open.has(g) ? TF.open.delete(g) : TF.open.add(g);
+    TF.closed.has(g) ? TF.closed.delete(g) : TF.closed.add(g);
     renderTransferencias(lastRows);
   }));
-  function groups_ids(el) { const o = {}; el.querySelectorAll('.tf-grp').forEach(x => o[x.dataset.g] = 1); return o; }
 }
 
 function tfSeleccionadas() {
@@ -2758,10 +2803,10 @@ function copiarRemision() {
 // Eventos del módulo
 document.querySelectorAll('.tf-scope').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.tf-scope').forEach(x => x.classList.remove('active'));
-  b.classList.add('active'); TF.scope = b.dataset.scope; TF.sel.clear(); TF.open.clear();
+  b.classList.add('active'); TF.scope = b.dataset.scope; TF.sel.clear(); TF.closed.clear();
   renderTransferencias(lastRows);
 }));
-document.getElementById('transf-vista').addEventListener('change', e => { TF.vista = e.target.value; TF.open.clear(); renderTransferencias(lastRows); });
+document.getElementById('transf-vista').addEventListener('change', e => { TF.vista = e.target.value; TF.closed.clear(); renderTransferencias(lastRows); });
 let _tfT; document.getElementById('transf-search').addEventListener('input', e => { clearTimeout(_tfT); _tfT = setTimeout(() => { TF.search = e.target.value; renderTransferencias(lastRows); }, 200); });
 document.getElementById('transf-sel-all').addEventListener('change', e => {
   const vis = tfVisible(); vis.forEach(s => e.target.checked ? TF.sel.add(tfKey(s)) : TF.sel.delete(tfKey(s)));
