@@ -87,6 +87,27 @@
   .sb-stat-lbl { font-size: 10px; color: #64748b; }
 
 
+  /* ── SIDEBAR RESPONSIVE ── */
+  #sb-toggle { display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+    width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer;
+    box-shadow: var(--card-shadow); align-items: center; justify-content: center; }
+  #sb-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 90; }
+  #sidebar { transition: transform 0.25s ease; }
+  @media (max-width: 1024px) {
+    #sb-toggle { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    body.sb-open #sidebar { transform: translateX(0); }
+    body.sb-open #sb-overlay { display: block; }
+    body.sb-open #sb-toggle { left: 232px; }
+    #main-content { margin-left: 0; }
+    #topbar .filters { padding-left: 60px !important; }
+    #panels-wrap { padding: 16px 12px; }
+  }
+  @media (max-width: 700px) {
+    #panel-resumen > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  }
+
   header { display: none; }
   #sticky-top { display: none; }
   .tabs { display: none; }
@@ -321,6 +342,8 @@
 </div>
 
 <div id="app">
+  <button id="sb-toggle" aria-label="Abrir menú" title="Menú">☰</button>
+  <div id="sb-overlay"></div>
   <!-- ── SIDEBAR ── -->
   <nav id="sidebar">
     <div class="sb-logo">
@@ -340,7 +363,7 @@
       <span class="sb-badge" id="cnt-detalle">0</span>
     </button>
     <button class="sb-btn" data-tab="plan">
-      <span class="sb-icon">🎯</span><span class="sb-label">Plan de Acción</span>
+      <span class="sb-icon">🔵</span><span class="sb-label">Sobrestock</span>
       <span class="sb-badge sb-badge-purple" id="cnt-plan">0</span>
     </button>
     <button class="sb-btn" data-tab="provmarcas">
@@ -364,9 +387,6 @@
     <div style="padding:0 12px;margin-top:8px">
       <span id="last-update-hdr" style="font-size:10px;color:#94a3b8;display:block;margin-bottom:6px"></span>
       <button class="btn-refresh" id="btn-refresh" style="width:100%;justify-content:center;">↻ Actualizar</button>
-      <button onclick="generarCorreoSemanal()" style="width:100%;margin-top:8px;justify-content:center;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-        📧 Enviar Reporte
-      </button>
     </div>
   </nav>
 
@@ -375,6 +395,10 @@
     <!-- Top bar: filters + KPIs -->
     <div id="topbar">
       <div class="filters" style="background:none;border:none;padding:12px 24px 8px;margin:0;border-bottom:1px solid var(--border);">
+        <div class="filter-group">
+          <span class="filter-label">CIUDAD</span>
+          <div class="ms-wrap" id="ms-ciudad"></div>
+        </div>
         <div class="filter-group">
           <span class="filter-label">TIENDA</span>
           <div class="ms-wrap" id="ms-store"></div>
@@ -451,8 +475,15 @@
       </div>
     </div>
 
-    <!-- Fila 2: Sobrestock + Evolución -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <!-- Fila 2: Ciudades + Sobrestock + Evolución -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <h3>🏙️ Ciudades por días inv.</h3>
+          <button class="sort-toggle" id="sort-ciudad" data-dir="-1">↕ Mejor → Peor</button>
+        </div>
+        <svg class="chart" id="chart-ciudad" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
       <div class="card">
         <div class="card-header"><h3>🔵 Sobrestock por categoría (≥60d)</h3></div>
         <div id="chart-sobre-cat" style="padding:12px;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
@@ -529,7 +560,7 @@
     <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <h2 style="font-size:18px;font-weight:800;color:#1e293b;margin:0">📋 Detalle por Categoría</h2>
-        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs · <span id="row-count"></span></p>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Marca → SKUs · <span id="row-count"></span></p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input class="search-input" id="f-search2" placeholder="Buscar producto, SKU…" style="min-width:200px;background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px"/>
@@ -540,7 +571,7 @@
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
-            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría / SKU</th>
+            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Marca / SKU</th>
             <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
             <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortDet('skus')" id="deth2-skus">SKUs ↕</th>
             <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortDet('inv_val')" id="deth2-inv_val">Val. Inv ↕</th>
@@ -588,8 +619,8 @@
   <div class="tab-panel" id="panel-plan">
     <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
-        <h2 style="font-size:18px;font-weight:800;color:#a78bfa;margin:0">🎯 Plan de Ataque — Sobrestock ≥60 días</h2>
-        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Subcategoría → SKUs con inventario excesivo</p>
+        <h2 style="font-size:18px;font-weight:800;color:#a78bfa;margin:0">🔵 Sobrestock ≥60 días</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Categoría → Marca → SKUs con inventario excesivo</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="plan-store" style="background:#f0ede8;border:1px solid #1e2d3d;color:#334155;padding:7px 10px;border-radius:6px;font-size:13px"><option value="">Todas las tiendas</option></select>
@@ -602,6 +633,10 @@
       </div>
     </div>
     <div id="plan-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+    <div style="margin-bottom:20px">
+      <p style="font-size:11px;color:#64748b;margin:0 0 12px 0">"SKUs Sobrestock" y "Capital Inmovilizado" de arriba ya muestran solo el <b>sobrestock real</b> — se excluyeron los falsos positivos por ruptura de stock recuperada, y los casos sin dato suficiente se separan abajo en su propia sección.</p>
+      <div id="plan-summary-ruptura" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:#ffffff;border:1px solid #1e2d3d;border-radius:12px;padding:16px">
         <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 14px 0">📦 SKUs Sobrestock por Responsable</h3>
@@ -616,10 +651,10 @@
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:#f0ede8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
-            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Subcategoría</th>
+            <th style="padding:10px 12px;text-align:left;color:#64748b">Categoría / Marca</th>
             <th style="padding:10px 12px;text-align:center;color:#64748b">Responsable</th>
             <th style="padding:10px 12px;text-align:right;color:#a78bfa;cursor:pointer;user-select:none" onclick="sortPlan('skus')" id="planh-skus">SKUs ↕</th>
-            <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortPlan('inv_val')" id="planh-inv_val">Val. Inv ↕</th>
+            <th style="padding:10px 12px;text-align:right;color:#f59e0b;cursor:pointer;user-select:none" onclick="sortPlan('inv_val')" id="planh-inv_val">Val. Sobrestock ↕</th>
             <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('dias')" id="planh-dias">Días Prom ↕</th>
             <th style="padding:10px 12px;text-align:right;color:#64748b;cursor:pointer;user-select:none" onclick="sortPlan('inv_actual')" id="planh-inv_actual">Inv. Actual ↕</th>
             <th style="padding:10px 12px;text-align:center;color:#64748b">Estado</th>
@@ -628,6 +663,34 @@
         </table>
       </div>
     </div>
+
+    <div style="margin-top:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;cursor:pointer" onclick="toggleEnRupturaSection()">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="icon-ruptura-section" style="font-size:11px;color:#2563eb">▶</span>
+          <h3 style="font-size:14px;font-weight:800;color:#2563eb;margin:0">⏳ En Ruptura — Pendiente de Confirmar <span id="cnt-enruptura-header" style="font-weight:600;color:#64748b;font-size:12px"></span></h3>
+        </div>
+        <button id="btn-plan-export-ruptura" onclick="event.stopPropagation();exportEnRupturaXLSX()" style="background:#2563eb;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">⬇ Exportar</button>
+      </div>
+      <p style="font-size:11px;color:#64748b;margin:0 0 12px 0">Julio (último mes completo) en cero — no hay suficiente evidencia todavía para confirmar si es sobrestock real o ruptura sin resolver. No se cuentan como sobrestock confirmado ni se accionan como tal.</p>
+      <div id="plan-ruptura-body" style="display:none">
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead><tr style="background:#eff6ff;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">
+                <th style="padding:10px 12px;text-align:left;color:#64748b">Proveedor / SKU · Producto</th>
+                <th style="padding:10px 12px;text-align:center;color:#64748b">Tienda</th>
+                <th style="padding:10px 12px;text-align:right;color:#f59e0b">Val. Inv</th>
+                <th style="padding:10px 12px;text-align:right;color:#64748b">Inv. Actual</th>
+                <th style="padding:10px 12px;text-align:center;color:#64748b">¿Tenía stock en julio?</th>
+              </tr></thead>
+              <tbody id="plan-ruptura-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <!-- SIN MOVIMIENTO -->
   <div class="tab-panel" id="panel-sinmovimiento">
@@ -695,7 +758,11 @@ function detectVentaColumns(rawRows) {
   if (!rawRows.length) return;
   const keys = Object.keys(rawRows[0]);
   const ORDER = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const found = keys.filter(k => k.trim().toLowerCase().startsWith('venta '));
+  const found = keys.filter(k => {
+    const kk = k.trim().toLowerCase();
+    if (kk.startsWith('venta ')) return true; // ej. "Venta Enero"
+    return ORDER.some(m => kk === m.toLowerCase()); // ej. "Enero" (sin prefijo)
+  });
   found.sort((a, b) => {
     const ma = ORDER.findIndex(m => a.toLowerCase().includes(m.toLowerCase()));
     const mb = ORDER.findIndex(m => b.toLowerCase().includes(m.toLowerCase()));
@@ -709,11 +776,30 @@ let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm 
 let detSortCol2 = 'inv_val', detSortDir2 = -1;
 let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
 function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
+
+// ── ASIGNACIÓN MANUAL: ¿tenía stock en julio o no? (resuelve SKUs "En Ruptura") ──
+// true  = confirmado que SÍ tenía stock y no vendió -> se trata como sobrestock real
+// false = confirmado que NO tenía stock -> sigue en ruptura, pero ya verificado (no ambiguo)
+// ausente = sin verificar todavía (estado original, ambiguo)
+let STOCK_OVERRIDES = JSON.parse(localStorage.getItem('fithub_stock_overrides') || '{}');
+function saveStockOverrides() { try { localStorage.setItem('fithub_stock_overrides', JSON.stringify(STOCK_OVERRIDES)); } catch(e){} }
+function overrideKey(r) { return (r.store||'') + '|' + (r.sku||''); }
+function getClasificacionEfectiva(r) {
+  const ov = STOCK_OVERRIDES[overrideKey(r)];
+  if (ov === true) return 'Sobrestock confirmado'; // verificado: tenía stock, no vendió -> exceso real
+  return r.clasificacion_ruptura; // false (confirmado sin stock) o sin verificar: se queda igual
+}
+function setStockOverride(store, sku, value) {
+  const key = store + '|' + sku;
+  if (value === null) delete STOCK_OVERRIDES[key]; else STOCK_OVERRIDES[key] = value;
+  saveStockOverrides();
+  if (lastRows.length) renderPlan(lastRows);
+}
 let sortCol = 'dias_inv', sortDir = -1;
 let provSortCol = 'inv_val', provSortDir = -1;
 let marcaSortCol = 'inv_val', marcaSortDir = -1;
 let pageSize = 50, currentPage = 1;
-const sortDirs = { store: -1, sup: -1, cat: -1 };
+const sortDirs = { store: -1, ciudad: -1, sup: -1, cat: -1 };
 
 // ── LOADER ──────────────────────────────────────────────────────────────────
 function setLoader(txt, pct) {
@@ -754,6 +840,45 @@ function numFast(v) {
   return result;
 }
 
+// ── DETECCIÓN DE RUPTURA DE INVENTARIO ──────────────────────────────────────
+// Diagnóstico: "Días de Inventario" se calcula con el promedio de venta de
+// TODOS los meses. Si un SKU tuvo quiebre de stock (meses en cero por falta
+// de inventario, no por falta de demanda) y ya se recuperó, esos ceros siguen
+// arrastrando el promedio hacia abajo e inflan artificialmente los días de
+// inventario, marcándolo como falso positivo de sobrestock.
+// Método: se busca el último tramo de ≥2 meses consecutivos en cero
+// inmediatamente seguido de ≥2 meses consecutivos con venta > 0 y sin volver
+// a caer a cero. Si se confirma, la venta promedio se recalcula SOLO con los
+// meses de la ventana de recuperación.
+function detectarRuptura(ventas) {
+  const n = ventas.length;
+  if (n === 0) return { rupturaConfirmada: false, enRupturaActual: false };
+
+  let ultimoCeroIdx = -1;
+  for (let i = n - 1; i >= 0; i--) {
+    const v = ventas[i];
+    if (v == null || v === 0) { ultimoCeroIdx = i; break; }
+  }
+  if (ultimoCeroIdx === -1) {
+    return { rupturaConfirmada: false, enRupturaActual: false }; // nunca tuvo un mes en cero
+  }
+  if (ultimoCeroIdx === n - 1) {
+    // el último mes (completo) sigue en cero -> no se puede confirmar recuperación todavía
+    return { rupturaConfirmada: false, enRupturaActual: true };
+  }
+
+  let cerosSeguidos = 0;
+  for (let i = ultimoCeroIdx; i >= 0; i--) {
+    const v = ventas[i];
+    if (v == null || v === 0) cerosSeguidos++; else break;
+  }
+  const inicioRecuperacion = ultimoCeroIdx + 1;
+  const mesesRecuperacion = n - inicioRecuperacion; // por construcción, todos > 0 (sin recaída)
+  const rupturaConfirmada = cerosSeguidos >= 2 && mesesRecuperacion >= 2;
+
+  return { rupturaConfirmada, enRupturaActual: false, cerosSeguidos, mesesRecuperacion, inicioRecuperacion };
+}
+
 function normalise(raw, keyMap) {
   const g = k => gk(raw, keyMap, k);
   const str = v => v == null ? '' : String(v).trim();
@@ -769,16 +894,78 @@ function normalise(raw, keyMap) {
   const dias = numFast(g('días de inventario') ?? g('dias de inventario'));
   const vidaUtil = numFast(g('promedio de vida útil') ?? g('promedio de vida util'));
 
+  // El último mes se considera parcial (aún corriendo) si su nombre coincide
+  // con el mes calendario actual — se excluye de la detección de ruptura y
+  // del promedio ajustado, y queda solo como referencia informativa.
+  const MESES_ORDEN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesActualNombre = MESES_ORDEN[new Date().getMonth()];
+  const ultimaEsParcial = VENTA_LABELS.length > 0 &&
+    VENTA_LABELS[VENTA_LABELS.length - 1].toLowerCase() === mesActualNombre.toLowerCase();
+  const ventasCompletas = ultimaEsParcial ? ventas.slice(0, -1) : ventas.slice();
+
+  const rupturaInfo = detectarRuptura(ventasCompletas);
+  let promVtaAjustado = null, diasAjustado = null, ajusteFavorable = false;
+  if (rupturaInfo.rupturaConfirmada) {
+    const recuperacion = ventasCompletas.slice(rupturaInfo.inicioRecuperacion);
+    const sumaRec = recuperacion.reduce((a, b) => a + (b || 0), 0);
+    const promCandidato = sumaRec / recuperacion.length;
+    const diasCandidato = (inv != null && promCandidato > 0) ? (inv * 30 / promCandidato) : dias;
+    // El ajuste SOLO se aplica si reduce los días (beneficio de la duda para
+    // corregir falsos positivos por ruptura). Si el promedio de la ventana de
+    // recuperación resulta más bajo que el promedio original — por ejemplo,
+    // porque antes del hueco en cero las ventas eran excepcionalmente altas —
+    // el "ajuste" empeoraría la cifra. En ese caso NO se aplica, para no
+    // marcar como sobrestock algo que el cálculo original no marcaba.
+    if (diasCandidato < dias) {
+      promVtaAjustado = promCandidato;
+      diasAjustado = diasCandidato;
+      ajusteFavorable = true;
+    }
+  }
+  // diasFinal = mejor estimado disponible de cobertura real: usa el ajustado
+  // solo si se confirmó un patrón de ruptura Y el ajuste resultó favorable.
+  const diasFinal = ajusteFavorable ? diasAjustado : dias;
+
   const tieneVentas = ventas.some(v => v != null && v > 0);
-  let estado = 'normal';
-  if (!tieneVentas) {
-    estado = (inv != null && inv > 0) ? 'sin_movimiento' : 'nuevo';
-  } else if (dias != null) {
-    if (dias === 0 || (inv != null && inv === 0)) estado = 'sin_stock';
-    else if (dias <= 3)                          estado = 'quiebre';
-    else if (vidaUtil != null && dias > vidaUtil) estado = 'gestionar';
-    else if (dias >= 60)                         estado = 'sobrestock';
-    else if (dias >= 4)                          estado = 'bien';
+
+  // Clasifica el estado a partir de un valor de "días" dado — se usa tanto
+  // con el valor original (para saber si HABRÍA sido sobrestock) como con
+  // el ajustado (para el estado final que ve el resto del dashboard).
+  function clasificarEstado(diasVal) {
+    if (!tieneVentas) return (inv != null && inv > 0) ? 'sin_movimiento' : 'nuevo';
+    if (diasVal == null) return 'normal';
+    if (diasVal === 0 || (inv != null && inv === 0)) return 'sin_stock';
+    if (diasVal <= 3) return 'quiebre';
+    if (vidaUtil != null && diasVal > vidaUtil) return 'gestionar';
+    if (diasVal >= 60) return 'sobrestock';
+    if (diasVal >= 4) return 'bien';
+    return 'normal';
+  }
+
+  const estadoOriginal = clasificarEstado(dias);
+  const estado = clasificarEstado(diasFinal);
+
+  // ── CLASIFICACIÓN DE RUPTURA (4 categorías, igual que el análisis en Excel) ──
+  // Solo aplica a SKUs que el sistema HABRÍA marcado sobrestock/gestionar con
+  // el cálculo original (antes de ajustar por ruptura).
+  let clasificacionRuptura = null;
+  const eraSobrestockOriginal = (estadoOriginal === 'sobrestock' || estadoOriginal === 'gestionar');
+  if (eraSobrestockOriginal) {
+    if (rupturaInfo.enRupturaActual) {
+      // Julio (último mes completo) en cero: no hay dato suficiente para
+      // confirmar recuperación. Se distingue según el inventario ACTUAL
+      // (hoy), que sí conocemos, para que la etiqueta sea accionable:
+      // con stock hoy pero sin ventas recientes es un problema distinto
+      // a estar sin stock hoy mismo.
+      clasificacionRuptura = (inv != null && inv > 0)
+        ? 'En ruptura - tiene stock, monitorear'
+        : 'En ruptura - sin stock, reabasto urgente';
+    } else if (ajusteFavorable) {
+      const sigueSobrestock = (estado === 'sobrestock' || estado === 'gestionar');
+      clasificacionRuptura = sigueSobrestock ? 'Sobrestock real (ajustado)' : 'Falso positivo - Ruptura recuperada';
+    } else {
+      clasificacionRuptura = 'Sobrestock confirmado';
+    }
   }
 
   return {
@@ -789,6 +976,7 @@ function normalise(raw, keyMap) {
     brand:         str(g('brand') ?? g('marca')),
     product:       str(g('product') ?? g('producto')),
     category:      str(g('categories') ?? g('category') ?? g('categoría') ?? g('categoria')),
+    ciudad:        str(g('ciudad') ?? g('city')) || STORE_CIUDAD[str(g('store'))] || '',
     sub_category:  str(g('sub categories') ?? g('sub_category') ?? g('subcategoría') ?? g('subcategoria')),
     tipo_pago:     str(g('tipo de pago') ?? g('tipo_pago') ?? g('tipopago')),
     tipo_producto: str(g('tipo de producto') ?? g('tipo_producto') ?? g('tipoproducto')),
@@ -796,8 +984,14 @@ function normalise(raw, keyMap) {
     inv_valorizado: numFast(g('total inv a costo') ?? g('inventario actual valorizado') ?? g('inv valorizado')),
     inv_actual:    inv,
     dias_inv:      dias,
+    dias_inv_ajustado: ajusteFavorable ? Math.round(diasAjustado * 10) / 10 : null,
+    ruptura_detectada: ajusteFavorable,
+    en_ruptura_actual: !!rupturaInfo.enRupturaActual,
+    clasificacion_ruptura: clasificacionRuptura,
+    meses_recuperacion: ajusteFavorable ? rupturaInfo.mesesRecuperacion : null,
     vida_util:     vidaUtil,
     prom_vta:      numFast(g('promedio de venta ytd')) ?? promVta,
+    prom_vta_ajustado: ajusteFavorable ? Math.round(promVtaAjustado * 10000) / 10000 : null,
     venta_mes:     (() => { const last = ventas.filter(v=>v!=null&&v>0); return last.length ? last[last.length-1] : 0; })(),
     costo:         numFast(g('costo sin iva') ?? g('costo sin iva') ?? g('costo')) ?? 0,
     ventas,
@@ -880,6 +1074,7 @@ async function loadData() {
     const appEl=document.getElementById('app');appEl.style.display='block';
 
     const onFC = () => { cascadeFilters(); render(); };
+    msCreate('ms-ciudad',   'Todas',  onFC);
     msCreate('ms-store',    'Todas',  onFC);
     msCreate('ms-supplier', 'Todos',  onFC);
     msCreate('ms-brand',    'Todas',  onFC);
@@ -1011,6 +1206,7 @@ document.addEventListener('click', () => {
 });
 
 function repopulateFilters() {
+  msSetOptions('ms-ciudad',   DATA.map(r=>r.ciudad));
   msSetOptions('ms-store',    DATA.map(r=>r.store));
   msSetOptions('ms-supplier', DATA.map(r=>r.supplier));
   msSetOptions('ms-brand',    DATA.map(r=>r.brand));
@@ -1024,23 +1220,29 @@ function repopulateFilters() {
 
 function cascadeFilters() {
   if (!DATA.length) return;
+  const ciudades  = msGetSelected('ms-ciudad');
+  // Ciudad → Tienda: las tiendas disponibles dependen de la ciudad elegida
+  msSetOptions('ms-store', DATA.filter(r => !ciudades.size || ciudades.has(r.ciudad)).map(r=>r.store));
   const stores    = msGetSelected('ms-store');
   const sups      = msGetSelected('ms-supplier');
   const brands    = msGetSelected('ms-brand');
   const base = DATA.filter(r =>
+    (!ciudades.size || ciudades.has(r.ciudad)) &&
     (!stores.size || stores.has(r.store)) &&
     (!sups.size   || sups.has(r.supplier)) &&
     (!brands.size || brands.has(r.brand))
   );
   msSetOptions('ms-cat', base.map(r=>r.category));
-  const baseForBrand = DATA.filter(r => (!stores.size||stores.has(r.store)) && (!sups.size||sups.has(r.supplier)));
+  const inCiudad = r => !ciudades.size || ciudades.has(r.ciudad);
+  const baseForBrand = DATA.filter(r => inCiudad(r) && (!stores.size||stores.has(r.store)) && (!sups.size||sups.has(r.supplier)));
   msSetOptions('ms-brand', baseForBrand.map(r=>r.brand));
-  const baseForSup = DATA.filter(r => (!stores.size||stores.has(r.store)) && (!brands.size||brands.has(r.brand)));
+  const baseForSup = DATA.filter(r => inCiudad(r) && (!stores.size||stores.has(r.store)) && (!brands.size||brands.has(r.brand)));
   msSetOptions('ms-supplier', baseForSup.map(r=>r.supplier));
 }
 
 // ── FILTER ROWS ──────────────────────────────────────────────────────────────
 function filterRows() {
+  const ciudades = msGetSelected('ms-ciudad');
   const stores  = msGetSelected('ms-store');
   const sups    = msGetSelected('ms-supplier');
   const brands  = msGetSelected('ms-brand');
@@ -1052,6 +1254,7 @@ function filterRows() {
   const term    = searchTerm.toLowerCase();
   const subcats = msGetSelected('ms-subcat');
   return DATA.filter(r => {
+    if (ciudades.size && !ciudades.has(r.ciudad))       return false;
     if (stores.size  && !stores.has(r.store))           return false;
     if (sups.size    && !sups.has(r.supplier))          return false;
     if (brands.size  && !brands.has(r.brand))           return false;
@@ -1584,7 +1787,7 @@ function renderTable(rows) {
   const catMap = {};
   filtered.forEach(r => {
     const cat = r.category || '(Sin categoría)';
-    const sub = r.sub_category || '(Sin subcategoría)';
+    const sub = r.brand || '(Sin marca)';
     if (!catMap[cat]) catMap[cat] = { skus:0, inv_val:0, inv_actual:0, diasSum:0, diasN:0, subs:{} };
     const c = catMap[cat];
     c.skus++; c.inv_val += r.inv_valorizado||0; c.inv_actual += r.inv_actual||0;
@@ -1622,11 +1825,13 @@ function renderTable(rows) {
           '<td style="padding:5px 12px 5px 56px;color:#6b7280;font-size:11px"><span style="color:#334155;margin-right:5px">⤷</span>'+escH(r.sku||'')+
           ' <span style="color:#475569;font-size:10px">'+escH(r.product||'')+'</span>'+
           ' <span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700;background:'+sc2+'22;color:'+sc2+';border:1px solid '+sc2+'44;margin-left:4px">'+(r.store||'')+'</span>'+
-          (r.pareto==='Si'?' <span title="Pareto" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(234,179,8,0.18);color:#b45309;border:1px solid rgba(234,179,8,0.45);margin-left:4px">★ P</span>':'')+'</td>'+
+          (r.pareto==='Si'?' <span title="Pareto" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(234,179,8,0.18);color:#b45309;border:1px solid rgba(234,179,8,0.45);margin-left:4px">★ P</span>':'')+
+          (r.ruptura_detectada?' <span title="Días de inventario ajustados por ruptura recuperada: '+r.dias_inv.toFixed(1)+'d → '+r.dias_inv_ajustado.toFixed(1)+'d (promedio recalculado con los últimos '+r.meses_recuperacion+' meses de recuperación)" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(16,185,129,0.15);color:#059669;border:1px solid rgba(16,185,129,0.4);margin-left:4px">🔄 Ruptura recuperada</span>':'')+
+          (r.en_ruptura_actual?(r.inv_actual!=null&&r.inv_actual>0?' <span title="Último mes completo en cero, pero SÍ hay inventario hoy — monitorear si repunta" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.35);margin-left:4px">👀 Con stock, monitorear</span>':' <span title="Último mes completo en cero Y sin inventario hoy — reabasto urgente" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;background:rgba(239,68,68,0.12);color:#dc2626;border:1px solid rgba(239,68,68,0.35);margin-left:4px">🚨 Sin stock, reabasto</span>'):'')+'</td>'+
           '<td style="padding:5px 12px;text-align:center;font-size:10px;color:#64748b">'+escH(r.supplier||'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#f59e0b;font-size:11px;font-weight:600">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.prom_vta!=null?fmt(r.prom_vta):'—')+'</td>'+
-          '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+'</td>'+
+          '<td style="padding:5px 12px;text-align:right;color:'+diasColor(r.dias_inv||0)+';font-weight:700;font-size:12px" title="'+(r.ruptura_detectada?'Original: '+r.dias_inv.toFixed(1)+'d — Ajustado por ruptura: '+r.dias_inv_ajustado.toFixed(1)+'d':'')+'">'+(r.dias_inv!=null?r.dias_inv.toFixed(1)+'d':'—')+(r.ruptura_detectada?' <span style="font-size:9px;color:#059669">('+r.dias_inv_ajustado.toFixed(0)+'d aj.)</span>':'')+'</td>'+
           '<td style="padding:5px 12px;text-align:right;color:#6b7280;font-size:11px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
           '<td style="padding:5px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+ec+'22;color:'+ec+'">'+el+'</span></td>'+
           '</tr>';
@@ -2239,35 +2444,99 @@ function renderPlan(rows){
   if(planStore) planStore.innerHTML='<option value="">Todas las tiendas</option>'+stores.map(s=>`<option value="${s}" ${s===curStore?'selected':''}>${s}</option>`).join('');
   const sf=planStore?planStore.value:'';const rf=planResp?planResp.value:'';
   const sobre=rows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
-  if(planCnt) planCnt.textContent=sobre.length;
-  const totalVal=sobre.reduce((a,r)=>a+(r.inv_valorizado||0),0);
-  const totalInv=sobre.reduce((a,r)=>a+(r.inv_actual||0),0);
-  const validDias=sobre.filter(r=>r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999);
+
+  // ── Separación: Verdadero Sobrestock (accionable) vs En Ruptura (pendiente) ──
+  // Usa la clasificación EFECTIVA (aplica asignaciones manuales de stock si existen)
+  const verdadero=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='Sobrestock confirmado'||c==='Sobrestock real (ajustado)';});
+  const enRuptura=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='En ruptura - tiene stock, monitorear'||c==='En ruptura - sin stock, reabasto urgente';});
+
+  if(planCnt) planCnt.textContent=verdadero.length;
+  const totalVal=verdadero.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+  const totalInv=verdadero.reduce((a,r)=>a+(r.inv_actual||0),0);
+  const validDias=verdadero.filter(r=>r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999);
   const diasProm=validDias.length?validDias.reduce((a,r)=>a+r.dias_inv,0)/validDias.length:0;
-  const gst=sobre.filter(r=>r.estado==='gestionar').length;
+  const gst=verdadero.filter(r=>r.estado==='gestionar').length;
   if(planSumEl) planSumEl.innerHTML=[
-    {label:'SKUs Sobrestock',val:sobre.length.toLocaleString('es-CO'),sub:((sobre.length/Math.max(rows.length,1))*100).toFixed(1)+'% del total',color:'#8b5cf6'},
-    {label:'Capital Inmovilizado',val:'$'+Math.round(totalVal).toLocaleString('es-CO'),sub:'Inv. valorizado sobrestock',color:'#f59e0b'},
+    {label:'SKUs Sobrestock',val:verdadero.length.toLocaleString('es-CO'),sub:((verdadero.length/Math.max(rows.length,1))*100).toFixed(1)+'% del total · sobrestock real',color:'#8b5cf6'},
+    {label:'Capital Inmovilizado',val:'$'+Math.round(totalVal).toLocaleString('es-CO'),sub:'Inv. valorizado — sobrestock real',color:'#f59e0b'},
     {label:'Días Prom.',val:diasProm>0?diasProm.toFixed(0):'—',sub:'días promedio cobertura',color:'#a78bfa'},
     {label:'⚠️ Riesgo Vencimiento',val:gst,sub:'supera vida útil',color:'#ef4444'},
-    {label:'Categorías Afectadas',val:new Set(sobre.map(r=>r.category)).size,sub:'con al menos 1 SKU',color:'#8b5cf6'},
+    {label:'Categorías Afectadas',val:new Set(verdadero.map(r=>r.category)).size,sub:'con al menos 1 SKU',color:'#8b5cf6'},
     {label:'Unidades en Exceso',val:Math.round(totalInv).toLocaleString('es-CO'),sub:'unidades sobrestock',color:'#64748b'},
   ].map(k=>`<div style="background:#ffffff;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
-  const respMap={};sobre.forEach(r=>{const resp=RESPONSABLES[r.category]||'—';respMap[resp]=(respMap[resp]||0)+1;});
+
+  // ── Bloque "En Ruptura" (pendiente de confirmar) — con su propio valorizado ──
+  const planRupturaEl=document.getElementById('plan-summary-ruptura');
+  if(planRupturaEl){
+    const cEnRupturaStock=enRuptura.filter(r=>getClasificacionEfectiva(r)==='En ruptura - tiene stock, monitorear').length;
+    const cEnRupturaSinStock=enRuptura.filter(r=>getClasificacionEfectiva(r)==='En ruptura - sin stock, reabasto urgente').length;
+    const valEnRuptura=enRuptura.reduce((a,r)=>a+(r.inv_valorizado||0),0);
+    planRupturaEl.innerHTML=[
+      {label:'⏳ SKUs En Ruptura',val:enRuptura.length.toLocaleString('es-CO'),sub:'🚨 Sin stock hoy ('+cEnRupturaSinStock+') · 👀 Con stock ('+cEnRupturaStock+')',color:'#2563eb'},
+      {label:'💰 Valorizado En Ruptura',val:'$'+Math.round(valEnRuptura).toLocaleString('es-CO'),sub:'inventario pendiente de confirmar',color:'#60a5fa'},
+    ].map(k=>`<div style="background:#ffffff;border:1px solid #1e2d3d;border-left:3px solid ${k.color};border-radius:10px;padding:14px 16px"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">${k.label}</div><div style="font-size:22px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${k.sub}</div></div>`).join('');
+  }
+  const cntEnRupturaHeader=document.getElementById('cnt-enruptura-header');
+  if(cntEnRupturaHeader) cntEnRupturaHeader.textContent=enRuptura.length?'('+enRuptura.length+' SKUs)':'';
+  const planRupturaTbody=document.getElementById('plan-ruptura-tbody');
+  if(planRupturaTbody){
+    const provGroups={};
+    enRuptura.forEach(r=>{
+      const prov=r.supplier||'(Sin proveedor)';
+      if(!provGroups[prov]) provGroups[prov]={rows:[],valTotal:0};
+      provGroups[prov].rows.push(r);
+      provGroups[prov].valTotal+=r.inv_valorizado||0;
+    });
+    const provEntries=Object.entries(provGroups).sort((a,b)=>b[1].valTotal-a[1].valTotal);
+    if(!provEntries.length){
+      planRupturaTbody.innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:#94a3b8">Sin SKUs en ruptura pendiente</td></tr>';
+    } else {
+      planRupturaTbody.innerHTML=provEntries.map(([prov,g])=>{
+        const provId='rupprov-'+prov.replace(/[^a-zA-Z0-9]/g,'_');
+        const rowsSorted=g.rows.slice().sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0));
+        const skuRows=rowsSorted.map(r=>{
+          const sc2={'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899'}[r.store]||'#64748b';
+          const key=overrideKey(r);
+          const ov=STOCK_OVERRIDES[key];
+          const btnTuvo='<button onclick="event.stopPropagation();setStockOverride(\''+r.store+'\',\''+r.sku+'\','+(ov===true?'null':'true')+')" style="padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid '+(ov===true?'#059669':'#d1d5db')+';background:'+(ov===true?'#059669':'#ffffff')+';color:'+(ov===true?'#fff':'#374151')+';cursor:pointer;margin-right:4px">✅ Tuvo stock</button>';
+          const btnNo='<button onclick="event.stopPropagation();setStockOverride(\''+r.store+'\',\''+r.sku+'\','+(ov===false?'null':'false')+')" style="padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid '+(ov===false?'#dc2626':'#d1d5db')+';background:'+(ov===false?'#dc2626':'#ffffff')+';color:'+(ov===false?'#fff':'#374151')+';cursor:pointer">🚫 Sin stock</button>';
+          return '<tr style="border-bottom:1px solid #f0ede8" class="hover-row">'+
+            '<td style="padding:8px 12px 8px 32px;font-size:12px"><span style="color:#6b7280">'+escH(r.sku||'')+'</span> <span style="font-weight:600">'+escH((r.product||'').slice(0,38))+'</span></td>'+
+            '<td style="padding:8px 12px;text-align:center"><span style="display:inline-block;padding:1px 8px;border-radius:6px;font-size:10px;font-weight:700;background:'+sc2+'22;color:'+sc2+'">'+(r.store||'')+'</span></td>'+
+            '<td style="padding:8px 12px;text-align:right;color:#f59e0b;font-weight:600;font-size:12px">'+(r.inv_valorizado!=null?'$'+Math.round(r.inv_valorizado).toLocaleString('es-CO'):'—')+'</td>'+
+            '<td style="padding:8px 12px;text-align:right;color:#6b7280;font-size:12px">'+(r.inv_actual!=null?fmt(r.inv_actual):'—')+'</td>'+
+            '<td style="padding:8px 12px;text-align:center;white-space:nowrap">'+btnTuvo+btnNo+(ov!=null?' <span onclick="event.stopPropagation();setStockOverride(\''+r.store+'\',\''+r.sku+'\',null)" title="Quitar asignación" style="cursor:pointer;color:#94a3b8;font-size:11px;margin-left:4px">✕</span>':'')+'</td></tr>';
+        }).join('');
+        return '<tr style="background:#f4f1ec;cursor:pointer" onclick="toggleAtacarRow(\''+provId+'\')">'+
+          '<td colspan="2" style="padding:9px 12px;font-weight:700;color:#1e293b;font-size:12px"><span id="icon-'+provId+'" style="color:#475569;margin-right:6px;font-size:10px">▶</span>'+escH(prov)+' <span style="font-size:10px;color:#64748b;font-weight:500">('+g.rows.length+' SKUs)</span></td>'+
+          '<td style="padding:9px 12px;text-align:right;color:#f59e0b;font-weight:700;font-size:12px">$'+Math.round(g.valTotal).toLocaleString('es-CO')+'</td>'+
+          '<td colspan="2" style="padding:9px 12px"></td></tr>'+
+          '<tr id="'+provId+'" style="display:none"><td colspan="5" style="padding:0"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#eef2ff">'+
+          '<th style="padding:4px 12px 4px 32px;text-align:left;color:#9ca3af;font-size:9px;text-transform:uppercase">SKU · Producto</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Tienda</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Val. Inv</th>'+
+          '<th style="padding:4px 12px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Inv. Actual</th>'+
+          '<th style="padding:4px 12px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">¿Tenía stock en julio?</th>'+
+          '</tr></thead><tbody>'+skuRows+'</tbody></table></td></tr>';
+      }).join('');
+    }
+  }
+
+  const respMap={};verdadero.forEach(r=>{const resp=RESPONSABLES[r.category]||'—';respMap[resp]=(respMap[resp]||0)+1;});
   const respEl=document.getElementById('plan-chart-resp');
   if(respEl){const ent=Object.entries(respMap).sort((a,b)=>b[1]-a[1]);const max=ent[0]?.[1]||1;
     respEl.innerHTML=ent.map(([resp,cnt])=>{const color=RESP_COLORS[resp]||'#64748b';const pct=(cnt/max*100).toFixed(1);
-      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span><div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span></div></div><span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(sobre.length,1))*100).toFixed(0)}%</span></div>`;
+      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:50px;font-size:12px;font-weight:700;color:${color}">${resp}</span><div style="flex:1;height:22px;background:#f0ede8;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">${cnt.toLocaleString('es-CO')} SKUs</span></div></div><span style="min-width:36px;font-size:11px;color:#64748b;text-align:right">${((cnt/Math.max(verdadero.length,1))*100).toFixed(0)}%</span></div>`;
     }).join('');}
-  const provMap={};sobre.forEach(r=>{const p=r.supplier||'(Sin prov.)';provMap[p]=(provMap[p]||0)+1;});
+  const provMap={};verdadero.forEach(r=>{const p=r.supplier||'(Sin prov.)';provMap[p]=(provMap[p]||0)+1;});
   const provEl=document.getElementById('plan-chart-prov');
   if(provEl){const ent=Object.entries(provMap).sort((a,b)=>b[1]-a[1]).slice(0,20);const max=ent[0]?.[1]||1;
     const colors=['#8b5cf6','#a78bfa','#c4b5fd','#7c3aed','#6d28d9','#5b21b6','#4c1d95','#7c3aed','#8b5cf6','#9333ea','#a855f7','#b366f5','#c084fc','#d8b4fe','#8b5cf6','#7c3aed','#6d28d9','#a78bfa','#c4b5fd','#8b5cf6'];
     provEl.innerHTML=ent.map(([prov,cnt],i)=>{const pct=(cnt/max*100).toFixed(1);const short=prov.length>28?prov.substring(0,26)+'…':prov;
       return`<div style="display:flex;align-items:center;gap:8px"><span style="min-width:160px;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escH(prov)}">${escH(short)}</span><div style="flex:1;height:18px;background:#f0ede8;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:3px;display:flex;align-items:center;padding-left:6px"><span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${cnt}</span></div></div></div>`;
     }).join('');}
-  const catMap={};sobre.forEach(r=>{
-    const cat=r.category||'(Sin categoría)';const sub=r.sub_category||'(Sin subcategoría)';
+  const catMap={};verdadero.forEach(r=>{
+    const cat=r.category||'(Sin categoría)';const sub=r.brand||'(Sin marca)';
     if(!catMap[cat]) catMap[cat]={skus:0,inv_val:0,inv_actual:0,diasSum:0,diasN:0,gestionar:0,subs:{}};
     const c=catMap[cat];c.skus++;c.inv_val+=r.inv_valorizado||0;c.inv_actual+=r.inv_actual||0;if(r.estado==='gestionar')c.gestionar++;
     if(r.dias_inv!=null&&r.dias_inv>0&&r.dias_inv<9999){c.diasSum+=r.dias_inv;c.diasN++;}
@@ -2336,14 +2605,37 @@ function renderPlan(rows){
 
 function exportPlanXLSX(){
   const sf=document.getElementById('plan-store')?.value||'';const rf=document.getElementById('plan-resp')?.value||'';
-  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf)).sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
-  if(!sobre.length) return;
-  const wsData=[['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Días Inv.','Inv. Actual','Val. Inv','Estado']];
-  sobre.forEach(r=>wsData.push([r.category||'',r.sub_category||'',RESPONSABLES[r.category]||'—',r.store||'',r.supplier||'',r.brand||'',r.sku||'',r.product||'',r.dias_inv!=null?+r.dias_inv.toFixed(1):'',r.inv_actual||'',r.inv_valorizado||'',r.estado||'']));
+  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  const verdadero=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='Sobrestock confirmado'||c==='Sobrestock real (ajustado)';}).sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
+  if(!verdadero.length) return;
+  const wsData=[['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Días Inv.','Inv. Actual','Val. Inv','Estado','Diagnóstico Ruptura']];
+  verdadero.forEach(r=>wsData.push([r.category||'',r.sub_category||'',RESPONSABLES[r.category]||'—',r.store||'',r.supplier||'',r.brand||'',r.sku||'',r.product||'',r.dias_inv!=null?+r.dias_inv.toFixed(1):'',r.inv_actual||'',r.inv_valorizado||'',r.estado||'',getClasificacionEfectiva(r)+(STOCK_OVERRIDES[overrideKey(r)]===true?' (verificado manualmente)':'')]));
   const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols']=[20,20,12,10,25,18,12,35,10,12,16,12].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,ws,'Plan de Ataque');
+  ws['!cols']=[20,20,12,10,25,18,12,35,10,12,16,12,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Sobrestock');
   XLSX.writeFile(wb,'plan_ataque_dias_inv_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportEnRupturaXLSX(){
+  const sf=document.getElementById('plan-store')?.value||'';const rf=document.getElementById('plan-resp')?.value||'';
+  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  const enRuptura=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='En ruptura - tiene stock, monitorear'||c==='En ruptura - sin stock, reabasto urgente';}).sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0));
+  if(!enRuptura.length) return;
+  const wsData=[['Proveedor','Categoría','Subcategoría','Responsable','Tienda','Marca','SKU','Producto','Días Inv. (original)','Inv. Actual','Val. Inv','Situación','¿Verificado sin stock?']];
+  enRuptura.forEach(r=>wsData.push([r.supplier||'',r.category||'',r.sub_category||'',RESPONSABLES[r.category]||'—',r.store||'',r.brand||'',r.sku||'',r.product||'',r.dias_inv!=null?+r.dias_inv.toFixed(1):'',r.inv_actual||'',r.inv_valorizado||'',r.clasificacion_ruptura||'',STOCK_OVERRIDES[overrideKey(r)]===false?'Sí':'Sin verificar']));
+  const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[25,20,20,12,10,18,12,35,14,12,16,28,20].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'En Ruptura');
+  XLSX.writeFile(wb,'en_ruptura_pendiente_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function toggleEnRupturaSection(){
+  const body=document.getElementById('plan-ruptura-body');
+  const icon=document.getElementById('icon-ruptura-section');
+  if(!body) return;
+  const isHidden=body.style.display==='none';
+  body.style.display=isHidden?'block':'none';
+  if(icon) icon.textContent=isHidden?'▼':'▶';
 }
 
 
@@ -2495,6 +2787,9 @@ function render() {
     const catData   = avgDias(rows,'category');
     const sd = sortDirs.store === -1 ? storeData : [...storeData].reverse();
     renderBars('chart-store', sd, null, 400, 260);
+    const ciudadData = avgDias(rows.filter(r=>r.ciudad),'ciudad');
+    const cd = sortDirs.ciudad === -1 ? ciudadData : [...ciudadData].reverse();
+    renderBars('chart-ciudad', cd, null, 400, 260);
     const supD = sortDirs.sup === -1 ? supData : [...supData].reverse();
     renderBars('chart-sup', supD, '#3b82f6', 400, 260);
     const catW = Math.max(400, catData.length*50);
@@ -2564,8 +2859,22 @@ function renderAlerts_counts(rows) {
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
+// ── SIDEBAR TOGGLE (tablet / móvil) ──
+(function(){
+  const tg = document.getElementById('sb-toggle'), ov = document.getElementById('sb-overlay');
+  const close = () => { document.body.classList.remove('sb-open'); if (tg) tg.textContent = '☰'; };
+  if (tg) tg.addEventListener('click', () => {
+    const open = document.body.classList.toggle('sb-open');
+    tg.textContent = open ? '✕' : '☰';
+  });
+  if (ov) ov.addEventListener('click', close);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  window.closeSidebar = close;
+})();
+
 document.querySelectorAll('.sb-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
+    if (window.innerWidth <= 1024 && window.closeSidebar) window.closeSidebar();
     document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
@@ -2603,7 +2912,7 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 });
 
 // ── SORT TOGGLES ─────────────────────────────────────────────────────────────
-['store','sup','cat'].forEach(k=>{
+['store','ciudad','sup','cat'].forEach(k=>{
   const btn=document.getElementById('sort-'+k);
   if(!btn) return;
   btn.addEventListener('click',()=>{
@@ -2618,7 +2927,7 @@ document.querySelectorAll('#panel-detalle th[data-col]').forEach(th=>{
 // ── FILTER EVENTS ─────────────────────────────────────────────────────────────
 // Multi-select onChange already wired in msCreate
 document.getElementById('btn-reset').addEventListener('click',()=>{
-  ['ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago','ms-tipoprod','ms-pareto'].forEach(msClear);
+  ['ms-ciudad','ms-store','ms-supplier','ms-brand','ms-cat','ms-subcat','ms-estado','ms-pago','ms-tipoprod','ms-pareto'].forEach(msClear);
   document.getElementById('f-search').value=''; searchTerm='';
   repopulateFilters(); render();
 });
@@ -2686,148 +2995,6 @@ document.addEventListener('mousemove',e=>{
 });
 document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) return; ttEl.style.opacity='0'; });
 
-// ── REPORTE SEMANAL POR CORREO ────────────────────────────────────────────────
-function generarCorreoSemanal() {
-  if (!lastRows.length) { alert('Espera a que carguen los datos primero.'); return; }
-
-  const rows = lastRows;
-
-  // ── Semana actual
-  const hoy = new Date();
-  const semana = (() => {
-    const d = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  })();
-
-  // ── KPIs globales
-  const validDias = rows.filter(r => r.dias_inv != null && isFinite(r.dias_inv) && r.dias_inv > 0 && r.dias_inv < 366
-    && ['bien','sobrestock','gestionar','quiebre'].includes(r.estado));
-  const diasProm = validDias.length ? (validDias.reduce((a,r) => a + r.dias_inv, 0) / validDias.length) : 0;
-
-  // ── Sobrestock ≥60d
-  const sobre60 = rows.filter(r => (r.estado==='sobrestock'||r.estado==='gestionar') && (r.dias_inv==null||r.dias_inv>=60));
-  const capInmov = sobre60.reduce((a,r) => a+(r.inv_valorizado||0), 0);
-  const udsExceso = sobre60.reduce((a,r) => {
-    const ex = r.estado==='gestionar' ? (r.inv_actual||0) : Math.max(0,(r.inv_actual||0)-Math.ceil((r.prom_vta||0)*2));
-    return a+ex;
-  }, 0);
-
-  // ── Sin movimiento
-  const sinMov = rows.filter(r => r.estado==='sin_movimiento');
-  const sinMovVal = sinMov.reduce((a,r) => a+(r.inv_valorizado||0), 0);
-
-  // ── Sin stock (quiebre)
-  const sinStock = rows.filter(r => r.estado==='sin_stock');
-
-  // ── Días por tienda
-  const storeOrder = ['STF 15','STF 30','STF 51','STF 82','STF 93'];
-  const storeDias = {};
-  storeOrder.forEach(s => {
-    const sr = rows.filter(r => r.store===s && r.dias_inv!=null && isFinite(r.dias_inv) && r.dias_inv>0 && r.dias_inv<366
-      && ['bien','sobrestock','gestionar','quiebre'].includes(r.estado));
-    storeDias[s] = sr.length ? sr.reduce((a,r)=>a+r.dias_inv,0)/sr.length : null;
-  });
-
-  // ── Top 5 marcas capital inmovilizado
-  const marcaMap = {};
-  sobre60.forEach(r => {
-    const k = r.brand||'(Sin marca)';
-    if(!marcaMap[k]) marcaMap[k]=0;
-    marcaMap[k]+=(r.inv_valorizado||0);
-  });
-  const top5marcas = Object.entries(marcaMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-  // ── Top 5 SKUs sin stock con ventas
-  const top5sinstock = sinStock.sort((a,b)=>(b.prom_vta||0)-(a.prom_vta||0)).slice(0,5);
-
-  // ── Formatters
-  const fmtM2 = v => {
-    if(v>=1e9) return '$'+(v/1e9).toFixed(1)+'B';
-    if(v>=1e6) return '$'+(v/1e6).toFixed(1)+'M';
-    return '$'+Math.round(v).toLocaleString('es-CO');
-  };
-  const fmtN = v => Math.round(v).toLocaleString('es-CO');
-  const storeEmoji = s => ({'STF 15':'🔵','STF 30':'🟣','STF 51':'🟡','STF 82':'🟢','STF 93':'🩷'}[s]||'⚪');
-
-  // ── Construir cuerpo del correo
-  const sep = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-
-  const storeLines = storeOrder
-    .filter(s => storeDias[s] != null)
-    .map(s => `${storeEmoji(s)} ${s}: ${storeDias[s].toFixed(1)} días`)
-    .join('\n');
-
-  const top5marcasLines = top5marcas.length
-    ? top5marcas.map(([m,v],i) => `  ${i+1}. ${m}: ${fmtM2(v)}`).join('\n')
-    : '  Sin datos';
-
-  const top5sinstockLines = top5sinstock.length
-    ? top5sinstock.map(r => `  • ${(r.product||r.sku||'').slice(0,40)} (${r.store}) — ${(r.prom_vta||0).toFixed(1)} uds/mes`).join('\n')
-    : '  Sin SKUs en quiebre total ✅';
-
-  const cuerpo =
-`Hola equipo,
-
-Les compartimos el informe de inventario correspondiente a la Semana ${semana} de ${hoy.getFullYear()}. A continuación los principales indicadores:
-
-${sep}
-📅 DÍAS PROMEDIO DE INVENTARIO
-${sep}
-${diasProm.toFixed(1)} días (red completa)
-
-${sep}
-🏪 DÍAS DE INVENTARIO POR TIENDA
-${sep}
-${storeLines}
-
-${sep}
-⚠️ SOBRESTOCK ≥ 60 DÍAS
-${sep}
-📦 SKUs en sobrestock: ${fmtN(sobre60.length)}
-💰 Capital inmovilizado: ${fmtM2(capInmov)}
-📬 Unidades en exceso: ${fmtN(udsExceso)}
-
-Top 5 marcas con mayor capital inmovilizado:
-${top5marcasLines}
-
-${sep}
-⏸️ INVENTARIO SIN MOVIMIENTO
-${sep}
-🗂️ SKUs parados: ${fmtN(sinMov.length)}
-💰 Valor: ${fmtM2(sinMovVal)}
-
-${sep}
-💀 SIN STOCK CON VENTAS ACTIVAS
-${sep}
-SKUs en quiebre total: ${fmtN(sinStock.length)}
-
-Top 5 por volumen de venta:
-${top5sinstockLines}
-
-${sep}
-🔗 DASHBOARD INTERACTIVO
-${sep}
-Pueden consultar el detalle completo por tienda, categoría y proveedor en el siguiente enlace:
-👉 https://racuna-beep.github.io/fithub-rotacion/dias_inventario.html
-
-${sep}
-Quedamos atentos a cualquier consulta o comentario.
-
-Cordialmente,
-Rodrigo Acuña
-Director de Compras | Fithub`;
-
-  const asunto = encodeURIComponent(`📊 Reporte Inventario | Semana ${semana} — Fithub`);
-  const para = encodeURIComponent('jabib@fithub.com.co,cristina@fithub.com.co,jorge@fithub.com.co,loraine@fithub.com.co,edwin@fithub.com.co,andrea@fithub.com.co,angie@fithub.com.co,mauro@fithub.com.co,alex@fithub.com.co,ricardo@fithub.com.co,lino@fithub.com.co');
-  const cc = encodeURIComponent('racuna@fithub.com.co');
-  const body = encodeURIComponent(cuerpo);
-
-  // Abrir Gmail con el correo pre-llenado
-  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${para}&cc=${cc}&su=${asunto}&body=${body}`;
-  window.open(gmailUrl, '_blank');
-}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} // siempre datos frescos al recargar
