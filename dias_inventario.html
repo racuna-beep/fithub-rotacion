@@ -22,28 +22,27 @@
     background: radial-gradient(ellipse 80% 50% at 50% 100%, rgba(249,115,22,0.18) 0%, transparent 70%),
                 radial-gradient(ellipse 40% 30% at 20% 20%, rgba(249,115,22,0.06) 0%, transparent 60%); }
   #loading-screen::after { content: ''; position: absolute; inset: 0; z-index: 0;
-    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(30,41,59,0.035) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(30,41,59,0.035) 1px, transparent 1px);
     background-size: 60px 60px;
     mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%); }
   #loading-screen > * { position: relative; z-index: 1; }
   .ld-card { display:flex; flex-direction:column; align-items:center; gap:24px;
-    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:24px;
-    padding:48px 60px; backdrop-filter:blur(20px);
-    box-shadow:0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(249,115,22,0.1),inset 0 1px 0 rgba(255,255,255,0.05); }
+    background:#ffffff; border:1px solid var(--border); border-radius:20px;
+    padding:44px 60px;
+    box-shadow:0 20px 50px rgba(30,41,59,0.10), 0 2px 6px rgba(30,41,59,0.05); }
   .ld-badge { background:linear-gradient(135deg,#FF6B00,#fb923c); color:#fff; font-size:10px; font-weight:800;
     letter-spacing:4px; text-transform:uppercase; padding:5px 18px; border-radius:4px;
     box-shadow:0 4px 20px rgba(249,115,22,0.5); }
-  .ld-logo { font-size:56px; font-weight:900; letter-spacing:-3px; color:#fff; line-height:1;
-    text-shadow:0 0 40px rgba(249,115,22,0.3); }
+  .ld-logo { font-size:56px; font-weight:900; letter-spacing:-3px; color:#1e293b; line-height:1; }
   .ld-logo span { color:#FF6B00; }
-  .ld-sub { font-size:11px; color:#475569; letter-spacing:3px; text-transform:uppercase; margin-top:-16px; }
-  .ld-divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent); }
-  .ld-bar { width:240px; height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+  .ld-sub { font-size:11px; color:#6b7280; letter-spacing:3px; text-transform:uppercase; margin-top:-16px; }
+  .ld-divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); }
+  .ld-bar { width:240px; height:4px; background:#ece9e3; border-radius:2px; overflow:hidden; }
   .ld-fill { height:100%; background:linear-gradient(90deg,#FF6B00,#fb923c,#fcd34d); background-size:200% 100%;
     width:0%; transition:width 0.4s ease; border-radius:2px; animation:shimmer 1.5s infinite linear; }
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-  .ld-text { font-size:12px; color:#475569; letter-spacing:0.5px; }
+  .ld-text { font-size:12px; color:#6b7280; letter-spacing:0.5px; }
 
   /* ── SIDEBAR LAYOUT ── */
   html, body { height: 100%; margin: 0; padding: 0; }
@@ -108,6 +107,8 @@
     #panel-resumen > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
   }
 
+  .tf-scope { border:none; background:transparent; color:#64748b; font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer; }
+  .tf-scope.active { background:#fff; color:#0891b2; box-shadow:var(--card-shadow); }
   header { display: none; }
   #sticky-top { display: none; }
   .tabs { display: none; }
@@ -374,7 +375,7 @@
       <span class="sb-badge" id="cnt-sinmov-tab">0</span>
     </button>
     <button class="sb-btn" data-tab="transferencias">
-      <span class="sb-icon">🔁</span><span class="sb-label">Mover Stock</span>
+      <span class="sb-icon">🔁</span><span class="sb-label">Transferencias</span>
       <span class="sb-badge sb-badge-cyan" id="cnt-transf">0</span>
     </button>
 
@@ -589,30 +590,60 @@
 
   <!-- POSIBLES TRANSFERENCIAS -->
   <div class="tab-panel" id="panel-transferencias">
-    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
-        <h2 style="font-size:20px;font-weight:800;color:#1e293b;margin:0">🔁 Transferencias</h2>
-        <p style="font-size:12px;color:#64748b;margin-top:4px">SKUs con sobrestock en una tienda y quiebre/sin stock en otra · prioridad intra-ciudad</p>
+        <h2 style="font-size:20px;font-weight:800;color:#1e293b;margin:0">🔁 Transferencias — Nivelación de inventario</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Mueve unidades de tiendas con exceso a tiendas en riesgo de quiebre dentro de la misma ciudad, para que todas queden con cobertura similar.</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="transf-tipo" style="background:#f0ede8;border:1px solid #cbd5e1;color:#334155;padding:7px 12px;border-radius:8px;font-size:13px">
-          <option value="">Todos</option>
-          <option value="intra">🏙️ Solo intra-ciudad</option>
-          <option value="inter">✈️ Solo inter-ciudad</option>
+        <div style="display:inline-flex;background:#f0ede8;border:1px solid var(--border);border-radius:8px;padding:3px" id="transf-scope">
+          <button class="tf-scope active" data-scope="Bogotá">🏙️ Bogotá</button>
+          <button class="tf-scope" data-scope="Medellín">Medellín</button>
+          <button class="tf-scope" data-scope="Barranquilla">Barranquilla</button>
+          <button class="tf-scope" data-scope="inter">✈️ Entre ciudades</button>
+        </div>
+        <select id="transf-vista" style="background:#fff;border:1px solid var(--border);color:#334155;padding:7px 12px;border-radius:8px;font-size:13px">
+          <option value="destino">Vista: por tienda que recibe</option>
+          <option value="origen">Vista: por tienda que envía</option>
+          <option value="lista">Vista: lista completa</option>
         </select>
-        <select id="transf-ciudad" style="background:#f0ede8;border:1px solid #cbd5e1;color:#334155;padding:7px 12px;border-radius:8px;font-size:13px">
-          <option value="">Todas las ciudades</option>
-          <option value="Bogotá">Bogotá</option>
-          <option value="Medellín">Medellín</option>
-          <option value="Barranquilla">Barranquilla</option>
-        </select>
-        <button id="btn-exp-transf" style="background:#0891b2;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">⬇ Excel</button>
+        <input id="transf-search" placeholder="Buscar SKU, producto, marca…" style="background:#fff;border:1px solid var(--border);color:#334155;padding:7px 12px;border-radius:8px;font-size:13px;width:220px"/>
       </div>
     </div>
+
     <!-- KPIs -->
-    <div id="transf-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
-    <!-- Cards grid -->
+    <div id="transf-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px"></div>
+
+    <!-- Matriz origen → destino -->
+    <div id="transf-matrix-wrap" class="card" style="margin-bottom:16px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="font-size:13px;font-weight:700;color:#1e293b;margin:0">Flujo de unidades entre tiendas</h3>
+        <span style="font-size:11px;color:#94a3b8">filas = envía · columnas = recibe</span>
+      </div>
+      <div id="transf-matrix" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- Barra de acciones (selección) -->
+    <div id="transf-actions" style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--card-shadow)">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer"><input type="checkbox" id="transf-sel-all"/> Seleccionar todo lo visible</label>
+      <span id="transf-sel-info" style="font-size:12px;color:#64748b">0 seleccionadas</span>
+      <div style="flex:1"></div>
+      <button id="btn-transf-copy" style="background:#f0ede8;color:#334155;border:1px solid var(--border);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">📋 Copiar remisión</button>
+      <button id="btn-exp-transf" style="background:#0891b2;color:#fff;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">⬇ Excel</button>
+    </div>
+
+    <!-- Resultados -->
     <div id="transf-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+
+    <details style="margin-top:16px;font-size:12px;color:#64748b">
+      <summary style="cursor:pointer;font-weight:600;color:#475569">¿Cómo se calcula la nivelación?</summary>
+      <div style="padding:10px 4px;line-height:1.6">
+        Para cada SKU se suman el inventario y la venta diaria de todas las tiendas del alcance elegido y se calcula la <b>cobertura objetivo</b> (días que alcanzaría el stock total si estuviera bien repartido).
+        Las tiendas por encima de ese objetivo y con ≥ <b>45 días</b> (o en sobrestock / sin movimiento) son candidatas a <b>enviar</b>; las que están por debajo y con ≤ <b>15 días</b>, en quiebre o sin stock, son candidatas a <b>recibir</b>.
+        Las unidades sugeridas acercan a ambas tiendas al objetivo, sin dejar a la que envía con menos de 30 días de cobertura.
+        Las cantidades son editables antes de exportar.
+      </div>
+    </details>
   </div>
 
   <!-- PLAN DE ATAQUE -->
@@ -2223,152 +2254,301 @@ const STORE_CIUDAD = {
 };
 const STORE_COLOR = { 'STF 15':'#3b82f6','STF 30':'#8b5cf6','STF 51':'#f59e0b','STF 82':'#10b981','STF 93':'#ec4899' };
 
-function buildTransferencias(rows, tipoFil, ciudadFil) {
-  const skuMap = {};
+// ── TRANSFERENCIAS: NIVELACIÓN DE INVENTARIO ─────────────────────────────────
+const TF = { scope: 'Bogotá', vista: 'destino', search: '', sel: new Set(), qty: {}, open: new Set() };
+const TF_MIN_DIAS_ORIGEN = 45;   // la tienda que envía debe tener al menos esta cobertura (o estar en sobrestock/sin mov.)
+const TF_MAX_DIAS_DESTINO = 15;  // la tienda que recibe debe estar por debajo de esta cobertura (o en quiebre/sin stock)
+const TF_RESERVA_ORIGEN = 30;    // la tienda que envía nunca queda con menos de esta cobertura
+
+function tfKey(s) { return s.sku + '|' + s.origen + '|' + s.destino; }
+
+function buildTransferencias(rows, scope) {
+  const interCiudad = scope === 'inter';
+  const enScope = r => interCiudad || scope === 'todas' ? true : r.ciudad === scope;
+  const bySku = {};
   rows.forEach(r => {
-    const k = r.sku || r.llave; if (!k) return;
-    if (!skuMap[k]) skuMap[k] = { sku:k, product:r.product, brand:r.brand, category:r.category, supplier:r.supplier, origenes:[], destinos:[] };
-    const isOrigen  = r.estado==='sobrestock'||r.estado==='gestionar'||r.estado==='sin_movimiento';
-    const isDestino = r.estado==='quiebre'||r.estado==='sin_stock';
-    if (isOrigen && (r.inv_actual||0)>0) skuMap[k].origenes.push(r);
-    if (isDestino) skuMap[k].destinos.push(r);
+    if (!enScope(r)) return;
+    const k = r.sku || r.llave; if (!k || !r.store) return;
+    (bySku[k] = bySku[k] || []).push(r);
   });
-  const suggestions = [];
-  Object.values(skuMap).forEach(({ sku, product, brand, category, supplier, origenes, destinos }) => {
-    if (!origenes.length || !destinos.length) return;
-    origenes.forEach(o => { destinos.forEach(d => {
-      if (o.store === d.store) return;
-      const cO = STORE_CIUDAD[o.store]||'Otra', cD = STORE_CIUDAD[d.store]||'Otra';
-      const intra = cO === cD;
-      const tipo = intra ? 'intra' : 'inter';
-      if (tipoFil && tipoFil !== tipo) return;
-      if (ciudadFil && cO !== ciudadFil && cD !== ciudadFil) return;
-      const promD = d.prom_vta || 0;
-      const exceso = Math.max(0, (o.inv_actual||0) - Math.ceil(promD*30));
-      const sug = exceso > 0 ? exceso : Math.min(o.inv_actual||0, Math.ceil(promD*15)||Math.ceil((o.inv_actual||0)*0.3));
-      if (sug <= 0) return;
-      suggestions.push({ sku, product, brand, category, supplier,
-        origen:o.store, ciudadO:cO, destino:d.store, ciudadD:cD,
-        diasO:o.dias_inv, diasD:d.dias_inv, inv_val:o.inv_valorizado||0,
-        estadoO:o.estado, estadoD:d.estado, sugeridas:sug, tipo, intra, inv_actual_o:o.inv_actual||0 });
-    }); });
+
+  const out = [];
+  Object.entries(bySku).forEach(([sku, lst]) => {
+    if (lst.length < 2) return;
+    const st = lst.map(r => {
+      const inv = Math.max(0, r.inv_actual || 0);
+      const dDia = Math.max(0, (r.prom_vta || 0) / 30);
+      const dias = r.dias_inv != null ? r.dias_inv : (dDia > 0 ? inv / dDia : (inv > 0 ? 9999 : 0));
+      return { r, inv, dDia, dias, unit: inv > 0 ? (r.inv_valorizado || 0) / inv : 0 };
+    });
+    const I = st.reduce((a, x) => a + x.inv, 0);
+    const D = st.reduce((a, x) => a + x.dDia, 0);
+    if (I <= 0 || D <= 0) return;
+    const T = I / D; // cobertura objetivo (días) si el stock estuviera bien repartido
+
+    const donantes = [], receptores = [];
+    st.forEach(x => {
+      const target = x.dDia * T;
+      const e = x.r.estado;
+      const esExceso = e === 'sobrestock' || e === 'gestionar' || e === 'sin_movimiento' || x.dias >= TF_MIN_DIAS_ORIGEN;
+      const esFalta  = e === 'quiebre' || e === 'sin_stock' || x.dias <= TF_MAX_DIAS_DESTINO;
+      if (esExceso && x.inv > 0) {
+        // puede dar hasta llegar al objetivo, pero sin bajar de la reserva
+        const piso = Math.max(target, x.dDia * TF_RESERVA_ORIGEN);
+        const surplus = Math.floor(x.inv - piso);
+        if (surplus >= 1) donantes.push({ ...x, surplus, invRem: x.inv });
+      } else if (esFalta && x.dDia > 0) {
+        const deficit = Math.ceil(target - x.inv);
+        if (deficit >= 1) receptores.push({ ...x, deficit });
+      }
+    });
+    if (!donantes.length || !receptores.length) return;
+    donantes.sort((a, b) => b.surplus - a.surplus);
+    receptores.sort((a, b) => a.dias - b.dias); // más urgente primero
+
+    receptores.forEach(rec => {
+      let falta = rec.deficit;
+      for (const don of donantes) {
+        if (falta <= 0) break;
+        if (don.surplus <= 0 || don.r.store === rec.r.store) continue;
+        const cO = don.r.ciudad, cD = rec.r.ciudad;
+        if (interCiudad && cO === cD) continue;
+        if (!interCiudad && scope !== 'todas' && cO !== cD) continue;
+        const uds = Math.min(don.surplus, falta);
+        if (uds < 1) continue;
+        don.surplus -= uds; falta -= uds; don.invRem -= uds;
+        const diasD_post = rec.dDia > 0 ? (rec.inv + uds) / rec.dDia : null;
+        const diasO_post = don.dDia > 0 ? don.invRem / don.dDia : null;
+        const urg = rec.r.estado === 'sin_stock' || rec.inv === 0 ? 'critica' : rec.dias <= 3 ? 'alta' : 'media';
+        out.push({
+          sku, product: rec.r.product || don.r.product, brand: rec.r.brand || don.r.brand,
+          category: rec.r.category || don.r.category, supplier: rec.r.supplier || don.r.supplier,
+          origen: don.r.store, ciudadO: cO, destino: rec.r.store, ciudadD: cD,
+          invO: don.inv, diasO: don.dias, estadoO: don.r.estado, diasO_post,
+          invD: rec.inv, diasD: rec.dias, estadoD: rec.r.estado, diasD_post, promD: rec.r.prom_vta || 0,
+          uds, valor: uds * don.unit, objetivo: T, urg, intra: cO === cD,
+        });
+      }
+    });
   });
-  return suggestions.sort((a,b) => a.intra !== b.intra ? (a.intra?-1:1) : b.inv_val - a.inv_val);
+  const urgRank = { critica: 0, alta: 1, media: 2 };
+  return out.sort((a, b) => (urgRank[a.urg] - urgRank[b.urg]) || (b.valor - a.valor));
+}
+
+function tfQty(s) { const k = tfKey(s); return TF.qty[k] != null ? TF.qty[k] : s.uds; }
+function tfVisible() {
+  const all = buildTransferencias(lastRows, TF.scope);
+  const t = TF.search.trim().toLowerCase();
+  return t ? all.filter(s => (s.sku + ' ' + (s.product||'') + ' ' + (s.brand||'') + ' ' + (s.supplier||'') + ' ' + (s.category||'')).toLowerCase().includes(t)) : all;
 }
 
 function renderTransferencias(rows) {
   const cardsEl = document.getElementById('transf-cards');
   const kpisEl  = document.getElementById('transf-kpis');
-  const tipoFil   = document.getElementById('transf-tipo')?.value || '';
-  const ciudadFil = document.getElementById('transf-ciudad')?.value || '';
   if (!cardsEl) return;
+  const vis = tfVisible();
+  const all = buildTransferencias(rows, TF.scope);
 
-  const suggestions = buildTransferencias(rows, tipoFil, ciudadFil);
   const cntEl = document.getElementById('cnt-transf');
-  if (cntEl) cntEl.textContent = suggestions.length;
+  if (cntEl) cntEl.textContent = all.length;
 
-  // KPIs
-  const nIntra = suggestions.filter(s=>s.intra).length;
-  const nInter = suggestions.filter(s=>!s.intra).length;
-  const totalVal = suggestions.reduce((a,s)=>a+s.inv_val,0);
-  const uniqueSkus = new Set(suggestions.map(s=>s.sku)).size;
+  // ── KPIs
+  const uds = all.reduce((a, s) => a + tfQty(s), 0);
+  const val = all.reduce((a, s) => a + tfQty(s) * (s.valor / (s.uds || 1)), 0);
+  const nCrit = all.filter(s => s.urg === 'critica').length;
+  const nAlta = all.filter(s => s.urg === 'alta').length;
+  const skus = new Set(all.map(s => s.sku)).size;
+  const tiendasRec = new Set(all.map(s => s.destino)).size;
   if (kpisEl) kpisEl.innerHTML = [
-    {label:'Sugerencias',      val:suggestions.length, sub:'pares origen→destino', color:'#0891b2'},
-    {label:'🏙️ Intra-Ciudad', val:nIntra,             sub:'alta prioridad',       color:'#10b981'},
-    {label:'✈️ Inter-Ciudad', val:nInter,             sub:'media prioridad',      color:'#f59e0b'},
-    {label:'SKUs involucrados',val:uniqueSkus,         sub:'productos distintos',  color:'#8b5cf6'},
-    {label:'Val. Inv. origen', val:fmtM(totalVal),    sub:'total sobrestock',     color:'#f97316'},
-  ].map(k=>`<div class="kpi orange" style="border-left-color:${k.color}" data-tip="${k.sub}">
+    { label: 'Movimientos', val: all.length, sub: 'pares origen → destino', color: '#0891b2' },
+    { label: 'SKUs a nivelar', val: skus, sub: 'productos distintos', color: '#8b5cf6' },
+    { label: 'Unidades a mover', val: fmt(uds), sub: 'total sugerido', color: '#0ea5e9' },
+    { label: 'Valor transferido', val: fmtM(val), sub: 'a costo de inventario', color: '#f59e0b' },
+    { label: '🚨 Sin stock hoy', val: nCrit, sub: 'destinos críticos', color: '#dc2626' },
+    { label: '⚠️ ≤3 días', val: nAlta, sub: 'destinos urgentes', color: '#f97316' },
+    { label: 'Tiendas que reciben', val: tiendasRec, sub: 'en el alcance', color: '#10b981' },
+  ].map(k => `<div class="kpi" style="border-left-color:${k.color}">
     <div class="kpi-label">${k.label}</div>
     <div class="kpi-value" style="font-size:20px;color:${k.color}">${k.val}</div>
-    <div class="kpi-sub">${k.sub}</div>
-  </div>`).join('');
+    <div class="kpi-sub">${k.sub}</div></div>`).join('');
 
-  if (!suggestions.length) {
-    cardsEl.innerHTML = `<div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border:1px solid #e8e4de;border-radius:12px">
+  // ── Matriz origen × destino
+  const mx = document.getElementById('transf-matrix');
+  if (mx) {
+    const stores = [...new Set([...all.map(s => s.origen), ...all.map(s => s.destino)])].sort();
+    if (!stores.length) mx.innerHTML = '<div style="font-size:12px;color:#94a3b8">Sin movimientos en este alcance</div>';
+    else {
+      const cell = {}; all.forEach(s => { const k = s.origen + '|' + s.destino; cell[k] = cell[k] || { u: 0, n: 0 }; cell[k].u += tfQty(s); cell[k].n++; });
+      const tag = st => `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${STORE_COLOR[st]||'#64748b'}20;color:${STORE_COLOR[st]||'#64748b'}">${st}</span>`;
+      const totO = {}, totD = {};
+      stores.forEach(o => stores.forEach(d => { const c = cell[o + '|' + d]; if (c) { totO[o] = (totO[o]||0) + c.u; totD[d] = (totD[d]||0) + c.u; } }));
+      mx.innerHTML = `<table style="border-collapse:collapse;font-size:12px;min-width:420px"><thead><tr>
+        <th style="padding:6px 10px;text-align:left;color:#94a3b8;font-size:10px;text-transform:uppercase">Envía ↓ / Recibe →</th>
+        ${stores.map(d => `<th style="padding:6px 10px;text-align:center">${tag(d)}</th>`).join('')}
+        <th style="padding:6px 10px;text-align:right;color:#94a3b8;font-size:10px;text-transform:uppercase">Total envía</th></tr></thead><tbody>
+        ${stores.map(o => `<tr style="border-top:1px solid var(--border)"><td style="padding:6px 10px">${tag(o)}</td>
+          ${stores.map(d => { const c = cell[o + '|' + d]; return `<td style="padding:6px 10px;text-align:center;${c ? 'font-weight:700;color:#0891b2;background:rgba(8,145,178,0.06)' : 'color:#d1d5db'}">${c ? fmt(c.u) + ' <span style="font-size:10px;color:#94a3b8;font-weight:500">(' + c.n + ')</span>' : (o === d ? '—' : '·')}</td>`; }).join('')}
+          <td style="padding:6px 10px;text-align:right;font-weight:700;color:#334155">${totO[o] ? fmt(totO[o]) : '—'}</td></tr>`).join('')}
+        <tr style="border-top:2px solid var(--border)"><td style="padding:6px 10px;color:#94a3b8;font-size:10px;text-transform:uppercase">Total recibe</td>
+          ${stores.map(d => `<td style="padding:6px 10px;text-align:center;font-weight:700;color:#334155">${totD[d] ? fmt(totD[d]) : '—'}</td>`).join('')}<td></td></tr>
+        </tbody></table><div style="font-size:10px;color:#94a3b8;margin-top:6px">unidades (número de SKUs)</div>`;
+    }
+  }
+
+  // ── Selección
+  const selVis = vis.filter(s => TF.sel.has(tfKey(s)));
+  const selInfo = document.getElementById('transf-sel-info');
+  if (selInfo) selInfo.textContent = `${selVis.length} seleccionadas · ${fmt(selVis.reduce((a, s) => a + tfQty(s), 0))} uds`;
+  const selAll = document.getElementById('transf-sel-all');
+  if (selAll) selAll.checked = vis.length > 0 && selVis.length === vis.length;
+
+  if (!vis.length) {
+    cardsEl.innerHTML = `<div style="text-align:center;padding:48px;color:#94a3b8;background:#fff;border:1px solid var(--border);border-radius:12px">
       <div style="font-size:32px;margin-bottom:12px">✅</div>
-      <div style="font-size:15px;font-weight:600">Sin transferencias sugeridas</div>
-      <div style="font-size:13px;margin-top:4px">No hay SKUs con sobrestock en una tienda y quiebre en otra al mismo tiempo</div>
-    </div>`;
+      <div style="font-size:15px;font-weight:600;color:#475569">${TF.search ? 'Nada coincide con la búsqueda' : 'Inventario nivelado en este alcance'}</div>
+      <div style="font-size:13px;margin-top:4px">No hay SKUs con exceso en una tienda y falta en otra al mismo tiempo</div></div>`;
     return;
   }
 
-  const storeTag = (store, ciudad) => {
-    const c = STORE_COLOR[store]||'#64748b';
-    return `<div style="text-align:center">
-      <span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;background:${c}20;color:${c};border:1px solid ${c}40">${store}</span>
-      <div style="font-size:10px;color:#94a3b8;margin-top:3px">${ciudad}</div>
-    </div>`;
+  // ── Filas
+  const urgCfg = { critica: ['#dc2626', '🚨 Sin stock'], alta: ['#f97316', '⚠️ ≤3 días'], media: ['#0891b2', '↗ Reforzar'] };
+  const estLbl = { sobrestock: 'Sobrestock', gestionar: 'Gestionar', sin_movimiento: 'Sin mov.', quiebre: 'Quiebre', sin_stock: 'Sin stock', bien: 'Bien', normal: 'Normal', nuevo: 'Nuevo' };
+  const tag = st => `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${STORE_COLOR[st]||'#64748b'}20;color:${STORE_COLOR[st]||'#64748b'}">${st}</span>`;
+  const dd = v => v == null || !isFinite(v) ? '∞' : v.toFixed(0) + 'd';
+  const row = (s, hide) => {
+    const k = tfKey(s); const q = tfQty(s); const [uc, ul] = urgCfg[s.urg];
+    return `<tr class="hover-row" style="border-top:1px solid var(--border);background:#fff">
+      <td style="padding:8px 10px;text-align:center"><input type="checkbox" class="tf-chk" data-k="${escH(k)}" ${TF.sel.has(k) ? 'checked' : ''}/></td>
+      <td style="padding:8px 10px"><span style="font-size:11px;font-weight:700;color:${uc}">${ul}</span></td>
+      <td style="padding:8px 10px;min-width:220px"><div style="font-weight:600;font-size:12px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px" title="${escH(s.product||'')}">${escH(s.product||s.sku)}</div>
+        <div style="font-size:10px;color:#94a3b8">${escH(s.sku)} · ${escH(s.brand||'')} · ${escH(s.supplier||'')}</div></td>
+      ${hide !== 'origen' ? `<td style="padding:8px 10px;text-align:center">${tag(s.origen)}<div style="font-size:10px;color:#64748b;margin-top:2px">${fmt(s.invO)} uds · ${dd(s.diasO)} → <b>${dd(s.diasO_post)}</b></div></td>` : ''}
+      <td style="padding:8px 4px;text-align:center;color:#94a3b8;font-size:16px">→</td>
+      ${hide !== 'destino' ? `<td style="padding:8px 10px;text-align:center">${tag(s.destino)}<div style="font-size:10px;color:#64748b;margin-top:2px">${fmt(s.invD)} uds · <span style="color:${uc};font-weight:700">${dd(s.diasD)}</span> → <b style="color:#10b981">${dd(s.diasD_post)}</b></div></td>` : ''}
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#64748b">${s.promD ? fmt(+s.promD.toFixed(1)) + '/mes' : '—'}</td>
+      <td style="padding:8px 10px;text-align:center"><input type="number" min="1" class="tf-qty" data-k="${escH(k)}" value="${q}" style="width:64px;text-align:center;font-weight:800;color:#0891b2;font-size:14px;border:1px solid rgba(8,145,178,0.35);border-radius:6px;padding:4px;background:rgba(8,145,178,0.05)"/>
+        ${q !== s.uds ? `<div style="font-size:9px;color:#94a3b8">sug. ${s.uds}</div>` : ''}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:600;color:#f59e0b;font-size:12px">${fmtM(q * (s.valor / (s.uds||1)))}</td>
+    </tr>`;
   };
+  const head = hide => `<thead><tr style="background:#ece9e3">
+    <th style="padding:6px 10px"></th>
+    <th style="padding:6px 10px;text-align:left;color:#9ca3af;font-size:9px;text-transform:uppercase">Urgencia</th>
+    <th style="padding:6px 10px;text-align:left;color:#9ca3af;font-size:9px;text-transform:uppercase">Producto</th>
+    ${hide !== 'origen' ? '<th style="padding:6px 10px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Envía · cobertura antes → después</th>' : ''}
+    <th></th>
+    ${hide !== 'destino' ? '<th style="padding:6px 10px;text-align:center;color:#9ca3af;font-size:9px;text-transform:uppercase">Recibe · cobertura antes → después</th>' : ''}
+    <th style="padding:6px 10px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Vta destino</th>
+    <th style="padding:6px 10px;text-align:center;color:#0891b2;font-size:9px;text-transform:uppercase">Unidades</th>
+    <th style="padding:6px 10px;text-align:right;color:#9ca3af;font-size:9px;text-transform:uppercase">Valor</th></tr></thead>`;
+  const table = (list, hide) => `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">${head(hide)}<tbody>${list.map(s => row(s, hide)).join('')}</tbody></table></div>`;
 
-  const estadoTag = (e, dias) => {
-    const cfg = {
-      sobrestock: ['#8b5cf6','🔵 Sobrestock'],
-      gestionar:  ['#f43f5e','⚠️ Gestionar'],
-      sin_movimiento: ['#94a3b8','⏸️ Sin Mov.'],
-      quiebre:    ['#ef4444','🚨 Quiebre'],
-      sin_stock:  ['#dc2626','💀 Sin Stock'],
-    }[e] || ['#64748b', e];
-    return `<span style="font-size:11px;font-weight:700;color:${cfg[0]}">${cfg[1]}${dias!=null?' · '+dias.toFixed(0)+'d':''}</span>`;
-  };
+  if (TF.vista === 'lista') {
+    cardsEl.innerHTML = `<div class="card" style="padding:0;overflow:hidden">${table(vis, null)}</div>`;
+  } else {
+    const key = TF.vista === 'destino' ? 'destino' : 'origen';
+    const groups = {}; vis.forEach(s => (groups[s[key]] = groups[s[key]] || []).push(s));
+    cardsEl.innerHTML = Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([st, list]) => {
+      const u = list.reduce((a, s) => a + tfQty(s), 0), v = list.reduce((a, s) => a + tfQty(s) * (s.valor / (s.uds||1)), 0);
+      const crit = list.filter(s => s.urg === 'critica').length;
+      const gid = 'tfg-' + st.replace(/[^a-zA-Z0-9]/g, '_');
+      const open = !TF.open.size || TF.open.has(gid);
+      const c = STORE_COLOR[st] || '#64748b';
+      return `<div class="card" style="padding:0;overflow:hidden;border-left:4px solid ${c}">
+        <div class="tf-grp" data-g="${gid}" style="display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;background:#fff">
+          <span style="color:#94a3b8;font-size:11px">${open ? '▼' : '▶'}</span>
+          <span style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${key === 'destino' ? 'Recibe' : 'Envía'}</span>
+          <span style="font-size:15px;font-weight:800;color:${c}">${st}</span>
+          <span style="font-size:11px;color:#94a3b8">${STORE_CIUDAD[st] || ''}</span>
+          <div style="flex:1"></div>
+          ${crit ? `<span style="font-size:11px;font-weight:700;color:#dc2626">🚨 ${crit} sin stock</span>` : ''}
+          <span style="font-size:12px;color:#475569"><b>${list.length}</b> SKUs</span>
+          <span style="font-size:12px;color:#0891b2"><b>${fmt(u)}</b> uds</span>
+          <span style="font-size:12px;color:#f59e0b;font-weight:700">${fmtM(v)}</span>
+        </div>
+        <div id="${gid}" style="display:${open ? 'block' : 'none'}">${table(list, key)}</div></div>`;
+    }).join('');
+  }
 
-  cardsEl.innerHTML = suggestions.map(s => {
-    const prioColor = s.intra ? '#10b981' : '#f59e0b';
-    const prioBg    = s.intra ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)';
-    const prioLabel = s.intra ? '🏙️ Intra-ciudad' : '✈️ Inter-ciudad';
-    const name = (s.product||s.sku||'').substring(0,45);
-    return `<div style="background:#fff;border:1px solid #e8e4de;border-radius:12px;padding:16px;display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:16px;align-items:center;transition:box-shadow 0.15s" class="hover-row">
-      <!-- Prioridad -->
-      <div style="background:${prioBg};border:1px solid ${prioColor}30;border-radius:8px;padding:6px 12px;text-align:center;min-width:100px">
-        <div style="font-size:11px;font-weight:700;color:${prioColor}">${prioLabel}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">${s.ciudadO}${s.intra?'':' → '+s.ciudadD}</div>
-      </div>
-      <!-- Producto -->
-      <div style="min-width:0">
-        <div style="font-weight:700;font-size:13px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(s.product||s.sku)}">${escH(name)}</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(s.sku)} · ${escH(s.category||'')} · ${escH(s.supplier||'')}</div>
-      </div>
-      <!-- Flecha origen → destino -->
-      <div style="display:flex;align-items:center;gap:12px">
-        <div>
-          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Origen</div>
-          ${storeTag(s.origen, s.ciudadO)}
-          <div style="margin-top:4px">${estadoTag(s.estadoO, s.diasO)}</div>
-        </div>
-        <div style="font-size:20px;color:#94a3b8;font-weight:300">→</div>
-        <div>
-          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Destino</div>
-          ${storeTag(s.destino, s.ciudadD)}
-          <div style="margin-top:4px">${estadoTag(s.estadoD, s.diasD)}</div>
-        </div>
-      </div>
-      <!-- Val inv -->
-      <div style="text-align:right">
-        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Val. Inv</div>
-        <div style="font-size:14px;font-weight:800;color:#f59e0b">${fmtM(s.inv_val)}</div>
-        <div style="font-size:10px;color:#94a3b8">${fmt(s.inv_actual_o)} uds total</div>
-      </div>
-      <!-- Uds sugeridas -->
-      <div style="text-align:center;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:8px;padding:8px 14px">
-        <div style="font-size:10px;color:#0891b2;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Sugeridas</div>
-        <div style="font-size:20px;font-weight:900;color:#0891b2">${fmt(s.sugeridas)}</div>
-        <div style="font-size:10px;color:#94a3b8">unidades</div>
-      </div>
-    </div>`;
-  }).join('');
+  // ── Eventos delegados
+  cardsEl.querySelectorAll('.tf-chk').forEach(el => el.addEventListener('change', e => {
+    const k = e.target.dataset.k; e.target.checked ? TF.sel.add(k) : TF.sel.delete(k);
+    const selVis2 = vis.filter(s => TF.sel.has(tfKey(s)));
+    if (selInfo) selInfo.textContent = `${selVis2.length} seleccionadas · ${fmt(selVis2.reduce((a, s) => a + tfQty(s), 0))} uds`;
+    if (selAll) selAll.checked = selVis2.length === vis.length;
+  }));
+  cardsEl.querySelectorAll('.tf-qty').forEach(el => el.addEventListener('change', e => {
+    const k = e.target.dataset.k; const v = parseInt(e.target.value, 10);
+    if (v >= 1) TF.qty[k] = v; else delete TF.qty[k];
+    renderTransferencias(lastRows);
+  }));
+  cardsEl.querySelectorAll('.tf-grp').forEach(el => el.addEventListener('click', () => {
+    const g = el.dataset.g;
+    if (!TF.open.size) Object.keys(groups_ids(cardsEl)).forEach(x => TF.open.add(x));
+    TF.open.has(g) ? TF.open.delete(g) : TF.open.add(g);
+    renderTransferencias(lastRows);
+  }));
+  function groups_ids(el) { const o = {}; el.querySelectorAll('.tf-grp').forEach(x => o[x.dataset.g] = 1); return o; }
+}
+
+function tfSeleccionadas() {
+  const vis = tfVisible();
+  const sel = vis.filter(s => TF.sel.has(tfKey(s)));
+  return sel.length ? sel : vis;
 }
 
 function exportTransfExcel() {
-  if(!lastRows.length) return;
-  const suggestions = buildTransferencias(lastRows, '', '');
-  const ws_data=[['Prioridad','SKU','Producto','Marca','Categoría','Proveedor','Origen','Ciudad Origen','Destino','Ciudad Destino','Días Origen','Días Destino','Val. Inv Origen','Uds. Sugeridas','Tipo']];
-  suggestions.forEach(s=>ws_data.push([s.intra?'Alta (Intra)':'Media (Inter)',s.sku,s.product||'',s.brand||'',s.category||'',s.supplier||'',s.origen,s.ciudadO,s.destino,s.ciudadD,s.diasO!=null?+s.diasO.toFixed(1):null,s.diasD!=null?+s.diasD.toFixed(1):null,s.inv_val,s.sugeridas,s.intra?'Intra-Ciudad':'Inter-Ciudad']));
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(ws_data);
-  ws['!cols']=[10,14,30,20,20,18,22,10,14,10,14,12,12,18,14,14].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,ws,'Transferencias');
-  XLSX.writeFile(wb,'posibles_transferencias_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  if (!lastRows.length) return;
+  const list = tfSeleccionadas();
+  if (!list.length) { alert('No hay transferencias para exportar.'); return; }
+  const wb = XLSX.utils.book_new();
+  const hdr = ['Urgencia','Envía','Ciudad envía','Recibe','Ciudad recibe','SKU','Producto','Marca','Categoría','Proveedor','Unidades','Valor','Inv. envía','Días envía (antes)','Días envía (después)','Inv. recibe','Días recibe (antes)','Días recibe (después)','Vta prom. recibe/mes'];
+  const urgTxt = { critica: 'Crítica - sin stock', alta: 'Alta - ≤3 días', media: 'Media - reforzar' };
+  const rowsX = list.map(s => [urgTxt[s.urg], s.origen, s.ciudadO, s.destino, s.ciudadD, s.sku, s.product||'', s.brand||'', s.category||'', s.supplier||'', tfQty(s), Math.round(tfQty(s) * (s.valor/(s.uds||1))), s.invO, s.diasO!=null&&isFinite(s.diasO)?+s.diasO.toFixed(1):null, s.diasO_post!=null&&isFinite(s.diasO_post)?+s.diasO_post.toFixed(1):null, s.invD, s.diasD!=null?+s.diasD.toFixed(1):null, s.diasD_post!=null?+s.diasD_post.toFixed(1):null, +s.promD.toFixed(1)]);
+  const ws = XLSX.utils.aoa_to_sheet([hdr, ...rowsX]);
+  ws['!cols'] = [18,10,12,10,12,14,34,18,18,22,10,12,10,12,12,10,12,12,14].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Transferencias');
+  // Una hoja por tienda que envía (lista de picking)
+  const byO = {}; list.forEach(s => (byO[s.origen] = byO[s.origen] || []).push(s));
+  Object.entries(byO).forEach(([o, l]) => {
+    const data = [['Recibe','SKU','Producto','Marca','Unidades','Urgencia']].concat(l.sort((a,b)=>a.destino.localeCompare(b.destino)).map(s => [s.destino, s.sku, s.product||'', s.brand||'', tfQty(s), urgTxt[s.urg]]));
+    const w2 = XLSX.utils.aoa_to_sheet(data); w2['!cols'] = [10,14,34,18,10,18].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, w2, ('Envía ' + o).substring(0, 31));
+  });
+  XLSX.writeFile(wb, 'transferencias_' + TF.scope.replace(/[^a-zA-Z]/g,'') + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
+
+function copiarRemision() {
+  const list = tfSeleccionadas();
+  if (!list.length) { alert('No hay transferencias para copiar.'); return; }
+  const byO = {}; list.forEach(s => { const k = s.origen + ' → ' + s.destino; (byO[k] = byO[k] || []).push(s); });
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+  let txt = `*TRANSFERENCIAS FITHUB — ${TF.scope === 'inter' ? 'Entre ciudades' : TF.scope}* (${fecha})\n`;
+  Object.entries(byO).sort().forEach(([k, l]) => {
+    const u = l.reduce((a, s) => a + tfQty(s), 0);
+    txt += `\n*${k}* · ${l.length} SKUs · ${u} uds\n`;
+    l.forEach(s => { txt += `• ${s.sku} — ${(s.product||'').substring(0,40)} — *${tfQty(s)} uds*${s.urg==='critica'?' 🚨':s.urg==='alta'?' ⚠️':''}\n`; });
+  });
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = document.getElementById('btn-transf-copy'); if (!b) return;
+    const old = b.textContent; b.textContent = '✅ Copiado'; setTimeout(() => b.textContent = old, 1800);
+  }).catch(() => alert('No se pudo copiar. Revisa permisos del navegador.'));
+}
+
+// Eventos del módulo
+document.querySelectorAll('.tf-scope').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tf-scope').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); TF.scope = b.dataset.scope; TF.sel.clear(); TF.open.clear();
+  renderTransferencias(lastRows);
+}));
+document.getElementById('transf-vista').addEventListener('change', e => { TF.vista = e.target.value; TF.open.clear(); renderTransferencias(lastRows); });
+let _tfT; document.getElementById('transf-search').addEventListener('input', e => { clearTimeout(_tfT); _tfT = setTimeout(() => { TF.search = e.target.value; renderTransferencias(lastRows); }, 200); });
+document.getElementById('transf-sel-all').addEventListener('change', e => {
+  const vis = tfVisible(); vis.forEach(s => e.target.checked ? TF.sel.add(tfKey(s)) : TF.sel.delete(tfKey(s)));
+  renderTransferencias(lastRows);
+});
+document.getElementById('btn-transf-copy').addEventListener('click', copiarRemision);
+
 
 // ── EXPORT EXCEL ─────────────────────────────────────────────────────────────
 function exportExcel(rows, filename) {
@@ -2978,8 +3158,6 @@ document.getElementById('btn-refresh').addEventListener('click',()=>{
   try { sessionStorage.removeItem(SESSION_KEY); } catch(e){}
   DATA=[];loadData();
 });
-document.getElementById('transf-tipo').addEventListener('change',()=>renderTransferencias(lastRows));
-document.getElementById('transf-ciudad').addEventListener('change',()=>renderTransferencias(lastRows));
 
 // ── TOOLTIP SYSTEM ────────────────────────────────────────────────────────────
 const ttEl=document.getElementById('tooltip');
