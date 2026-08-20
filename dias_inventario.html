@@ -949,8 +949,8 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbxUxiy9qkKTucyWudjTHboYNcIo36xchhLyZCOxOhQ7BKXBiBSBYcJ-bakxzCxanjzWJg/exec';
-const SESSION_KEY = 'fithub_dias_inv_cache_v7';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbzMzd5RriOg28aliJL5CrY5iB5JSAMwCj0KMQDt4nxWF5fho_EuYmQcA0NQfSpK054zsg/exec';
+const SESSION_KEY = 'fithub_dias_inv_cache_v8';
 const STORE_CIUDAD = {
   'STF 15': 'Bogotá', 'STF 93': 'Bogotá', 'STF 82': 'Bogotá',
   'STF 30': 'Medellín', 'STF 51': 'Barranquilla',
@@ -984,7 +984,7 @@ const _sinAcentos = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, 
 function detectCierreColumn(rawRows) {
   CIERRE_KEY = null; CIERRE_MES = '';
   if (!rawRows.length) return;
-  RAW_HEADERS = Object.keys(rawRows[0]);
+  RAW_HEADERS = allHeaders(rawRows);
   const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const mesActual = MESES[new Date().getMonth()];
   const ultima = VENTA_LABELS.length ? _sinAcentos(VENTA_LABELS[VENTA_LABELS.length - 1]) : '';
@@ -1004,7 +1004,7 @@ function detectCierreColumn(rawRows) {
 
 function detectVentaColumns(rawRows) {
   if (!rawRows.length) return;
-  const keys = Object.keys(rawRows[0]);
+  const keys = allHeaders(rawRows);
   const ORDER = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const found = keys.filter(k => {
     const kk = k.trim().toLowerCase();
@@ -1106,9 +1106,18 @@ function setLoader(txt, pct) {
 
 // ── KEY MAP (precalculado una sola vez) ──────────────────────────────────────
 let _keyMap = null;
-function buildKeyMap(rawRow) {
+// Algunas filas pueden llegar sin todas las claves (celdas vacías al final de la
+// hoja), así que los encabezados se toman de la unión de las primeras filas.
+function allHeaders(rawArr, n) {
+  const set = new Set();
+  const lim = Math.min(rawArr.length, n || 200);
+  for (let i = 0; i < lim; i++) for (const k of Object.keys(rawArr[i] || {})) set.add(k);
+  return [...set];
+}
+function buildKeyMap(rawArrOrRow) {
   const map = {};
-  for (const key of Object.keys(rawRow)) map[key.trim().toLowerCase()] = key;
+  const keys = Array.isArray(rawArrOrRow) ? allHeaders(rawArrOrRow) : Object.keys(rawArrOrRow);
+  for (const key of keys) map[key.trim().toLowerCase()] = key;
   return map;
 }
 function gk(raw, keyMap, k) {
@@ -1342,7 +1351,7 @@ function fetchJSONP(url, timeout = 60000) {
 
 async function processInChunks(rawArr, chunkSize, onProgress) {
   // Build keyMap once from first row
-  const keyMap = buildKeyMap(rawArr[0]);
+  const keyMap = buildKeyMap(rawArr);
   const result = [];
   for (let i = 0; i < rawArr.length; i += chunkSize) {
     const chunk = rawArr.slice(i, i + chunkSize);
@@ -3004,9 +3013,12 @@ function renderPlan(rows){
         '<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--muted);font-size:11px">No la detecta · ver columnas que llegaron de la hoja</summary>'+
         '<div style="padding:8px 4px;color:var(--muted);line-height:1.6;font-size:11px">'+
         'Mes de referencia detectado: <b>'+escH(mesRef||'—')+'</b><br>'+
-        'Columnas con «inv/stock» recibidas: '+(cand.length?cand.map(c=>'<code>'+escH(c)+'</code>').join(', '):'<i>ninguna</i>')+'<br>'+
-        'Si tu columna no está en esa lista, el Apps Script no la está enviando: revisa el rango que publica. '+
-        'Si está pero no la toma, renómbrala a <b>Inventario '+escH(mesRef||'')+'</b> y pulsa «Actualizar datos».'+
+        'Columnas recibidas de la hoja: <b>'+RAW_HEADERS.length+'</b><br>'+
+        'Con «inv/stock»: '+(cand.length?cand.map(c=>'<code>'+escH(c)+'</code>').join(', '):'<i>ninguna</i>')+'<br>'+
+        'Última columna recibida: <code>'+escH(RAW_HEADERS[RAW_HEADERS.length-1]||'—')+'</code><br><br>'+
+        'Si tu columna no aparece arriba, el Apps Script no la está enviando (suele pasar cuando publica un rango fijo hasta la columna Z). '+
+        'Si sí aparece, pulsa «Actualizar datos» para limpiar el caché de la sesión.<br><br>'+
+        '<a href="#" onclick="event.preventDefault();alert(RAW_HEADERS.join(String.fromCharCode(10)))" style="color:var(--orange);font-weight:600">Ver las '+RAW_HEADERS.length+' columnas completas</a>'+
         '</div></details>';
     }
   }
