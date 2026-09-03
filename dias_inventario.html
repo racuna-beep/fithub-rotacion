@@ -1021,6 +1021,10 @@ function detectVentaColumns(rawRows) {
 }
 
 let DATA = [], lastRows = [], searchTerm = '', search2Term = '', searchProvTerm = '', searchMarcaTerm = '';
+// Inventario "real" restante por tienda+SKU después de asignar virtualmente el
+// excedente puro a las tiendas de la misma ciudad que lo necesitan (ver
+// computeInvRemDespuesTransferencias) — se recalcula en cada render().
+let INV_REM_TRANSF = {};
 let detSortCol2 = 'inv_val', detSortDir2 = -1;
 let NOTAS = JSON.parse(localStorage.getItem('fithub_notas') || '{}');
 function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify(NOTAS)); } catch(e){} }
@@ -1038,9 +1042,26 @@ function diasEfectivo(r) { return r.dias_inv_ajustado != null ? r.dias_inv_ajust
 // Un SKU pertenece a "Sobrestock ≥60 días" solo si de verdad tiene 60+ días
 // de cobertura. 'gestionar' (supera vida útil) puede dispararse con menos de
 // 60 días — sin este filtro se colaban esos SKUs en la pestaña de Sobrestock.
+//
+// Además: cuando una tienda (ej. STF 15, que también funciona como bodega)
+// tiene un SKU en 'sobrestock' puro (no por vencimiento) mientras OTRA tienda
+// de su misma ciudad está corta del mismo SKU, ese inventario ya "tiene
+// dueño" — solo falta transferirlo, no es exceso real. computeInvRemDespuesTransferencias
+// resta virtualmente esa porción (misma lógica que la pestaña Transferencias)
+// y aquí se usa ese remanente para decidir si sigue calificando como sobrestock.
 function esSobrestock60(r) {
   const d = diasEfectivo(r);
-  return (r.estado === 'sobrestock' || r.estado === 'gestionar') && d != null && d >= 60;
+  if (!((r.estado === 'sobrestock' || r.estado === 'gestionar') && d != null && d >= 60)) return false;
+  if (r.estado === 'sobrestock') {
+    const key = (r.store||'') + '|' + (r.sku||'');
+    if (Object.prototype.hasOwnProperty.call(INV_REM_TRANSF, key)) {
+      const invRem = INV_REM_TRANSF[key];
+      const dDia = Math.max(0, (r.prom_vta || 0) / 30);
+      const diasRed = dDia > 0 ? invRem / dDia : (invRem > 0 ? 9999 : 0);
+      if (diasRed < 60) return false; // se resuelve transfiriendo, no es sobrestock real
+    }
+  }
+  return true;
 }
 function getClasificacionEfectiva(r) {
   // Prioridad: corrección manual del usuario > dato de la hoja > sin verificar.
@@ -2684,6 +2705,67 @@ function buildTransferencias(rows, scope) {
   return out.sort((a, b) => (urgRank[a.urg] - urgRank[b.urg]) || (b.valor - a.valor));
 }
 
+// ── AJUSTE DE SOBRESTOCK POR RED (intra-ciudad) ──────────────────────────────
+// Reutiliza la misma mecánica de donante/receptor de Transferencias, pero solo
+// para SKUs en estado 'sobrestock' puro (≥60d por volumen, no por vencimiento).
+// Si una tienda tiene excedente de un SKU y OTRA tienda de la misma ciudad
+// está corta de ese mismo SKU, se asigna virtualmente esa cantidad al
+// receptor (como haría una transferencia real) y se devuelve, por tienda+SKU,
+// cuánto le queda al donante DESPUÉS de esas asignaciones. Eso es lo que
+// esSobrestock60() usa para decidir si el excedente es real o solo pendiente
+// de mover — evita marcar como sobrestock el inventario de una tienda-bodega
+// (como STF 15) que en realidad ya está reservado para otra tienda.
+function computeInvRemDespuesTransferencias(rows) {
+  const bySkuCiudad = {};
+  rows.forEach(r => {
+    if (!r.sku || !r.store || !r.ciudad) return;
+    const k = r.sku + '|' + r.ciudad;
+    (bySkuCiudad[k] = bySkuCiudad[k] || []).push(r);
+  });
+  const invRemMap = {};
+  Object.values(bySkuCiudad).forEach(lst => {
+    if (lst.length < 2) return;
+    const st = lst.map(r => {
+      const inv = Math.max(0, r.inv_actual || 0);
+      const dDia = Math.max(0, (r.prom_vta || 0) / 30);
+      const dias = r.dias_inv != null ? r.dias_inv : (dDia > 0 ? inv / dDia : (inv > 0 ? 9999 : 0));
+      return { r, inv, dDia, dias };
+    });
+    const I = st.reduce((a, x) => a + x.inv, 0);
+    const D = st.reduce((a, x) => a + x.dDia, 0);
+    if (I <= 0 || D <= 0) return;
+    const T = I / D;
+    const donantes = [], receptores = [];
+    st.forEach(x => {
+      const target = x.dDia * T;
+      const esExcesoPuro = x.r.estado === 'sobrestock' && x.dias >= 60;
+      const esFalta = x.r.estado === 'quiebre' || x.r.estado === 'sin_stock' || x.dias <= TF_MAX_DIAS_DESTINO;
+      if (esExcesoPuro && x.inv > 0) {
+        const piso = Math.max(target, x.dDia * TF_RESERVA_ORIGEN);
+        const surplus = Math.floor(x.inv - piso);
+        if (surplus >= 1) donantes.push({ ...x, surplus, invRem: x.inv });
+      } else if (esFalta && x.dDia > 0) {
+        const deficit = Math.ceil(target - x.inv);
+        if (deficit >= 1) receptores.push({ ...x, deficit });
+      }
+    });
+    donantes.sort((a, b) => b.surplus - a.surplus);
+    receptores.sort((a, b) => a.dias - b.dias);
+    receptores.forEach(rec => {
+      let falta = rec.deficit;
+      for (const don of donantes) {
+        if (falta <= 0) break;
+        if (don.surplus <= 0 || don.r.store === rec.r.store) continue;
+        const uds = Math.min(don.surplus, falta);
+        if (uds < 1) continue;
+        don.surplus -= uds; falta -= uds; don.invRem -= uds;
+      }
+    });
+    donantes.forEach(d => { invRemMap[d.r.store + '|' + d.r.sku] = d.invRem; });
+  });
+  return invRemMap;
+}
+
 function tfQty(s) { const k = tfKey(s); return TF.qty[k] != null ? TF.qty[k] : s.uds; }
 function tfVisible() {
   const all = buildTransferencias(lastRows, TF.scope);
@@ -3350,6 +3432,7 @@ function activeTab() {
 function render() {
   const rows = filterRows();
   lastRows = rows;
+  INV_REM_TRANSF = computeInvRemDespuesTransferencias(rows);
   renderExecSummary(rows);
   renderKPIs(rows);
 
