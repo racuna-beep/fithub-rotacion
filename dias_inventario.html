@@ -1032,6 +1032,16 @@ function saveNotas() { try { localStorage.setItem('fithub_notas', JSON.stringify
 let STOCK_OVERRIDES = JSON.parse(localStorage.getItem('fithub_stock_overrides') || '{}');
 function saveStockOverrides() { try { localStorage.setItem('fithub_stock_overrides', JSON.stringify(STOCK_OVERRIDES)); } catch(e){} }
 function overrideKey(r) { return (r.store||'') + '|' + (r.sku||''); }
+// Días de cobertura "efectivos" del SKU: usa el valor ajustado por ruptura
+// cuando aplica (mismo criterio que decide el estado), si no, el original.
+function diasEfectivo(r) { return r.dias_inv_ajustado != null ? r.dias_inv_ajustado : r.dias_inv; }
+// Un SKU pertenece a "Sobrestock ≥60 días" solo si de verdad tiene 60+ días
+// de cobertura. 'gestionar' (supera vida útil) puede dispararse con menos de
+// 60 días — sin este filtro se colaban esos SKUs en la pestaña de Sobrestock.
+function esSobrestock60(r) {
+  const d = diasEfectivo(r);
+  return (r.estado === 'sobrestock' || r.estado === 'gestionar') && d != null && d >= 60;
+}
 function getClasificacionEfectiva(r) {
   // Prioridad: corrección manual del usuario > dato de la hoja > sin verificar.
   const ov = STOCK_OVERRIDES[overrideKey(r)];
@@ -2959,7 +2969,7 @@ function renderPlan(rows){
   const curStore=planStore?planStore.value:'';
   if(planStore) planStore.innerHTML='<option value="">Todas las tiendas</option>'+stores.map(s=>`<option value="${s}" ${s===curStore?'selected':''}>${s}</option>`).join('');
   const sf=planStore?planStore.value:'';const rf=planResp?planResp.value:'';
-  const sobre=rows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  const sobre=rows.filter(r=>esSobrestock60(r)&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
 
   // ── Separación: Verdadero Sobrestock (accionable) vs En Ruptura (pendiente) ──
   // Usa la clasificación EFECTIVA (aplica asignaciones manuales de stock si existen)
@@ -3168,7 +3178,7 @@ function renderPlan(rows){
 
 function exportPlanXLSX(){
   const sf=document.getElementById('plan-store')?.value||'';const rf=document.getElementById('plan-resp')?.value||'';
-  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  const sobre=lastRows.filter(r=>esSobrestock60(r)&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
   const verdadero=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='Sobrestock confirmado'||c==='Sobrestock real (ajustado)';}).sort((a,b)=>(b.dias_inv||0)-(a.dias_inv||0));
   if(!verdadero.length) return;
   const wsData=[['Categoría','Subcategoría','Responsable','Tienda','Proveedor','Marca','SKU','Producto','Días Inv.','Inv. Actual','Val. Inv','Estado','Diagnóstico Ruptura']];
@@ -3181,7 +3191,7 @@ function exportPlanXLSX(){
 
 function exportEnRupturaXLSX(){
   const sf=document.getElementById('plan-store')?.value||'';const rf=document.getElementById('plan-resp')?.value||'';
-  const sobre=lastRows.filter(r=>(r.estado==='sobrestock'||r.estado==='gestionar')&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
+  const sobre=lastRows.filter(r=>esSobrestock60(r)&&(!sf||r.store===sf)&&(!rf||(RESPONSABLES[r.category]||'—')===rf));
   const enRuptura=sobre.filter(r=>{const c=getClasificacionEfectiva(r);return c==='En ruptura - tiene stock, monitorear'||c==='En ruptura - sin stock, reabasto urgente';}).sort((a,b)=>(b.inv_valorizado||0)-(a.inv_valorizado||0));
   if(!enRuptura.length) return;
   const mesRefX=(lastRows.find(r=>r.mes_referencia)||{}).mes_referencia||'cierre';
@@ -3371,7 +3381,7 @@ function render() {
     renderEvolDias(rows);
     const sobreMap={};
     rows.forEach(r=>{
-      if(r.estado==='sobrestock'||r.estado==='gestionar') sobreMap[r.category]=(sobreMap[r.category]||0)+1;
+      if(esSobrestock60(r)) sobreMap[r.category]=(sobreMap[r.category]||0)+1;
     });
     const sobreEl=document.getElementById('chart-sobre-cat');
     const barChart=(el,map,color)=>{
@@ -3400,7 +3410,7 @@ function render() {
 
   // Always update counts
   // Update plan badge
-  const planRows = rows.filter(r=>r.estado==='sobrestock'||r.estado==='gestionar');
+  const planRows = rows.filter(esSobrestock60);
   const cntPlan = document.getElementById('cnt-plan');
   if(cntPlan) cntPlan.textContent = planRows.length.toLocaleString('es-CO');
 
