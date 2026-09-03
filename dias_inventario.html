@@ -856,7 +856,11 @@
       <p style="font-size:11px;color:#667085;margin:0 0 12px 0">"SKUs Sobrestock" y "Capital Inmovilizado" de arriba ya muestran solo el <b>sobrestock real</b> — se excluyeron los falsos positivos por ruptura de stock recuperada, y los casos sin dato suficiente se separan abajo en su propia sección.</p>
       <div id="plan-summary-ruptura" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px">
+      <div style="background:#ffffff;border:1px solid #e6e2db;border-radius:12px;padding:16px">
+        <h3 style="font-size:13px;font-weight:700;color:#101828;margin:0 0 14px 0">🏬 Sobrestock por tienda</h3>
+        <div id="plan-chart-store" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
       <div style="background:#ffffff;border:1px solid #e6e2db;border-radius:12px;padding:16px">
         <h3 style="font-size:13px;font-weight:700;color:#101828;margin:0 0 14px 0">SKUs en sobrestock por responsable</h3>
         <div id="plan-chart-resp" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -3177,6 +3181,12 @@ function renderPlan(rows){
     }
   }
 
+  const storeMap={};verdadero.forEach(r=>{const s=r.store||'(Sin tienda)';if(!storeMap[s])storeMap[s]={skus:0,inv_val:0};storeMap[s].skus++;storeMap[s].inv_val+=r.inv_valorizado||0;});
+  const storeEl=document.getElementById('plan-chart-store');
+  if(storeEl){const ent=Object.entries(storeMap).sort((a,b)=>b[1].inv_val-a[1].inv_val);const max=ent[0]?.[1].inv_val||1;
+    storeEl.innerHTML=ent.length?ent.map(([store,g])=>{const color=STORE_COLOR[store]||'#667085';const pct=(g.inv_val/max*100).toFixed(1);
+      return`<div style="display:flex;align-items:center;gap:10px"><span style="min-width:58px;font-size:12px;font-weight:700;color:${color}">${escH(store)}</span><div style="flex:1;height:22px;background:#faf9f7;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap">$${Math.round(g.inv_val).toLocaleString('es-CO')}</span></div></div><span style="min-width:52px;font-size:11px;color:#667085;text-align:right">${g.skus} SKUs</span></div>`;
+    }).join(''):'<div style="font-size:12px;color:#98a2b3;text-align:center;padding:20px 0">Sin datos</div>';}
   const respMap={};verdadero.forEach(r=>{const resp=RESPONSABLES[r.category]||'—';respMap[resp]=(respMap[resp]||0)+1;});
   const respEl=document.getElementById('plan-chart-resp');
   if(respEl){const ent=Object.entries(respMap).sort((a,b)=>b[1]-a[1]);const max=ent[0]?.[1]||1;
