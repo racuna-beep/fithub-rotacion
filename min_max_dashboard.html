@@ -8,29 +8,73 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --cream: #F7F2E9;
-    --cream-dark: #EDE4D2;
-    --forest: #33513E;
-    --forest-light: #4A6B54;
-    --orange: #EA551D;
-    --ink: #23291F;
-    --green: #4C7A52;
-    --amber: #C8842A;
-    --red: #C23B22;
-    --line: #DDD3BE;
+    --paper: #EFEBDF;
+    --paper-dark: #E4DFCC;
+    --ink: #1E2B24;
+    --ink-soft: #4B5A50;
+    --forest: #2B5346;
+    --forest-dark: #16261F;
+    --gold: #B9832A;
+    --gold-light: #E4B85B;
+    --rust: #A14A34;
+    --sage: #8CA290;
+    --line: #D9D2BC;
   }
 
   * { box-sizing: border-box; }
 
   body {
     margin: 0;
-    background: var(--cream);
+    background: var(--paper);
     color: var(--ink);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
   .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ---------- App shell (sidebar + contenido) ---------- */
+  .app { display: flex; align-items: flex-start; min-height: 100vh; }
+  .sidebar {
+    width: 190px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 28px 14px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .brand {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--forest-dark);
+    padding: 0 10px 10px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--gold);
+  }
+  .nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    border-radius: 3px;
+    padding: 10px 10px;
+    margin-bottom: 4px;
+    cursor: pointer;
+  }
+  .nav-item:hover { background: var(--paper); color: var(--forest-dark); }
+  .nav-item.active { background: var(--paper-dark); color: var(--forest-dark); }
+  .content { flex: 1; min-width: 0; padding: 32px 32px 80px; max-width: 1180px; }
+  .tab-panel[hidden] { display: none; }
 
   /* ---------- Header ---------- */
   header.top {
@@ -47,15 +91,15 @@
     font-family: 'Fraunces', serif;
     font-weight: 600;
     font-size: 34px;
-    color: var(--forest);
+    color: var(--forest-dark);
     margin: 0 0 4px;
     letter-spacing: -0.01em;
   }
-  .subtitle { color: var(--forest-light); font-size: 14.5px; margin: 0; }
+  .subtitle { color: var(--ink-soft); font-size: 14.5px; margin: 0; }
   .updated {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12.5px;
-    color: var(--forest-light);
+    color: var(--ink-soft);
     text-align: right;
   }
   .updated strong { color: var(--ink); }
@@ -70,18 +114,20 @@
   .kpi {
     background: #fff;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-left: 3px solid var(--forest);
+    border-radius: 3px;
     padding: 16px 18px;
   }
   .kpi .n {
-    font-family: 'Fraunces', serif;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 28px;
     font-weight: 600;
-    color: var(--forest);
+    color: var(--forest-dark);
     line-height: 1;
   }
-  .kpi.alert .n { color: var(--red); }
-  .kpi .l { font-size: 12.5px; color: var(--forest-light); margin-top: 6px; }
+  .kpi.alert { border-left-color: var(--rust); }
+  .kpi.alert .n { color: var(--rust); }
+  .kpi .l { font-size: 11px; color: var(--ink-soft); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 
   /* ---------- Section headers ---------- */
   section { margin-bottom: 40px; }
@@ -98,43 +144,7 @@
     color: var(--forest);
     margin: 0;
   }
-  .sec-note { font-size: 12.5px; color: var(--forest-light); }
-
-  /* ---------- Priority cards ---------- */
-  .priority-list { display: flex; flex-direction: column; gap: 8px; }
-  .prow {
-    display: grid;
-    grid-template-columns: 30px 90px 1fr 90px 150px 150px 90px;
-    align-items: center;
-    gap: 12px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--line);
-    border-radius: 4px;
-    padding: 10px 14px;
-    font-size: 13.5px;
-  }
-  .prow.sem-red { border-left-color: var(--red); }
-  .prow.sem-amber { border-left-color: var(--amber); }
-  .prow.sem-green { border-left-color: var(--green); }
-  .prow .rank { font-family: 'IBM Plex Mono', monospace; color: var(--forest-light); font-size: 12px; }
-  .prow .tienda-tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11.5px;
-    background: var(--cream-dark);
-    color: var(--forest);
-    padding: 3px 7px;
-    border-radius: 3px;
-    text-align: center;
-  }
-  .prow .prod { font-weight: 500; }
-  .prow .prod .sku { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--forest-light); font-weight: 400; }
-  .prow .mm { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
-  .prow .mm .lbl { color: var(--forest-light); font-size: 10.5px; display: block; }
-  .prow .delta { font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-align: right; }
-  .sem-red .delta { color: var(--red); }
-  .sem-amber .delta { color: var(--amber); }
-  .sem-green .delta { color: var(--green); }
+  .sec-note { font-size: 12.5px; color: var(--ink-soft); }
 
   /* ---------- Filters ---------- */
   .filters {
@@ -161,7 +171,7 @@
     text-align: left;
     font-size: 11.5px;
     text-transform: none;
-    color: var(--forest-light);
+    color: var(--ink-soft);
     padding: 10px 12px;
     border-bottom: 2px solid var(--forest);
     cursor: pointer;
@@ -176,13 +186,13 @@
     font-size: 13px;
     vertical-align: top;
   }
-  tbody tr:hover { background: var(--cream); }
+  tbody tr:hover { background: var(--paper); }
   td.num, th.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
-  td.sku-cell { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--forest-light); }
+  td.sku-cell { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .dot.red { background: var(--red); }
-  .dot.amber { background: var(--amber); }
-  .dot.green { background: var(--green); }
+  .dot.red { background: var(--rust); }
+  .dot.amber { background: var(--gold-light); }
+  .dot.green { background: var(--forest); }
   .edit-input {
     width: 52px;
     font-family: 'IBM Plex Mono', monospace;
@@ -191,9 +201,9 @@
     border: 1px solid var(--line);
     border-radius: 3px;
     text-align: right;
-    background: var(--cream);
+    background: var(--paper);
   }
-  .edit-input.changed { border-color: var(--orange); background: #fff; }
+  .edit-input.changed { border-color: var(--gold); background: #fff; }
   .accion-cell { white-space: nowrap; }
   .btn-guardar {
     font-family: 'Inter', sans-serif;
@@ -213,15 +223,15 @@
     cursor: default;
   }
   .save-status { font-size: 11.5px; margin-left: 6px; }
-  .save-status.ok { color: var(--green); }
-  .save-status.err { color: var(--red); }
+  .save-status.ok { color: var(--forest); }
+  .save-status.err { color: var(--rust); }
   .tag-regla {
     display: inline-block;
     font-family: 'Inter', sans-serif;
     font-size: 10px;
     font-weight: 600;
-    background: var(--cream-dark);
-    color: var(--forest-light);
+    background: var(--paper-dark);
+    color: var(--ink-soft);
     padding: 1px 6px;
     border-radius: 3px;
     margin-left: 6px;
@@ -231,8 +241,8 @@
     font-family: 'Inter', sans-serif;
     font-size: 10px;
     font-weight: 600;
-    background: #F6D9CF;
-    color: var(--red);
+    background: #EAD3C9;
+    color: var(--rust);
     padding: 1px 6px;
     border-radius: 3px;
     margin-left: 6px;
@@ -244,7 +254,7 @@
     align-items: center;
     margin-top: 12px;
     font-size: 12.5px;
-    color: var(--forest-light);
+    color: var(--ink-soft);
   }
   .pager button {
     font-family: 'Inter', sans-serif;
@@ -261,20 +271,64 @@
   .state-msg {
     text-align: center;
     padding: 60px 20px;
-    color: var(--forest-light);
+    color: var(--ink-soft);
     font-size: 14px;
   }
 
+  /* ---------- Exportar ---------- */
+  .export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-exportar {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border: 1px solid var(--forest);
+    background: #fff;
+    color: var(--forest);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .btn-exportar:hover { background: var(--paper-dark); }
+
+  /* ---------- Resumen por tienda ---------- */
+  .store-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+  }
+  .store-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .store-name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--forest); }
+  .store-total { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
+  .store-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--paper-dark); margin-bottom: 12px; }
+  .store-bar span { display: block; height: 100%; }
+  .store-stats { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--ink); }
+  .store-stats .stat { display: flex; align-items: center; }
+  .store-stats .muted { color: var(--ink-soft); }
+
   @media (max-width: 720px) {
     .kpis { grid-template-columns: repeat(2, 1fr); }
-    .prow { grid-template-columns: 1fr; }
-    .prow .delta { text-align: left; }
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; display: flex; align-items: center; padding: 12px 16px; gap: 10px; }
+    .brand { margin-bottom: 0; }
+    .nav-item { width: auto; margin-bottom: 0; }
+    .content { padding: 24px 16px 60px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
 
+  <nav class="sidebar">
+    <div class="brand">Fithub</div>
+    <button class="nav-item active" data-tab="detalle">Detalle</button>
+    <button class="nav-item" data-tab="resumen">Resumen por tienda</button>
+  </nav>
+
+  <main class="content">
+
+  <div class="tab-panel" id="tab-detalle">
   <header class="top">
     <div>
       <h1>Min/Max Automático</h1>
@@ -292,15 +346,13 @@
 
   <section>
     <div class="sec-head">
-      <h2>Prioritarios</h2>
-      <span class="sec-note">SKUs donde el min/max calculado más se aleja de lo configurado actualmente</span>
-    </div>
-    <div class="priority-list" id="priority-list"></div>
-  </section>
-
-  <section>
-    <div class="sec-head">
       <h2>Todos los SKUs</h2>
+      <div class="export-actions">
+        <button class="btn-exportar" id="btn-csv">Exportar CSV</button>
+        <button class="btn-exportar" id="btn-xlsx">Exportar Excel</button>
+      </div>
+    </div>
+    <div class="sec-head">
       <span class="sec-note" id="count-note"></span>
     </div>
 
@@ -321,6 +373,7 @@
           <th class="num" data-key="maxActual">Max actual</th>
           <th class="num" data-key="minCalc">Min calc.</th>
           <th class="num" data-key="maxCalc">Max calc.</th>
+          <th class="num" data-key="consumoMax">Consumo Max</th>
           <th class="num" data-key="vidaUtil">Vida útil</th>
           <th class="num" data-key="variacion">Variación</th>
           <th>Acciones</th>
@@ -337,9 +390,22 @@
       </div>
     </div>
   </section>
+  </div>
 
+  <div class="tab-panel" id="tab-resumen" hidden>
+    <header class="top">
+      <div>
+        <h1>Resumen por tienda</h1>
+        <p class="subtitle">Estado del min/max calculado, agrupado por tienda</p>
+      </div>
+    </header>
+    <div id="resumen-tiendas"></div>
+  </div>
+
+  </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   // ---- CONFIGURACIÓN ----
   // Reemplaza con la URL de tu Web App de Apps Script (ver codigo_apps_script.gs)
@@ -408,7 +474,7 @@
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PON_AQUI') === 0) {
       document.getElementById('updated').textContent = 'Falta configurar APPS_SCRIPT_URL';
       document.getElementById('table-body').innerHTML =
-        '<tr><td colspan="10" class="state-msg">Configura la URL del Apps Script en el código del dashboard (APPS_SCRIPT_URL) para cargar los datos.</td></tr>';
+        '<tr><td colspan="11" class="state-msg">Configura la URL del Apps Script en el código del dashboard (APPS_SCRIPT_URL) para cargar los datos.</td></tr>';
       return;
     }
     const cbName = 'onData_' + Date.now();
@@ -446,7 +512,6 @@
 
     poblarFiltros();
     renderKPIs();
-    renderPrioritarios();
     aplicarFiltros();
   }
 
@@ -476,26 +541,6 @@
       new Set(allData.map(d => d.tienda)).size;
     document.getElementById('kpi-proveedores').textContent =
       new Set(allData.map(d => d.proveedor)).size;
-  }
-
-  function renderPrioritarios() {
-    const top = [...allData].sort((a, b) => b.variacion - a.variacion).slice(0, 20);
-    const cont = document.getElementById('priority-list');
-    if (top.length === 0) {
-      cont.innerHTML = '<div class="state-msg">No hay datos para mostrar.</div>';
-      return;
-    }
-    cont.innerHTML = top.map((d, i) => `
-      <div class="prow sem-${semaforo(d.variacion)}">
-        <span class="rank">${i + 1}</span>
-        <span class="tienda-tag">${esc(d.tienda)}</span>
-        <span class="prod">${esc(d.producto)}${etiquetas(d)}<span class="sku">${esc(d.sku)} · ${esc(d.proveedor)}</span></span>
-        <span class="mm"><span class="lbl">Actual</span>${d.minActual}–${d.maxActual}</span>
-        <span class="mm"><span class="lbl">Calculado</span>${d.minCalc}–${d.maxCalc}</span>
-        <span class="mm"><span class="lbl">Vida útil</span>${d.vidaUtil} días</span>
-        <span class="delta">${d.variacion > 0 ? '±' : ''}${d.variacion}</span>
-      </div>
-    `).join('');
   }
 
   function aplicarFiltros() {
@@ -537,7 +582,7 @@
 
     const body = document.getElementById('table-body');
     if (pageItems.length === 0) {
-      body.innerHTML = '<tr><td colspan="10" class="state-msg">Ningún SKU coincide con estos filtros.</td></tr>';
+      body.innerHTML = '<tr><td colspan="11" class="state-msg">Ningún SKU coincide con estos filtros.</td></tr>';
     } else {
       body.innerHTML = pageItems.map(d => {
         const key = rowKey(d);
@@ -550,6 +595,7 @@
           <td class="num">${d.maxActual}</td>
           <td class="num"><input type="number" class="edit-input" data-field="minCalc" data-orig="${d.minCalc}" value="${d.minCalc}"></td>
           <td class="num"><input type="number" class="edit-input" data-field="maxCalc" data-orig="${d.maxCalc}" value="${d.maxCalc}"></td>
+          <td class="num">${d.consumoMax}</td>
           <td class="num">${d.vidaUtil}</td>
           <td class="num variacion-cell"><span class="dot ${semaforo(d.variacion)}"></span>${d.variacion}</td>
           <td class="accion-cell">
@@ -633,7 +679,6 @@
         status.className = 'save-status ok';
 
         renderKPIs();
-        renderPrioritarios();
       } else {
         status.textContent = res.error || 'Error al guardar';
         status.className = 'save-status err';
@@ -668,6 +713,125 @@
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
   }
+
+  // ---------- Pestañas ----------
+  const navItems = document.querySelectorAll('.nav-item');
+  const paneles = {
+    detalle: document.getElementById('tab-detalle'),
+    resumen: document.getElementById('tab-resumen')
+  };
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => {
+      navItems.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.values(paneles).forEach(p => p.hidden = true);
+      paneles[btn.dataset.tab].hidden = false;
+      if (btn.dataset.tab === 'resumen') renderResumenTiendas();
+    });
+  });
+
+  // ---------- Resumen por tienda ----------
+  function renderResumenTiendas() {
+    const cont = document.getElementById('resumen-tiendas');
+    if (allData.length === 0) {
+      cont.innerHTML = '<div class="state-msg">No hay datos para mostrar.</div>';
+      return;
+    }
+
+    const porTienda = {};
+    allData.forEach(d => {
+      if (!porTienda[d.tienda]) {
+        porTienda[d.tienda] = { total: 0, red: 0, amber: 0, green: 0, nuevo: 0, bajoVolumen: 0, manual: 0, conflicto: 0 };
+      }
+      const t = porTienda[d.tienda];
+      t.total++;
+      t[semaforo(d.variacion)]++;
+      if (d.regla === 'nuevo') t.nuevo++;
+      if (d.regla === 'bajo_volumen') t.bajoVolumen++;
+      if (d.regla === 'manual') t.manual++;
+      if (d.conflicto) t.conflicto++;
+    });
+
+    const tiendas = Object.keys(porTienda).sort();
+    cont.innerHTML = tiendas.map(nombre => {
+      const s = porTienda[nombre];
+      const pRed = (s.red / s.total * 100);
+      const pAmber = (s.amber / s.total * 100);
+      const pGreen = (s.green / s.total * 100);
+      const extra = [];
+      if (s.nuevo) extra.push(s.nuevo + ' nuevos');
+      if (s.bajoVolumen) extra.push(s.bajoVolumen + ' bajo vol.');
+      if (s.manual) extra.push(s.manual + ' manuales');
+      if (s.conflicto) extra.push(s.conflicto + ' en conflicto');
+
+      return `
+        <div class="store-card">
+          <div class="store-head">
+            <span class="store-name">${esc(nombre)}</span>
+            <span class="store-total">${s.total} SKUs</span>
+          </div>
+          <div class="store-bar">
+            <span style="width:${pRed}%; background:var(--rust);"></span>
+            <span style="width:${pAmber}%; background:var(--gold-light);"></span>
+            <span style="width:${pGreen}%; background:var(--forest);"></span>
+          </div>
+          <div class="store-stats">
+            <span class="stat"><span class="dot red"></span>${s.red} por revisar</span>
+            <span class="stat"><span class="dot amber"></span>${s.amber} moderado</span>
+            <span class="stat"><span class="dot green"></span>${s.green} ok</span>
+            ${extra.length ? '<span class="muted">' + extra.join(' · ') + '</span>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ---------- Exportar ----------
+  function csvEscape(v) {
+    const s = String(v == null ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function descargarBlob(blob, nombre) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('btn-csv').addEventListener('click', () => {
+    const headers = ['Tienda', 'SKU', 'Min Calculado', 'Max Calculado'];
+    const filas = filtered.map(d => [d.tienda, d.sku, d.minCalc, d.maxCalc]);
+    const csv = [headers, ...filas].map(f => f.map(csvEscape).join(',')).join('\r\n');
+    descargarBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }), 'min_max_calculado.csv');
+  });
+
+  document.getElementById('btn-xlsx').addEventListener('click', () => {
+    const headers = [
+      'Tienda', 'SKU', 'Proveedor', 'Marca', 'Producto',
+      'Min Actual', 'Max Actual',
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep',
+      'Consumo Max', 'Vida Útil', 'Promedio Venta YTD', 'Promedio Venta Día',
+      'Min Calculado', 'Max Calculado', 'Variación', 'Regla', 'Conflicto'
+    ];
+    const filas = filtered.map(d => [
+      d.tienda, d.sku, d.proveedor, d.marca, d.producto,
+      d.minActual, d.maxActual,
+      d.ventas.ene, d.ventas.feb, d.ventas.mar, d.ventas.abr, d.ventas.may,
+      d.ventas.jun, d.ventas.jul, d.ventas.ago, d.ventas.sep,
+      d.consumoMax, d.vidaUtil, d.promedioYTD, d.promedioDia,
+      d.minCalc, d.maxCalc, d.variacion,
+      d.regla || '', d.conflicto ? 'Sí' : ''
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...filas]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Min Max');
+    XLSX.writeFile(wb, 'min_max_detalle.xlsx');
+  });
 
   document.getElementById('f-tienda').addEventListener('change', aplicarFiltros);
   document.getElementById('f-proveedor').addEventListener('change', aplicarFiltros);
