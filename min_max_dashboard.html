@@ -6,26 +6,32 @@
 <title>Min/Max Automático — Fithub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --paper: #EFEBDF;
-    --paper-dark: #E4DFCC;
-    --ink: #1E2B24;
-    --ink-soft: #4B5A50;
-    --forest: #2B5346;
-    --forest-dark: #16261F;
-    --gold: #B9832A;
-    --gold-light: #E4B85B;
-    --rust: #A14A34;
-    --sage: #8CA290;
-    --line: #D9D2BC;
+    --sidebar-bg: #1B2130;
+    --sidebar-bg-soft: #242B3D;
+    --sidebar-text: #9AA3B8;
+    --sidebar-text-strong: #E7EAF1;
+    --orange: #FF6A3D;
+    --purple: #7C5CFC;
+    --green: #1FA971;
+    --blue: #2F80ED;
+    --red: #E5544D;
+    --cream: #F5F1E8;
+    --paper: #FFFFFF;
+    --ink: #20242E;
+    --ink-soft: #767C8C;
+    --line: #E7E2D6;
+    --shadow: 0 2px 10px rgba(27,33,48,0.06);
+    --shadow-lg: 0 12px 34px rgba(27,33,48,0.12);
   }
 
   * { box-sizing: border-box; }
 
   body {
     margin: 0;
-    background: var(--paper);
+    background: var(--cream);
     color: var(--ink);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -36,43 +42,69 @@
   /* ---------- App shell (sidebar + contenido) ---------- */
   .app { display: flex; align-items: flex-start; min-height: 100vh; }
   .sidebar {
-    width: 190px;
+    width: 210px;
     flex-shrink: 0;
-    background: #fff;
-    border-right: 1px solid var(--line);
-    padding: 28px 14px;
+    background: var(--sidebar-bg);
+    padding: 24px 16px;
     position: sticky;
     top: 0;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: 'IBM Plex Mono', monospace;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--forest-dark);
-    padding: 0 10px 10px;
-    margin-bottom: 14px;
-    border-bottom: 2px solid var(--gold);
+    color: var(--sidebar-text-strong);
+    padding: 0 8px 16px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
   .nav-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
     text-align: left;
     font-family: 'Inter', sans-serif;
     font-size: 13.5px;
     font-weight: 600;
-    color: var(--ink-soft);
+    color: var(--sidebar-text);
     background: none;
     border: none;
-    border-radius: 3px;
-    padding: 10px 10px;
+    border-radius: 6px;
+    padding: 10px 12px;
     margin-bottom: 4px;
     cursor: pointer;
   }
-  .nav-item:hover { background: var(--paper); color: var(--forest-dark); }
-  .nav-item.active { background: var(--paper-dark); color: var(--forest-dark); }
+  .nav-item:hover { background: var(--sidebar-bg-soft); color: var(--sidebar-text-strong); }
+  .nav-item.active { background: var(--sidebar-bg-soft); color: var(--sidebar-text-strong); }
+  .nav-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.08);
+    color: var(--sidebar-text);
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .nav-item.active .nav-count { background: var(--orange); color: #fff; }
+
+  .sidebar-stats { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; font-size: 12px; }
+  .stat-label { color: var(--sidebar-text); }
+  .stat-value { font-family: 'IBM Plex Mono', monospace; color: var(--sidebar-text-strong); font-weight: 600; }
+  .status-row { gap: 7px; justify-content: flex-start; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sidebar-text); flex-shrink: 0; }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 0 3px rgba(31,169,113,0.2); }
+
   .content { flex: 1; min-width: 0; padding: 32px 32px 80px; max-width: 1180px; }
   .tab-panel[hidden] { display: none; }
 
@@ -84,14 +116,14 @@
     flex-wrap: wrap;
     gap: 16px;
     padding-bottom: 24px;
-    border-bottom: 2px solid var(--forest);
+    border-bottom: 2px solid var(--line);
     margin-bottom: 28px;
   }
   h1 {
     font-family: 'Fraunces', serif;
     font-weight: 600;
     font-size: 34px;
-    color: var(--forest-dark);
+    color: var(--ink);
     margin: 0 0 4px;
     letter-spacing: -0.01em;
   }
@@ -112,22 +144,28 @@
     margin-bottom: 36px;
   }
   .kpi {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--forest);
-    border-radius: 3px;
-    padding: 16px 18px;
+    background: var(--paper);
+    border-radius: 10px;
+    border-left: 4px solid var(--line);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
   }
   .kpi .n {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 600;
-    color: var(--forest-dark);
+    color: var(--ink);
     line-height: 1;
   }
-  .kpi.alert { border-left-color: var(--rust); }
-  .kpi.alert .n { color: var(--rust); }
   .kpi .l { font-size: 11px; color: var(--ink-soft); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-blue { border-left-color: var(--blue); }
+  .kpi-blue .n { color: var(--blue); }
+  .kpi-red { border-left-color: var(--red); }
+  .kpi-red .n { color: var(--red); }
+  .kpi-purple { border-left-color: var(--purple); }
+  .kpi-purple .n { color: var(--purple); }
+  .kpi-orange { border-left-color: var(--orange); }
+  .kpi-orange .n { color: var(--orange); }
 
   /* ---------- Section headers ---------- */
   section { margin-bottom: 40px; }
@@ -141,10 +179,18 @@
     font-family: 'Fraunces', serif;
     font-size: 20px;
     font-weight: 600;
-    color: var(--forest);
+    color: var(--ink);
     margin: 0;
   }
   .sec-note { font-size: 12.5px; color: var(--ink-soft); }
+
+  /* ---------- Gráfico ---------- */
+  .chart-card {
+    background: var(--paper);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+  }
 
   /* ---------- Filters ---------- */
   .filters {
@@ -158,7 +204,7 @@
     font-size: 13.5px;
     padding: 9px 12px;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: 6px;
     background: #fff;
     color: var(--ink);
   }
@@ -166,19 +212,19 @@
   .filters select { min-width: 150px; }
 
   /* ---------- Table ---------- */
-  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
   thead th {
     text-align: left;
     font-size: 11.5px;
     text-transform: none;
     color: var(--ink-soft);
     padding: 10px 12px;
-    border-bottom: 2px solid var(--forest);
+    border-bottom: 2px solid var(--line);
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
   }
-  thead th:hover { color: var(--forest); }
+  thead th:hover { color: var(--orange); }
   thead th .arrow { font-size: 10px; opacity: 0.5; margin-left: 3px; }
   tbody td {
     padding: 9px 12px;
@@ -186,34 +232,34 @@
     font-size: 13px;
     vertical-align: top;
   }
-  tbody tr:hover { background: var(--paper); }
+  tbody tr:hover { background: var(--cream); }
   td.num, th.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
   td.sku-cell { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .dot.red { background: var(--rust); }
-  .dot.amber { background: var(--gold-light); }
-  .dot.green { background: var(--forest); }
+  .dot.red { background: var(--red); }
+  .dot.amber { background: var(--orange); }
+  .dot.green { background: var(--green); }
   .edit-input {
     width: 52px;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12.5px;
     padding: 4px 5px;
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: 4px;
     text-align: right;
-    background: var(--paper);
+    background: var(--cream);
   }
-  .edit-input.changed { border-color: var(--gold); background: #fff; }
+  .edit-input.changed { border-color: var(--orange); background: #fff; }
   .accion-cell { white-space: nowrap; }
   .btn-guardar {
     font-family: 'Inter', sans-serif;
     font-size: 12px;
     font-weight: 600;
     padding: 5px 10px;
-    border: 1px solid var(--forest);
-    background: var(--forest);
+    border: 1px solid var(--green);
+    background: var(--green);
     color: #fff;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
   }
   .btn-guardar:disabled {
@@ -223,14 +269,14 @@
     cursor: default;
   }
   .save-status { font-size: 11.5px; margin-left: 6px; }
-  .save-status.ok { color: var(--forest); }
-  .save-status.err { color: var(--rust); }
+  .save-status.ok { color: var(--green); }
+  .save-status.err { color: var(--red); }
   .tag-regla {
     display: inline-block;
     font-family: 'Inter', sans-serif;
     font-size: 10px;
     font-weight: 600;
-    background: var(--paper-dark);
+    background: var(--cream);
     color: var(--ink-soft);
     padding: 1px 6px;
     border-radius: 3px;
@@ -241,32 +287,12 @@
     font-family: 'Inter', sans-serif;
     font-size: 10px;
     font-weight: 600;
-    background: #EAD3C9;
-    color: var(--rust);
+    background: rgba(229,84,77,0.13);
+    color: var(--red);
     padding: 1px 6px;
     border-radius: 3px;
     margin-left: 6px;
   }
-
-  .pager {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-  }
-  .pager button {
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    padding: 6px 14px;
-    border: 1px solid var(--line);
-    background: #fff;
-    border-radius: 4px;
-    cursor: pointer;
-    color: var(--forest);
-  }
-  .pager button:disabled { opacity: 0.4; cursor: default; }
 
   .state-msg {
     text-align: center;
@@ -282,36 +308,47 @@
     font-size: 12.5px;
     font-weight: 600;
     padding: 7px 12px;
-    border: 1px solid var(--forest);
+    border: 1px solid var(--ink);
     background: #fff;
-    color: var(--forest);
-    border-radius: 4px;
+    color: var(--ink);
+    border-radius: 6px;
     cursor: pointer;
   }
-  .btn-exportar:hover { background: var(--paper-dark); }
+  .btn-exportar:hover { background: var(--cream); }
+
+  /* ---------- Scroll infinito ---------- */
+  .scroll-status {
+    text-align: center;
+    padding: 16px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
 
   /* ---------- Resumen por tienda ---------- */
+  .store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
   .store-card {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    background: var(--paper);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
     padding: 18px 20px;
-    margin-bottom: 12px;
   }
   .store-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-  .store-name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--forest); }
+  .store-name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--ink); }
   .store-total { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
-  .store-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--paper-dark); margin-bottom: 12px; }
+  .store-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--cream); margin-bottom: 12px; }
   .store-bar span { display: block; height: 100%; }
-  .store-stats { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--ink); }
+  .store-avg { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  .store-avg strong { color: var(--ink); font-size: 14px; }
+  .store-stats { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink); }
   .store-stats .stat { display: flex; align-items: center; }
-  .store-stats .muted { color: var(--ink-soft); }
+  .store-stats .muted { color: var(--ink-soft); width: 100%; }
 
   @media (max-width: 720px) {
     .kpis { grid-template-columns: repeat(2, 1fr); }
     .app { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; position: static; display: flex; align-items: center; padding: 12px 16px; gap: 10px; }
-    .brand { margin-bottom: 0; }
+    .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 12px 16px; gap: 10px; }
+    .sidebar-stats { display: none; }
+    .brand { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
     .nav-item { width: auto; margin-bottom: 0; }
     .content { padding: 24px 16px 60px; }
   }
@@ -321,14 +358,62 @@
 <div class="app">
 
   <nav class="sidebar">
-    <div class="brand">Fithub</div>
-    <button class="nav-item active" data-tab="detalle">Detalle</button>
-    <button class="nav-item" data-tab="resumen">Resumen por tienda</button>
+    <div>
+      <div class="brand"><span class="brand-dot"></span>Fithub</div>
+      <button class="nav-item active" data-tab="resumen">
+        <span>Resumen por tienda</span>
+        <span class="nav-count" id="nav-count-resumen">—</span>
+      </button>
+      <button class="nav-item" data-tab="detalle">
+        <span>Detalle</span>
+        <span class="nav-count" id="nav-count-detalle">—</span>
+      </button>
+    </div>
+    <div class="sidebar-stats">
+      <div class="stat-row"><span class="stat-label">Registros</span><span class="stat-value" id="side-total">—</span></div>
+      <div class="stat-row"><span class="stat-label">Tiendas</span><span class="stat-value" id="side-tiendas">—</span></div>
+      <div class="stat-row status-row"><span class="status-dot" id="status-dot"></span><span id="status-text">Cargando…</span></div>
+    </div>
   </nav>
 
   <main class="content">
 
-  <div class="tab-panel" id="tab-detalle">
+  <div class="tab-panel" id="tab-resumen">
+    <header class="top">
+      <div>
+        <h1>Resumen por tienda</h1>
+        <p class="subtitle">Estado del min/max calculado, agrupado por tienda</p>
+      </div>
+      <div class="updated" id="updated-resumen">Cargando datos…</div>
+    </header>
+
+    <section class="kpis" id="kpis-resumen">
+      <div class="kpi kpi-blue"><div class="n" id="r-kpi-total">—</div><div class="l">SKUs activos</div></div>
+      <div class="kpi kpi-red"><div class="n" id="r-kpi-revisar">—</div><div class="l">Por revisar (variación alta)</div></div>
+      <div class="kpi kpi-purple"><div class="n" id="r-kpi-tiendas">—</div><div class="l">Tiendas</div></div>
+      <div class="kpi kpi-orange"><div class="n" id="r-kpi-proveedores">—</div><div class="l">Proveedores</div></div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>SKUs por revisar por tienda</h2>
+        <span class="sec-note">Distribución de alerta, moderado y ok</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="chart-resumen" height="90"></canvas>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>Por tienda</h2>
+        <span class="sec-note">Ordenadas de mayor a menor cantidad de SKUs por revisar</span>
+      </div>
+      <div class="store-grid" id="resumen-tiendas"></div>
+    </section>
+  </div>
+
+  <div class="tab-panel" id="tab-detalle" hidden>
   <header class="top">
     <div>
       <h1>Min/Max Automático</h1>
@@ -338,10 +423,10 @@
   </header>
 
   <section class="kpis" id="kpis">
-    <div class="kpi"><div class="n" id="kpi-total">—</div><div class="l">SKUs activos</div></div>
-    <div class="kpi alert"><div class="n" id="kpi-revisar">—</div><div class="l">Por revisar (variación alta)</div></div>
-    <div class="kpi"><div class="n" id="kpi-tiendas">—</div><div class="l">Tiendas</div></div>
-    <div class="kpi"><div class="n" id="kpi-proveedores">—</div><div class="l">Proveedores</div></div>
+    <div class="kpi kpi-blue"><div class="n" id="kpi-total">—</div><div class="l">SKUs activos</div></div>
+    <div class="kpi kpi-red"><div class="n" id="kpi-revisar">—</div><div class="l">Por revisar (variación alta)</div></div>
+    <div class="kpi kpi-purple"><div class="n" id="kpi-tiendas">—</div><div class="l">Tiendas</div></div>
+    <div class="kpi kpi-orange"><div class="n" id="kpi-proveedores">—</div><div class="l">Proveedores</div></div>
   </section>
 
   <section>
@@ -382,24 +467,9 @@
       <tbody id="table-body"></tbody>
     </table>
 
-    <div class="pager">
-      <span id="page-info"></span>
-      <div>
-        <button id="prev-page">← Anterior</button>
-        <button id="next-page">Siguiente →</button>
-      </div>
-    </div>
+    <div class="scroll-status" id="scroll-status"></div>
+    <div id="scroll-sentinel"></div>
   </section>
-  </div>
-
-  <div class="tab-panel" id="tab-resumen" hidden>
-    <header class="top">
-      <div>
-        <h1>Resumen por tienda</h1>
-        <p class="subtitle">Estado del min/max calculado, agrupado por tienda</p>
-      </div>
-    </header>
-    <div id="resumen-tiendas"></div>
   </div>
 
   </main>
@@ -456,13 +526,14 @@
     return { minCalc: r.minCalc, maxCalc: r.maxCalc, regla: null, conflicto: false };
   }
 
-  const PAGE_SIZE = 50;
+  const BATCH_SIZE = 50;
 
   let allData = [];
   let filtered = [];
-  let currentPage = 1;
+  let renderedCount = 0;
   let sortKey = 'variacion';
   let sortDir = 'desc';
+  let chartResumen = null;
 
   function semaforo(variacion) {
     if (variacion >= UMBRAL_ROJO) return 'red';
@@ -473,6 +544,7 @@
   function cargar() {
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PON_AQUI') === 0) {
       document.getElementById('updated').textContent = 'Falta configurar APPS_SCRIPT_URL';
+      document.getElementById('updated-resumen').textContent = 'Falta configurar APPS_SCRIPT_URL';
       document.getElementById('table-body').innerHTML =
         '<tr><td colspan="11" class="state-msg">Configura la URL del Apps Script en el código del dashboard (APPS_SCRIPT_URL) para cargar los datos.</td></tr>';
       return;
@@ -487,6 +559,7 @@
     script.src = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
     script.onerror = function() {
       document.getElementById('updated').textContent = 'Error al cargar datos';
+      document.getElementById('updated-resumen').textContent = 'Error al cargar datos';
     };
     document.body.appendChild(script);
   }
@@ -506,12 +579,15 @@
     });
 
     const fecha = payload.actualizado ? new Date(payload.actualizado) : new Date();
-    document.getElementById('updated').innerHTML =
+    const textoFecha =
       'Actualizado: <strong>' + fecha.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) +
       ' · ' + fecha.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) + '</strong>';
+    document.getElementById('updated').innerHTML = textoFecha;
+    document.getElementById('updated-resumen').innerHTML = textoFecha;
 
     poblarFiltros();
     renderKPIs();
+    renderResumenTiendas();
     aplicarFiltros();
   }
 
@@ -534,13 +610,29 @@
   }
 
   function renderKPIs() {
-    document.getElementById('kpi-total').textContent = allData.length.toLocaleString('es-CO');
-    document.getElementById('kpi-revisar').textContent =
-      allData.filter(d => semaforo(d.variacion) === 'red').length.toLocaleString('es-CO');
-    document.getElementById('kpi-tiendas').textContent =
-      new Set(allData.map(d => d.tienda)).size;
-    document.getElementById('kpi-proveedores').textContent =
-      new Set(allData.map(d => d.proveedor)).size;
+    const total = allData.length.toLocaleString('es-CO');
+    const revisar = allData.filter(d => semaforo(d.variacion) === 'red').length.toLocaleString('es-CO');
+    const tiendas = new Set(allData.map(d => d.tienda)).size;
+    const proveedores = new Set(allData.map(d => d.proveedor)).size;
+
+    document.getElementById('kpi-total').textContent = total;
+    document.getElementById('kpi-revisar').textContent = revisar;
+    document.getElementById('kpi-tiendas').textContent = tiendas;
+    document.getElementById('kpi-proveedores').textContent = proveedores;
+
+    document.getElementById('r-kpi-total').textContent = total;
+    document.getElementById('r-kpi-revisar').textContent = revisar;
+    document.getElementById('r-kpi-tiendas').textContent = tiendas;
+    document.getElementById('r-kpi-proveedores').textContent = proveedores;
+
+    document.getElementById('side-total').textContent = total;
+    document.getElementById('side-tiendas').textContent = tiendas;
+    document.getElementById('nav-count-detalle').textContent = total;
+    document.getElementById('nav-count-resumen').textContent = tiendas;
+
+    const statusDot = document.getElementById('status-dot');
+    statusDot.classList.add('live');
+    document.getElementById('status-text').textContent = 'Conectado';
   }
 
   function aplicarFiltros() {
@@ -558,8 +650,7 @@
     });
 
     ordenar();
-    currentPage = 1;
-    renderTabla();
+    reiniciarTabla();
   }
 
   function ordenar() {
@@ -572,21 +663,31 @@
     });
   }
 
-  function renderTabla() {
+  function reiniciarTabla() {
     document.getElementById('count-note').textContent =
       filtered.length.toLocaleString('es-CO') + ' de ' + allData.length.toLocaleString('es-CO') + ' SKUs';
 
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const pageItems = filtered.slice(start, start + PAGE_SIZE);
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
+    renderedCount = 0;
     const body = document.getElementById('table-body');
-    if (pageItems.length === 0) {
+    body.innerHTML = '';
+
+    if (filtered.length === 0) {
       body.innerHTML = '<tr><td colspan="11" class="state-msg">Ningún SKU coincide con estos filtros.</td></tr>';
-    } else {
-      body.innerHTML = pageItems.map(d => {
-        const key = rowKey(d);
-        return `
+      document.getElementById('scroll-status').textContent = '';
+      return;
+    }
+
+    cargarMasFilas();
+  }
+
+  function cargarMasFilas() {
+    if (renderedCount >= filtered.length) return;
+
+    const siguientes = filtered.slice(renderedCount, renderedCount + BATCH_SIZE);
+    const body = document.getElementById('table-body');
+    const html = siguientes.map(d => {
+      const key = rowKey(d);
+      return `
         <tr data-row-key="${esc(key)}">
           <td>${esc(d.tienda)}</td>
           <td>${esc(d.producto)}${etiquetas(d)}<div class="sku-cell">${esc(d.sku)}</div></td>
@@ -604,26 +705,36 @@
           </td>
         </tr>
       `;
-      }).join('');
+    }).join('');
 
-      body.querySelectorAll('tr[data-row-key]').forEach(tr => {
-        const inputs = tr.querySelectorAll('.edit-input');
-        const btn = tr.querySelector('.btn-guardar');
-        inputs.forEach(inp => {
-          inp.addEventListener('input', () => {
-            const anyChanged = [...inputs].some(i => i.value !== i.dataset.orig);
-            inputs.forEach(i => i.classList.toggle('changed', i.value !== i.dataset.orig));
-            btn.disabled = !anyChanged;
-          });
+    body.insertAdjacentHTML('beforeend', html);
+
+    body.querySelectorAll('tr[data-row-key]').forEach(tr => {
+      if (tr.dataset.wired) return;
+      tr.dataset.wired = '1';
+      const inputs = tr.querySelectorAll('.edit-input');
+      const btn = tr.querySelector('.btn-guardar');
+      inputs.forEach(inp => {
+        inp.addEventListener('input', () => {
+          const anyChanged = [...inputs].some(i => i.value !== i.dataset.orig);
+          inputs.forEach(i => i.classList.toggle('changed', i.value !== i.dataset.orig));
+          btn.disabled = !anyChanged;
         });
-        btn.addEventListener('click', () => guardarFila(tr));
       });
-    }
+      btn.addEventListener('click', () => guardarFila(tr));
+    });
 
-    document.getElementById('page-info').textContent = 'Página ' + currentPage + ' de ' + totalPages;
-    document.getElementById('prev-page').disabled = currentPage <= 1;
-    document.getElementById('next-page').disabled = currentPage >= totalPages;
+    renderedCount += siguientes.length;
+    const status = document.getElementById('scroll-status');
+    status.textContent = renderedCount >= filtered.length
+      ? 'Mostrando los ' + filtered.length.toLocaleString('es-CO') + ' SKUs'
+      : 'Mostrando ' + renderedCount.toLocaleString('es-CO') + ' de ' + filtered.length.toLocaleString('es-CO') + ' · desplázate para ver más';
   }
+
+  const sentinelObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) cargarMasFilas();
+  });
+  sentinelObserver.observe(document.getElementById('scroll-sentinel'));
 
   function rowKey(d) {
     return d.tienda + '|' + d.sku;
@@ -741,23 +852,53 @@
     const porTienda = {};
     allData.forEach(d => {
       if (!porTienda[d.tienda]) {
-        porTienda[d.tienda] = { total: 0, red: 0, amber: 0, green: 0, nuevo: 0, bajoVolumen: 0, manual: 0, conflicto: 0 };
+        porTienda[d.tienda] = { total: 0, red: 0, amber: 0, green: 0, nuevo: 0, bajoVolumen: 0, manual: 0, conflicto: 0, sumaVariacion: 0 };
       }
       const t = porTienda[d.tienda];
       t.total++;
       t[semaforo(d.variacion)]++;
+      t.sumaVariacion += d.variacion;
       if (d.regla === 'nuevo') t.nuevo++;
       if (d.regla === 'bajo_volumen') t.bajoVolumen++;
       if (d.regla === 'manual') t.manual++;
       if (d.conflicto) t.conflicto++;
     });
 
-    const tiendas = Object.keys(porTienda).sort();
+    const tiendas = Object.keys(porTienda).sort((a, b) => {
+      const sa = porTienda[a], sb = porTienda[b];
+      if (sb.red !== sa.red) return sb.red - sa.red;
+      return sb.total - sa.total;
+    });
+
+    if (chartResumen) chartResumen.destroy();
+    chartResumen = new Chart(document.getElementById('chart-resumen'), {
+      type: 'bar',
+      data: {
+        labels: tiendas,
+        datasets: [
+          { label: 'Por revisar', data: tiendas.map(t => porTienda[t].red), backgroundColor: '#E5544D', borderRadius: 4 },
+          { label: 'Moderado', data: tiendas.map(t => porTienda[t].amber), backgroundColor: '#FF6A3D', borderRadius: 4 },
+          { label: 'Ok', data: tiendas.map(t => porTienda[t].green), backgroundColor: '#1FA971', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, boxWidth: 12 } }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+
     cont.innerHTML = tiendas.map(nombre => {
       const s = porTienda[nombre];
       const pRed = (s.red / s.total * 100);
       const pAmber = (s.amber / s.total * 100);
       const pGreen = (s.green / s.total * 100);
+      const promedio = (s.sumaVariacion / s.total).toFixed(1);
       const extra = [];
       if (s.nuevo) extra.push(s.nuevo + ' nuevos');
       if (s.bajoVolumen) extra.push(s.bajoVolumen + ' bajo vol.');
@@ -771,10 +912,11 @@
             <span class="store-total">${s.total} SKUs</span>
           </div>
           <div class="store-bar">
-            <span style="width:${pRed}%; background:var(--rust);"></span>
-            <span style="width:${pAmber}%; background:var(--gold-light);"></span>
-            <span style="width:${pGreen}%; background:var(--forest);"></span>
+            <span style="width:${pRed}%; background:var(--red);"></span>
+            <span style="width:${pAmber}%; background:var(--orange);"></span>
+            <span style="width:${pGreen}%; background:var(--green);"></span>
           </div>
+          <div class="store-avg">Variación promedio: <strong>${promedio}</strong> unidades</div>
           <div class="store-stats">
             <span class="stat"><span class="dot red"></span>${s.red} por revisar</span>
             <span class="stat"><span class="dot amber"></span>${s.amber} moderado</span>
@@ -844,16 +986,8 @@
       if (sortKey === key) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
       else { sortKey = key; sortDir = 'desc'; }
       ordenar();
-      renderTabla();
+      reiniciarTabla();
     });
-  });
-
-  document.getElementById('prev-page').addEventListener('click', () => {
-    if (currentPage > 1) { currentPage--; renderTabla(); }
-  });
-  document.getElementById('next-page').addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    if (currentPage < totalPages) { currentPage++; renderTabla(); }
   });
 
   cargar();
