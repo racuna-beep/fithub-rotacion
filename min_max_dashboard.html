@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Min/Max Automático — Fithub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F2E9;
+    --cream-dark: #EDE4D2;
+    --forest: #33513E;
+    --forest-light: #4A6B54;
+    --orange: #EA551D;
+    --ink: #23291F;
+    --green: #4C7A52;
+    --amber: #C8842A;
+    --red: #C23B22;
+    --line: #DDD3BE;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ---------- Header ---------- */
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--forest);
+    margin-bottom: 28px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    color: var(--forest);
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: var(--forest-light); font-size: 14.5px; margin: 0; }
+  .updated {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--forest-light);
+    text-align: right;
+  }
+  .updated strong { color: var(--ink); }
+
+  /* ---------- KPI cards ---------- */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px 18px;
+  }
+  .kpi .n {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--forest);
+    line-height: 1;
+  }
+  .kpi.alert .n { color: var(--red); }
+  .kpi .l { font-size: 12.5px; color: var(--forest-light); margin-top: 6px; }
+
+  /* ---------- Section headers ---------- */
+  section { margin-bottom: 40px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--forest);
+    margin: 0;
+  }
+  .sec-note { font-size: 12.5px; color: var(--forest-light); }
+
+  /* ---------- Priority cards ---------- */
+  .priority-list { display: flex; flex-direction: column; gap: 8px; }
+  .prow {
+    display: grid;
+    grid-template-columns: 30px 90px 1fr 90px 150px 150px 90px;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+  }
+  .prow.sem-red { border-left-color: var(--red); }
+  .prow.sem-amber { border-left-color: var(--amber); }
+  .prow.sem-green { border-left-color: var(--green); }
+  .prow .rank { font-family: 'IBM Plex Mono', monospace; color: var(--forest-light); font-size: 12px; }
+  .prow .tienda-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    background: var(--cream-dark);
+    color: var(--forest);
+    padding: 3px 7px;
+    border-radius: 3px;
+    text-align: center;
+  }
+  .prow .prod { font-weight: 500; }
+  .prow .prod .sku { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--forest-light); font-weight: 400; }
+  .prow .mm { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+  .prow .mm .lbl { color: var(--forest-light); font-size: 10.5px; display: block; }
+  .prow .delta { font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-align: right; }
+  .sem-red .delta { color: var(--red); }
+  .sem-amber .delta { color: var(--amber); }
+  .sem-green .delta { color: var(--green); }
+
+  /* ---------- Filters ---------- */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .filters select, .filters input {
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters select { min-width: 150px; }
+
+  /* ---------- Table ---------- */
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+  thead th {
+    text-align: left;
+    font-size: 11.5px;
+    text-transform: none;
+    color: var(--forest-light);
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--forest);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: var(--forest); }
+  thead th .arrow { font-size: 10px; opacity: 0.5; margin-left: 3px; }
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    vertical-align: top;
+  }
+  tbody tr:hover { background: var(--cream); }
+  td.num, th.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  td.sku-cell { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--forest-light); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot.red { background: var(--red); }
+  .dot.amber { background: var(--amber); }
+  .dot.green { background: var(--green); }
+  .edit-input {
+    width: 52px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    padding: 4px 5px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    text-align: right;
+    background: var(--cream);
+  }
+  .edit-input.changed { border-color: var(--orange); background: #fff; }
+  .accion-cell { white-space: nowrap; }
+  .btn-guardar {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border: 1px solid var(--forest);
+    background: var(--forest);
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .btn-guardar:disabled {
+    background: transparent;
+    color: var(--line);
+    border-color: var(--line);
+    cursor: default;
+  }
+  .save-status { font-size: 11.5px; margin-left: 6px; }
+  .save-status.ok { color: var(--green); }
+  .save-status.err { color: var(--red); }
+  .tag-regla {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--cream-dark);
+    color: var(--forest-light);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+  }
+  .tag-conflicto {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    background: #F6D9CF;
+    color: var(--red);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+  }
+
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--forest-light);
+  }
+  .pager button {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--forest);
+  }
+  .pager button:disabled { opacity: 0.4; cursor: default; }
+
+  .state-msg {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--forest-light);
+    font-size: 14px;
+  }
+
+  @media (max-width: 720px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .prow { grid-template-columns: 1fr; }
+    .prow .delta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Min/Max Automático</h1>
+      <p class="subtitle">Cobertura calculada por SKU y tienda, frente a lo configurado hoy en el sistema</p>
+    </div>
+    <div class="updated" id="updated">Cargando datos…</div>
+  </header>
+
+  <section class="kpis" id="kpis">
+    <div class="kpi"><div class="n" id="kpi-total">—</div><div class="l">SKUs activos</div></div>
+    <div class="kpi alert"><div class="n" id="kpi-revisar">—</div><div class="l">Por revisar (variación alta)</div></div>
+    <div class="kpi"><div class="n" id="kpi-tiendas">—</div><div class="l">Tiendas</div></div>
+    <div class="kpi"><div class="n" id="kpi-proveedores">—</div><div class="l">Proveedores</div></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Prioritarios</h2>
+      <span class="sec-note">SKUs donde el min/max calculado más se aleja de lo configurado actualmente</span>
+    </div>
+    <div class="priority-list" id="priority-list"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Todos los SKUs</h2>
+      <span class="sec-note" id="count-note"></span>
+    </div>
+
+    <div class="filters">
+      <select id="f-tienda"><option value="">Todas las tiendas</option></select>
+      <select id="f-proveedor"><option value="">Todos los proveedores</option></select>
+      <select id="f-marca"><option value="">Todas las marcas</option></select>
+      <input type="text" id="f-buscar" placeholder="Buscar por SKU o nombre de producto…">
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th data-key="tienda">Tienda</th>
+          <th data-key="producto">Producto</th>
+          <th data-key="proveedor">Proveedor</th>
+          <th class="num" data-key="minActual">Min actual</th>
+          <th class="num" data-key="maxActual">Max actual</th>
+          <th class="num" data-key="minCalc">Min calc.</th>
+          <th class="num" data-key="maxCalc">Max calc.</th>
+          <th class="num" data-key="vidaUtil">Vida útil</th>
+          <th class="num" data-key="variacion">Variación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+
+    <div class="pager">
+      <span id="page-info"></span>
+      <div>
+        <button id="prev-page">← Anterior</button>
+        <button id="next-page">Siguiente →</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // ---- CONFIGURACIÓN ----
+  // Reemplaza con la URL de tu Web App de Apps Script (ver codigo_apps_script.gs)
+  // Se usa tanto para leer (JSONP) como para guardar ediciones (POST)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvMGBrCqinWiVlrUublodaDcvGxygVnnLqYqsnYgrJar5h-p32k92efmU5L1Pu-y8eGA/exec';
+
+  // Umbrales para el semáforo de prioridad (variación = |ΔMin| + |ΔMax|, en unidades)
+  const UMBRAL_ROJO = 8;
+  const UMBRAL_AMBAR = 3;
+
+  // Reglas fijas que reemplazan el min/max calculado del sheet:
+  // 1) Producto sin ninguna venta registrada (Ene-Sep en 0) -> min/max fijo
+  // 2) Producto cuyo mes de mayor venta no supera 3 unidades -> min/max fijo bajo
+  // Ajusta estos valores si cambian las políticas.
+  const SIN_VENTA_MIN = 6, SIN_VENTA_MAX = 12;
+  const BAJO_VOLUMEN_UMBRAL = 3; // venta máxima mensual observada
+  const BAJO_VOLUMEN_MIN = 1, BAJO_VOLUMEN_MAX = 3;
+
+  function calificaAutomatica(r) {
+    const meses = Object.values(r.ventas || {});
+    const totalVentas = meses.reduce((a, b) => a + b, 0);
+    const maxMensual = meses.length ? Math.max(...meses) : 0;
+    return {
+      sinVenta: totalVentas === 0,
+      bajoVolumen: totalVentas !== 0 && maxMensual <= BAJO_VOLUMEN_UMBRAL
+    };
+  }
+
+  function aplicarReglasFijas(r) {
+    const cal = calificaAutomatica(r);
+
+    if (r.esManual) {
+      // Ya hay un ajuste manual guardado: se respeta, pero se marca si
+      // de otro modo habría calificado para una regla fija automática.
+      return {
+        minCalc: r.minCalc,
+        maxCalc: r.maxCalc,
+        regla: 'manual',
+        conflicto: cal.sinVenta || cal.bajoVolumen
+      };
+    }
+    if (cal.sinVenta) {
+      return { minCalc: SIN_VENTA_MIN, maxCalc: SIN_VENTA_MAX, regla: 'nuevo', conflicto: false };
+    }
+    if (cal.bajoVolumen) {
+      return { minCalc: BAJO_VOLUMEN_MIN, maxCalc: BAJO_VOLUMEN_MAX, regla: 'bajo_volumen', conflicto: false };
+    }
+    return { minCalc: r.minCalc, maxCalc: r.maxCalc, regla: null, conflicto: false };
+  }
+
+  const PAGE_SIZE = 50;
+
+  let allData = [];
+  let filtered = [];
+  let currentPage = 1;
+  let sortKey = 'variacion';
+  let sortDir = 'desc';
+
+  function semaforo(variacion) {
+    if (variacion >= UMBRAL_ROJO) return 'red';
+    if (variacion >= UMBRAL_AMBAR) return 'amber';
+    return 'green';
+  }
+
+  function cargar() {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PON_AQUI') === 0) {
+      document.getElementById('updated').textContent = 'Falta configurar APPS_SCRIPT_URL';
+      document.getElementById('table-body').innerHTML =
+        '<tr><td colspan="10" class="state-msg">Configura la URL del Apps Script en el código del dashboard (APPS_SCRIPT_URL) para cargar los datos.</td></tr>';
+      return;
+    }
+    const cbName = 'onData_' + Date.now();
+    window[cbName] = function(payload) {
+      procesar(payload);
+      delete window[cbName];
+      script.remove();
+    };
+    const script = document.createElement('script');
+    script.src = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = function() {
+      document.getElementById('updated').textContent = 'Error al cargar datos';
+    };
+    document.body.appendChild(script);
+  }
+
+  function procesar(payload) {
+    allData = (payload.registros || []).map(r => {
+      const ajuste = aplicarReglasFijas(r);
+      const minCalc = ajuste.minCalc;
+      const maxCalc = ajuste.maxCalc;
+      const deltaMin = minCalc - r.minActual;
+      const deltaMax = maxCalc - r.maxActual;
+      return Object.assign({}, r, {
+        minCalc, maxCalc, regla: ajuste.regla, conflicto: ajuste.conflicto,
+        variacion: Math.abs(deltaMin) + Math.abs(deltaMax),
+        deltaMin, deltaMax
+      });
+    });
+
+    const fecha = payload.actualizado ? new Date(payload.actualizado) : new Date();
+    document.getElementById('updated').innerHTML =
+      'Actualizado: <strong>' + fecha.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' · ' + fecha.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) + '</strong>';
+
+    poblarFiltros();
+    renderKPIs();
+    renderPrioritarios();
+    aplicarFiltros();
+  }
+
+  function poblarFiltros() {
+    const tiendas = [...new Set(allData.map(d => d.tienda))].filter(Boolean).sort();
+    const proveedores = [...new Set(allData.map(d => d.proveedor))].filter(Boolean).sort();
+    const marcas = [...new Set(allData.map(d => d.marca))].filter(Boolean).sort();
+
+    const fill = (id, values) => {
+      const sel = document.getElementById(id);
+      values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        sel.appendChild(opt);
+      });
+    };
+    fill('f-tienda', tiendas);
+    fill('f-proveedor', proveedores);
+    fill('f-marca', marcas);
+  }
+
+  function renderKPIs() {
+    document.getElementById('kpi-total').textContent = allData.length.toLocaleString('es-CO');
+    document.getElementById('kpi-revisar').textContent =
+      allData.filter(d => semaforo(d.variacion) === 'red').length.toLocaleString('es-CO');
+    document.getElementById('kpi-tiendas').textContent =
+      new Set(allData.map(d => d.tienda)).size;
+    document.getElementById('kpi-proveedores').textContent =
+      new Set(allData.map(d => d.proveedor)).size;
+  }
+
+  function renderPrioritarios() {
+    const top = [...allData].sort((a, b) => b.variacion - a.variacion).slice(0, 20);
+    const cont = document.getElementById('priority-list');
+    if (top.length === 0) {
+      cont.innerHTML = '<div class="state-msg">No hay datos para mostrar.</div>';
+      return;
+    }
+    cont.innerHTML = top.map((d, i) => `
+      <div class="prow sem-${semaforo(d.variacion)}">
+        <span class="rank">${i + 1}</span>
+        <span class="tienda-tag">${esc(d.tienda)}</span>
+        <span class="prod">${esc(d.producto)}${etiquetas(d)}<span class="sku">${esc(d.sku)} · ${esc(d.proveedor)}</span></span>
+        <span class="mm"><span class="lbl">Actual</span>${d.minActual}–${d.maxActual}</span>
+        <span class="mm"><span class="lbl">Calculado</span>${d.minCalc}–${d.maxCalc}</span>
+        <span class="mm"><span class="lbl">Vida útil</span>${d.vidaUtil} días</span>
+        <span class="delta">${d.variacion > 0 ? '±' : ''}${d.variacion}</span>
+      </div>
+    `).join('');
+  }
+
+  function aplicarFiltros() {
+    const tienda = document.getElementById('f-tienda').value;
+    const proveedor = document.getElementById('f-proveedor').value;
+    const marca = document.getElementById('f-marca').value;
+    const buscar = document.getElementById('f-buscar').value.trim().toLowerCase();
+
+    filtered = allData.filter(d => {
+      if (tienda && d.tienda !== tienda) return false;
+      if (proveedor && d.proveedor !== proveedor) return false;
+      if (marca && d.marca !== marca) return false;
+      if (buscar && !(d.sku.toLowerCase().includes(buscar) || d.producto.toLowerCase().includes(buscar))) return false;
+      return true;
+    });
+
+    ordenar();
+    currentPage = 1;
+    renderTabla();
+  }
+
+  function ordenar() {
+    filtered.sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function renderTabla() {
+    document.getElementById('count-note').textContent =
+      filtered.length.toLocaleString('es-CO') + ' de ' + allData.length.toLocaleString('es-CO') + ' SKUs';
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+    const body = document.getElementById('table-body');
+    if (pageItems.length === 0) {
+      body.innerHTML = '<tr><td colspan="10" class="state-msg">Ningún SKU coincide con estos filtros.</td></tr>';
+    } else {
+      body.innerHTML = pageItems.map(d => {
+        const key = rowKey(d);
+        return `
+        <tr data-row-key="${esc(key)}">
+          <td>${esc(d.tienda)}</td>
+          <td>${esc(d.producto)}${etiquetas(d)}<div class="sku-cell">${esc(d.sku)}</div></td>
+          <td>${esc(d.proveedor)}</td>
+          <td class="num">${d.minActual}</td>
+          <td class="num">${d.maxActual}</td>
+          <td class="num"><input type="number" class="edit-input" data-field="minCalc" data-orig="${d.minCalc}" value="${d.minCalc}"></td>
+          <td class="num"><input type="number" class="edit-input" data-field="maxCalc" data-orig="${d.maxCalc}" value="${d.maxCalc}"></td>
+          <td class="num">${d.vidaUtil}</td>
+          <td class="num variacion-cell"><span class="dot ${semaforo(d.variacion)}"></span>${d.variacion}</td>
+          <td class="accion-cell">
+            <button class="btn-guardar" disabled>Guardar</button>
+            <span class="save-status"></span>
+          </td>
+        </tr>
+      `;
+      }).join('');
+
+      body.querySelectorAll('tr[data-row-key]').forEach(tr => {
+        const inputs = tr.querySelectorAll('.edit-input');
+        const btn = tr.querySelector('.btn-guardar');
+        inputs.forEach(inp => {
+          inp.addEventListener('input', () => {
+            const anyChanged = [...inputs].some(i => i.value !== i.dataset.orig);
+            inputs.forEach(i => i.classList.toggle('changed', i.value !== i.dataset.orig));
+            btn.disabled = !anyChanged;
+          });
+        });
+        btn.addEventListener('click', () => guardarFila(tr));
+      });
+    }
+
+    document.getElementById('page-info').textContent = 'Página ' + currentPage + ' de ' + totalPages;
+    document.getElementById('prev-page').disabled = currentPage <= 1;
+    document.getElementById('next-page').disabled = currentPage >= totalPages;
+  }
+
+  function rowKey(d) {
+    return d.tienda + '|' + d.sku;
+  }
+
+  function guardarFila(tr) {
+    const key = tr.dataset.rowKey;
+    const record = allData.find(d => rowKey(d) === key);
+    if (!record) return;
+
+    const inputs = tr.querySelectorAll('.edit-input');
+    const valores = {};
+    inputs.forEach(inp => { valores[inp.dataset.field] = Number(inp.value); });
+
+    const btn = tr.querySelector('.btn-guardar');
+    const status = tr.querySelector('.save-status');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    status.textContent = '';
+    status.className = 'save-status';
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        tienda: record.tienda,
+        sku: record.sku,
+        minCalc: valores.minCalc,
+        maxCalc: valores.maxCalc
+      })
+    })
+    .then(r => r.json())
+    .then(res => {
+      btn.textContent = 'Guardar';
+      if (res.ok) {
+        record.minCalc = valores.minCalc;
+        record.maxCalc = valores.maxCalc;
+        record.regla = 'manual';
+        const cal = calificaAutomatica(record);
+        record.conflicto = cal.sinVenta || cal.bajoVolumen;
+        record.deltaMin = record.minCalc - record.minActual;
+        record.deltaMax = record.maxCalc - record.maxActual;
+        record.variacion = Math.abs(record.deltaMin) + Math.abs(record.deltaMax);
+
+        inputs.forEach(inp => { inp.dataset.orig = inp.value; inp.classList.remove('changed'); });
+        const vcell = tr.querySelector('.variacion-cell');
+        vcell.innerHTML = '<span class="dot ' + semaforo(record.variacion) + '"></span>' + record.variacion;
+        const celdaProducto = tr.querySelector('td:nth-child(2)');
+        const skuDiv = celdaProducto.querySelector('.sku-cell');
+        celdaProducto.querySelectorAll('.tag-regla, .tag-conflicto').forEach(el => el.remove());
+        skuDiv.insertAdjacentHTML('beforebegin', etiquetas(record));
+        status.textContent = 'Guardado ✓';
+        status.className = 'save-status ok';
+
+        renderKPIs();
+        renderPrioritarios();
+      } else {
+        status.textContent = res.error || 'Error al guardar';
+        status.className = 'save-status err';
+        btn.disabled = false;
+      }
+    })
+    .catch(() => {
+      btn.textContent = 'Guardar';
+      status.textContent = 'Sin conexión con el sheet';
+      status.className = 'save-status err';
+      btn.disabled = false;
+    });
+  }
+
+  function tagRegla(regla) {
+    if (regla === 'nuevo') return '<span class="tag-regla">Nuevo</span>';
+    if (regla === 'bajo_volumen') return '<span class="tag-regla">Bajo vol.</span>';
+    if (regla === 'manual') return '<span class="tag-regla">Manual</span>';
+    return '';
+  }
+
+  function etiquetas(d) {
+    let html = tagRegla(d.regla);
+    if (d.conflicto) {
+      html += '<span class="tag-conflicto" title="Calificaría para una regla fija automática, pero tiene un ajuste manual guardado">⚠ Conflicto</span>';
+    }
+    return html;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
+
+  document.getElementById('f-tienda').addEventListener('change', aplicarFiltros);
+  document.getElementById('f-proveedor').addEventListener('change', aplicarFiltros);
+  document.getElementById('f-marca').addEventListener('change', aplicarFiltros);
+  document.getElementById('f-buscar').addEventListener('input', aplicarFiltros);
+
+  document.querySelectorAll('thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (sortKey === key) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+      else { sortKey = key; sortDir = 'desc'; }
+      ordenar();
+      renderTabla();
+    });
+  });
+
+  document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; renderTabla(); }
+  });
+  document.getElementById('next-page').addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (currentPage < totalPages) { currentPage++; renderTabla(); }
+  });
+
+  cargar();
+</script>
+</body>
+</html>
