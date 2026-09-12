@@ -488,19 +488,18 @@
 
   // Reglas fijas que reemplazan el min/max calculado del sheet:
   // 1) Producto sin ninguna venta registrada (Ene-Sep en 0) -> min/max fijo
-  // 2) Producto cuyo mes de mayor venta no supera 3 unidades -> min/max fijo bajo
+  // 2) Producto cuyo promedio de venta mensual (Promedio de Venta YTD) es menor a 3 -> min/max fijo bajo
   // Ajusta estos valores si cambian las políticas.
   const SIN_VENTA_MIN = 6, SIN_VENTA_MAX = 12;
-  const BAJO_VOLUMEN_UMBRAL = 3; // venta máxima mensual observada
+  const BAJO_VOLUMEN_UMBRAL = 3; // promedio de venta mensual (Promedio de Venta YTD)
   const BAJO_VOLUMEN_MIN = 1, BAJO_VOLUMEN_MAX = 3;
 
   function calificaAutomatica(r) {
     const meses = Object.values(r.ventas || {});
     const totalVentas = meses.reduce((a, b) => a + b, 0);
-    const maxMensual = meses.length ? Math.max(...meses) : 0;
     return {
       sinVenta: totalVentas === 0,
-      bajoVolumen: totalVentas !== 0 && maxMensual <= BAJO_VOLUMEN_UMBRAL
+      bajoVolumen: totalVentas !== 0 && r.promedioYTD <= BAJO_VOLUMEN_UMBRAL
     };
   }
 
