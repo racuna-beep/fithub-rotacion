@@ -261,7 +261,7 @@ svg text{font-family:inherit}
 /* ---------- impresión ---------- */
 @media print{
   body{font-size:12.5px}
-  .tools,.tabs,.seg,#filterCard,#btnPivotCsv,#btnCsv,#btnPaste,#btnReload,#btnMore,#btnTheme{display:none !important}
+  .tools,.tabs,.seg,#filterCard,#btnPivotCsv,#btnCsv,#btnPaste,#btnReload,#btnMore,#btnTheme,#btnMailResumen{display:none !important}
   body{background:#fff}
   .wrap{max-width:none;padding:0}
   .card,.kpi{break-inside:avoid;box-shadow:none}
@@ -298,6 +298,7 @@ svg text{font-family:inherit}
     </select>
     <button id="btnTheme">Tema oscuro</button>
     <button id="btnPaste">Pegar datos</button>
+    <button id="btnMailResumen" title="Abre Gmail con el resumen de la semana ya redactado">Enviar resumen ✉️</button>
     <button id="btnReload" class="primary">Actualizar</button>
   </div>
 </header>
@@ -865,7 +866,9 @@ function renderCategoria(rows){
   }).join('');
   $('#tblCat').innerHTML='<thead>'+th+'</thead><tbody>'+(body||'<tr><td colspan="4" style="color:var(--muted);padding:18px">Sin agotados con estos filtros.</td></tr>')+'</tbody>';
   $('#catCount').textContent=fmt(cats.length)+' categorías con al menos un SKU agotado bajo los filtros actuales.';
+  CATDATA=cats;
 }
+var CATDATA=[];
 
 /* ============================ ALERTAS ============================ */
 /* Fuera del portafolio activo para compra: no entran en el % */
@@ -1327,6 +1330,82 @@ function renderHeadline(rows){
 }
 var HLTEXT='';
 
+/* ============================ RESUMEN POR CORREO ============================ */
+function semEmoji(delta){
+  if(delta==null) return '🟠';
+  if(delta>0) return '🔴';
+  if(delta<0) return '🟢';
+  return '🟠';
+}
+function buildResumenEmail(){
+  var rows=filtered();
+  var curRows=rows.filter(function(r){return r.inCur && !isExcluded(r.obsCur);});
+  var prevRows=rows.filter(function(r){return r.inPrev && !isExcluded(r.obsPrev);});
+  var outCur=rows.filter(function(r){return r.outCur;});
+  var outPrev=rows.filter(function(r){return r.outPrev;});
+  var nuevos=rows.filter(function(r){return r.mov==='Nuevo';});
+  var recup=rows.filter(function(r){return r.mov==='Recuperado';});
+  var recur=rows.filter(function(r){return r.mov==='Recurrente';});
+  var pareto=outCur.filter(function(r){return r.esPareto;});
+  var trasl=outCur.filter(function(r){return r.qtyCedi!=null && r.qtyCedi>0;});
+  var pc=pct(outCur.length,curRows.length), pp=pct(outPrev.length,prevRows.length);
+  var dPts=pc-pp, dAbs=outCur.length-outPrev.length;
+
+  var L=[];
+  L.push('CONTROL DE AGOTADOS · FITHUB');
+  L.push('Semana '+isoWeek(new Date())+' · '+new Date().toLocaleDateString('es-CO'));
+  L.push('');
+  L.push('INDICADORES');
+  L.push(semEmoji(dAbs)+' Agotados esta semana: '+fmt(outCur.length)+' ('+pctTxt(outCur.length,curRows.length)+' del portafolio activo) — pasada: '+fmt(outPrev.length)+' ('+pctTxt(outPrev.length,prevRows.length)+')');
+  L.push(semEmoji(dAbs)+' Variación vs semana pasada: '+(dAbs>0?'+':'')+fmt(dAbs)+' SKU ('+(dPts>0?'+':'')+dPts.toFixed(1).replace('.',',')+' pts)');
+  L.push('🟠 Nuevos agotados: '+fmt(nuevos.length));
+  L.push('🟢 Recuperados: '+fmt(recup.length));
+  L.push((recur.length?'🔴':'🟢')+' Recurrentes (2 semanas seguidas): '+fmt(recur.length));
+  L.push((pareto.length?'🔴':'🟢')+' Agotados del Pareto: '+fmt(pareto.length)+' ('+pctTxt(pareto.length,outCur.length)+' del agotado actual)');
+  L.push('🟢 Cubribles con traslado desde CEDI: '+fmt(trasl.length));
+  L.push('');
+
+  L.push('PRINCIPALES HALLAZGOS');
+  if(HLTEXT){ HLTEXT.split('\n• ').forEach(function(t){ L.push('• '+t.replace(/^•\s*/,'')); }); }
+  else L.push('• Sin datos suficientes para calcular la lectura automática.');
+  L.push('');
+
+  L.push('COMPORTAMIENTO POR TIENDAS');
+  var g=PIVOT.g;
+  if(g && g.cur && g.cur.storeList && g.cur.storeList.length){
+    g.cur.storeList.forEach(function(s){
+      var ac=g.cur.activeCol[s]||0, dc=g.cur.dispCol[s]||0;
+      var ap=g.prev.activeCol[s]||0, dp=g.prev.dispCol[s]||0;
+      var c=ac?(100-dc/ac*100):null, p=ap?(100-dp/ap*100):null;
+      var d=(c==null||p==null)?null:(c-p);
+      L.push(semEmoji(d)+' '+s+': '+(c==null?'—':c.toFixed(1).replace('.',',')+'% agotado')+
+        (d==null?'':' ('+(d>0?'+':'')+d.toFixed(1).replace('.',',')+' pts vs semana pasada)'));
+    });
+  } else L.push('Sin datos por tienda con estos filtros.');
+  L.push('');
+
+  L.push('COMPORTAMIENTO POR CATEGORÍAS');
+  if(CATDATA && CATDATA.length){
+    CATDATA.slice(0,8).forEach(function(b){
+      L.push((b.n>0?'🔴':'🟢')+' '+b.cat+': '+fmt(b.n)+' agotados'+
+        (b.pareto?' ('+fmt(b.pareto)+' del Pareto)':'')+' · causa principal: '+b.topCausa);
+    });
+    if(CATDATA.length>8) L.push('… y '+fmt(CATDATA.length-8)+' categorías más (ver dashboard, pestaña Categoría).');
+  } else L.push('Sin categorías con agotados bajo los filtros actuales.');
+  L.push('');
+
+  L.push('CONCLUSIÓN');
+  L.push('Agotado actual: '+pctTxt(outCur.length,curRows.length)+' ('+fmt(outCur.length)+' de '+fmt(curRows.length)+' SKU activos). Meta: ≤'+META+'%.'+
+    (pc<=META ? ' Dentro de la meta.' : ' '+(pc-META).toFixed(1).replace('.',',')+' pts por encima de la meta.'));
+  L.push('');
+  L.push('Detalle completo: '+location.href.split('?')[0]);
+
+  return {
+    subject:'Control de agotados · Fithub · Semana '+isoWeek(new Date()),
+    body:L.join('\n')
+  };
+}
+
 /* ============================ RENDER ============================ */
 function kpiCard(cls,lbl,val,foot){
   return '<div class="kpi '+cls+'"><div class="lbl">'+esc(lbl)+'</div><div class="val">'+val+'</div><div class="foot">'+foot+'</div></div>';
@@ -1624,6 +1703,12 @@ document.addEventListener('DOMContentLoaded',function(){
     this.textContent = d?'Tema oscuro':'Tema claro';
   });
   $('#btnPaste').addEventListener('click',openDlg);
+  $('#btnMailResumen').addEventListener('click',function(){
+    if(!UNI.length){ alert('Todavía no hay datos cargados.'); return; }
+    var d=buildResumenEmail();
+    var url='https://mail.google.com/mail/?view=cm&fs=1&su='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body);
+    window.open(url,'_blank');
+  });
   $('#dlgCancel').addEventListener('click',closeDlg);
   $('#dlgOk').addEventListener('click',function(){
     var a=$('#pasteCur').value.trim(), b=$('#pastePrev').value.trim();
