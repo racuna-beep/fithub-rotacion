@@ -314,6 +314,7 @@ svg text{font-family:inherit}
       <div class="f"><label for="fTienda">Tienda</label><select id="fTienda"></select></div>
       <div class="f"><label for="fProv">Proveedor</label><select id="fProv"></select></div>
       <div class="f"><label for="fMarca">Marca</label><select id="fMarca"></select></div>
+      <div class="f"><label for="fCategoria">Categoría</label><select id="fCategoria"></select></div>
       <div class="f"><label for="fCausa">Causa (Obs)</label><select id="fCausa"></select></div>
       <div class="f"><label for="fPareto">Pareto</label><select id="fPareto"></select></div>
       <div class="f"><label for="fMov">Movimiento</label><select id="fMov"></select></div>
@@ -326,6 +327,7 @@ svg text{font-family:inherit}
     <button class="tabbtn active" data-tab="resumen" role="tab">Resumen</button>
     <button class="tabbtn" data-tab="alertas" role="tab">Alertas<span class="badge zerob" id="badgeAlertas">0</span></button>
     <button class="tabbtn" data-tab="detalle" role="tab">Detalle</button>
+    <button class="tabbtn" data-tab="categoria" role="tab">Categoría</button>
   </nav>
 
   <!-- ========================= RESUMEN ========================= -->
@@ -443,6 +445,32 @@ svg text{font-family:inherit}
 
   </div><!-- /detalle -->
 
+  <!-- ========================= CATEGORÍA ========================= -->
+  <div class="panel hidden" id="p-categoria">
+
+  <section class="grid kpis" id="kpisCat"></section>
+
+  <section class="grid two">
+    <div class="card">
+      <h2>Categoría × causa</h2>
+      <p class="hint">Conteo de SKU agotados. Usa el filtro "Causa (Obs)" arriba para acotar.</p>
+      <div id="matrixCat" style="overflow:auto"></div>
+    </div>
+    <div class="card">
+      <h2>Categorías con más agotados</h2>
+      <p class="hint">Top 12 por SKU en cero, semana actual.</p>
+      <div id="chartCategorias"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Detalle por categoría</h2>
+    <p class="hint" id="catCount">—</p>
+    <div class="tblwrap" style="max-height:520px"><table id="tblCat"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  </div><!-- /categoria -->
+
   <p class="status" id="foot"></p>
 </main>
 </div>
@@ -502,6 +530,7 @@ var FIELDS = [
   ['llave',   ['llave']],
   ['proveedor',['suppliers','supplier','proveedor','proveedores']],
   ['marca',   ['brand','marca']],
+  ['categoria',['category','categoria','categoría']],
   ['producto',['product','producto','descripcion','nombre','articulo']],
   ['qty',     ['qty available','qty avail','qty','existencia','existencias','stock','cantidad','disponible tienda']],
   ['obs',     ['obs','observacion','observaciones','causa','motivo','estado']],
@@ -550,6 +579,7 @@ function rowsToRecords(headers, rows){
       key: norm(tienda)+'|'+sku,
       producto: prod,
       marca: String(g('marca')).trim() || '—',
+      categoria: String(g('categoria')).trim() || '—',
       proveedor: String(g('proveedor')).trim() || '—',
       obs: String(g('obs')).trim() || '—',
       pareto: String(g('pareto')).trim() || '—',
@@ -614,7 +644,7 @@ function parseDelim(text){
 /* ============================ STATE ============================ */
 var CUR=[], PREV=[], UNI=[], LOADED_AT=null;
 var TH=0, SHOWN=250, TAB='resumen', ALERTSEL='';
-var F={tienda:'',prov:'',marca:'',causa:'',pareto:'',mov:'',busca:''};
+var F={tienda:'',prov:'',marca:'',categoria:'',causa:'',pareto:'',mov:'',busca:''};
 var SORT={col:'qtyCur',dir:1};
 
 function build(){
@@ -625,7 +655,7 @@ function build(){
     var c=cmap[k], p=pmap[k], b=c||p;
     return {
       key:k, tienda:b.tienda, sku:b.sku, producto:b.producto, marca:b.marca,
-      proveedor:b.proveedor, bodega:b.bodega,
+      categoria:b.categoria, proveedor:b.proveedor, bodega:b.bodega,
       pareto: (c && c.pareto && c.pareto!=='—') ? c.pareto : (p?p.pareto:'—'),
       obsCur: c?c.obs:'—', obsPrev: p?p.obs:'—',
       qtyCur: c?c.qty:null, qtyPrev: p?p.qty:null,
@@ -660,6 +690,7 @@ function filtered(){
     if(F.tienda && r.tienda!==F.tienda) return false;
     if(F.prov && r.proveedor!==F.prov) return false;
     if(F.marca && r.marca!==F.marca) return false;
+    if(F.categoria && r.categoria!==F.categoria) return false;
     if(F.causa && r.obsCur!==F.causa) return false;
     if(F.pareto && r.pareto!==F.pareto) return false;
     if(F.mov && r.mov!==F.mov) return false;
@@ -766,18 +797,19 @@ function groupedByStore(rows, node){
   node.innerHTML=s;
 }
 
-function matrixTable(rows, node){
-  var tiendas={}, causas={};
+function matrixTable(rows, node, dimKey){
+  dimKey = dimKey || 'tienda';
+  var dims={}, causas={};
   rows.forEach(function(r){
     if(!r.outCur) return;
-    tiendas[r.tienda]=1; causas[r.obsCur]=1;
+    dims[r[dimKey]]=1; causas[r.obsCur]=1;
   });
-  var T=Object.keys(tiendas).sort(), Ca=Object.keys(causas).sort();
+  var T=Object.keys(dims).sort(), Ca=Object.keys(causas).sort();
   if(!T.length){ node.innerHTML='<p class="status">Sin agotados con estos filtros.</p>'; return; }
   var m={}, max=0;
   rows.forEach(function(r){
     if(!r.outCur) return;
-    var k=r.tienda+'||'+r.obsCur; m[k]=(m[k]||0)+1; if(m[k]>max) max=m[k];
+    var k=r[dimKey]+'||'+r.obsCur; m[k]=(m[k]||0)+1; if(m[k]>max) max=m[k];
   });
   var h='<table class="matrix"><thead><tr><th></th>';
   Ca.forEach(function(c){ h+='<th style="font-size:11px;color:var(--muted);font-weight:600">'+esc(c.length>18?c.slice(0,17)+'…':c)+'</th>'; });
@@ -794,6 +826,45 @@ function matrixTable(rows, node){
   });
   h+='</tbody></table>';
   node.innerHTML=h;
+}
+
+/* ============================ CATEGORÍA ============================ */
+function renderCategoria(rows){
+  var outCur=rows.filter(function(r){return r.outCur;});
+  var byCat={};
+  outCur.forEach(function(r){
+    var k=r.categoria;
+    byCat[k]=byCat[k]||{cat:k,n:0,pareto:0,causas:{}};
+    byCat[k].n++;
+    if(r.esPareto) byCat[k].pareto++;
+    byCat[k].causas[r.obsCur]=(byCat[k].causas[r.obsCur]||0)+1;
+  });
+  var cats=Object.keys(byCat).map(function(k){
+    var b=byCat[k];
+    var topCausa='—', topN=0;
+    Object.keys(b.causas).forEach(function(c){ if(b.causas[c]>topN){ topN=b.causas[c]; topCausa=c; } });
+    b.topCausa=topCausa;
+    return b;
+  }).sort(function(a,b){return b.n-a.n;});
+
+  var totalCats=Object.keys(byCat).length;
+  $('#kpisCat').innerHTML=
+    kpiCard('red','Categorías con agotados', fmt(totalCats), 'Sobre '+fmt(outCur.length)+' SKU agotados (filtros aplicados)')+
+    kpiCard('amber','Categoría más afectada', cats[0]?esc(cats[0].cat):'—', cats[0]?fmt(cats[0].n)+' SKU agotados':'—')+
+    kpiCard('violet','Agotados del Pareto', fmt(outCur.filter(function(r){return r.esPareto;}).length), 'Dentro de las categorías filtradas');
+
+  matrixTable(rows,$('#matrixCat'),'categoria');
+
+  var catItems=cats.slice(0,12).map(function(b){return {label:b.cat,value:b.n};});
+  hbars(catItems,$('#chartCategorias'),{labelW:190});
+
+  var th='<tr><th>Categoría</th><th class="num">Agotados</th><th class="num">Pareto</th><th>Causa principal</th></tr>';
+  var body=cats.map(function(b){
+    return '<tr><td>'+esc(b.cat)+'</td><td class="num zero">'+fmt(b.n)+'</td>'+
+      '<td class="num">'+fmt(b.pareto)+'</td><td>'+esc(b.topCausa)+'</td></tr>';
+  }).join('');
+  $('#tblCat').innerHTML='<thead>'+th+'</thead><tbody>'+(body||'<tr><td colspan="4" style="color:var(--muted);padding:18px">Sin agotados con estos filtros.</td></tr>')+'</tbody>';
+  $('#catCount').textContent=fmt(cats.length)+' categorías con al menos un SKU agotado bajo los filtros actuales.';
 }
 
 /* ============================ ALERTAS ============================ */
@@ -1320,7 +1391,8 @@ function render(){
     .sort(function(a,b){return b.value-a.value||b.ref-a.ref;}).slice(0,12);
   hbars(provItems,$('#chartProv'),{labelW:190});
 
-  matrixTable(rows,$('#matrix'));
+  matrixTable(rows,$('#matrix'),'tienda');
+  renderCategoria(rows);
 
   // traslados
   var tr=trasl.slice().sort(function(a,b){return b.qtyCedi-a.qtyCedi;});
@@ -1350,7 +1422,7 @@ function render(){
 /* ---------------- detail table ---------------- */
 var COLS=[
   {k:'tienda',t:'Tienda'},{k:'sku',t:'SKU'},{k:'producto',t:'Producto',cls:'prod'},
-  {k:'marca',t:'Marca'},{k:'proveedor',t:'Proveedor'},
+  {k:'marca',t:'Marca'},{k:'categoria',t:'Categoría'},{k:'proveedor',t:'Proveedor'},
   {k:'qtyCur',t:'Actual',num:true},{k:'qtyPrev',t:'Pasada',num:true},{k:'qtyCedi',t:'CEDI',num:true},
   {k:'obsCur',t:'Causa'},{k:'pareto',t:'Pareto'},{k:'mov',t:'Movimiento'}
 ];
@@ -1375,6 +1447,7 @@ function renderTable(rows){
       '<td>'+esc(r.sku)+'</td>'+
       '<td class="prod">'+esc(r.producto)+(r.nuevoCat?' <span class="tag t-blue">nuevo</span>':'')+'</td>'+
       '<td>'+esc(r.marca)+'</td>'+
+      '<td>'+esc(r.categoria)+'</td>'+
       '<td>'+esc(r.proveedor)+'</td>'+
       '<td class="num '+(r.outCur?'zero':'')+'">'+(r.inCur?fmt(r.qtyCur||0):'—')+'</td>'+
       '<td class="num '+(r.outPrev?'zero':'')+'">'+(r.inPrev?fmt(r.qtyPrev||0):'—')+'</td>'+
@@ -1384,7 +1457,7 @@ function renderTable(rows){
       '<td>'+movTag(r.mov)+'</td>'+
     '</tr>';
   }).join('');
-  $('#tbl').querySelector('tbody').innerHTML=body||'<tr><td colspan="11" style="color:var(--muted);padding:18px">Nada que mostrar con estos filtros.</td></tr>';
+  $('#tbl').querySelector('tbody').innerHTML=body||'<tr><td colspan="12" style="color:var(--muted);padding:18px">Nada que mostrar con estos filtros.</td></tr>';
   $('#detCount').textContent=fmt(rows.length)+' filas · mostrando '+fmt(Math.min(SHOWN,rows.length));
   $('#btnMore').classList.toggle('hidden', rows.length<=SHOWN);
 }
@@ -1412,6 +1485,7 @@ function buildFilters(){
   fillSelect('#fTienda',uniq(UNI.map(function(r){return r.tienda;})),'Todas');
   fillSelect('#fProv',uniq(UNI.map(function(r){return r.proveedor;})),'Todos');
   fillSelect('#fMarca',uniq(UNI.map(function(r){return r.marca;})),'Todas');
+  fillSelect('#fCategoria',uniq(UNI.map(function(r){return r.categoria;})),'Todas');
   fillSelect('#fCausa',uniq(UNI.map(function(r){return r.obsCur;})),'Todas');
   fillSelect('#fPareto',uniq(UNI.map(function(r){return r.pareto;})),'Todos');
   $('#fMov').innerHTML='<option value="">Todos</option>'+
@@ -1421,6 +1495,7 @@ function buildFilters(){
 }
 function readFilters(){
   F.tienda=$('#fTienda').value; F.prov=$('#fProv').value; F.marca=$('#fMarca').value;
+  F.categoria=$('#fCategoria').value;
   F.causa=$('#fCausa').value; F.pareto=$('#fPareto').value; F.mov=$('#fMov').value; F.busca=$('#fBusca').value;
   SHOWN=250; render();
 }
@@ -1444,7 +1519,7 @@ function downloadCsv(){
 /* ---------------- tabs ---------------- */
 function setTab(name){
   TAB=name;
-  ['resumen','alertas','detalle'].forEach(function(t){
+  ['resumen','alertas','detalle','categoria'].forEach(function(t){
     $('#p-'+t).classList.toggle('hidden', t!==name);
   });
   Array.prototype.forEach.call(document.querySelectorAll('.tabbtn'),function(b){
@@ -1479,12 +1554,12 @@ function load(){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
-  ['#fTienda','#fProv','#fMarca','#fCausa','#fPareto','#fMov'].forEach(function(s){
+  ['#fTienda','#fProv','#fMarca','#fCategoria','#fCausa','#fPareto','#fMov'].forEach(function(s){
     $(s).addEventListener('change',readFilters);
   });
   var t; $('#fBusca').addEventListener('input',function(){ clearTimeout(t); t=setTimeout(readFilters,180); });
   $('#btnClear').addEventListener('click',function(){
-    ['#fTienda','#fProv','#fMarca','#fCausa','#fPareto','#fMov'].forEach(function(s){$(s).value='';});
+    ['#fTienda','#fProv','#fMarca','#fCategoria','#fCausa','#fPareto','#fMov'].forEach(function(s){$(s).value='';});
     $('#fBusca').value=''; readFilters();
   });
   $('#soloAgotados').addEventListener('change',function(){ SHOWN=250; renderTable(filtered()); });
