@@ -349,6 +349,22 @@ table.pivot tr.sumrow:last-child td{border-bottom:none}
   text-align:center;color:var(--muted);font-size:12.5px}
 .empty b{display:block;color:var(--text);font-size:15px;font-weight:800;margin-bottom:6px}
 .empty button{margin-top:14px}
+.resp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.respgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:12px;margin-top:4px}
+.respcard{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--muted);
+  border-radius:10px;padding:15px}
+.respcard h3{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.respcard .who{font-size:11px;color:var(--muted);margin-bottom:11px}
+.respcard .big{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.respcard .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0 11px}
+.respcard .mini div{background:var(--surface2);border-radius:6px;padding:7px 8px;text-align:center}
+.respcard .mini b{display:block;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.respcard .mini span{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.respcard .acts{display:flex;gap:6px;flex-wrap:wrap}
+.respcard .acts button{font-size:11.5px;padding:6px 10px}
+.score{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-variant-numeric:tabular-nums}
+.scorebar{width:52px;height:6px;border-radius:3px;background:var(--track);overflow:hidden;display:inline-block}
+.scorebar i{display:block;height:100%;border-radius:3px}
 .nodata{color:var(--faint);font-style:normal;font-size:11.5px}
 #tblwrapDet{max-height:calc(100vh - 260px);min-height:360px}
 .stale{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--yellow);font-weight:600}
@@ -481,6 +497,15 @@ svg text{font-family:'Inter',sans-serif}
       <span class="sb-label">Categor&iacute;as</span>
     </button>
 
+    <button class="sb-btn" data-tab="responsables">
+      <span class="sb-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M16 11.2a3 3 0 0 0 0-6M17 19c0-2.4-1-4-2.5-4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span class="sb-label">Por responsable</span>
+    </button>
+    <button class="sb-btn" data-tab="proveedores">
+      <span class="sb-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20V10l9-6 9 6v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span class="sb-label">Cumplimiento prov.</span>
+    </button>
+
     <div class="sb-section-label">Datos cargados</div>
     <div class="sb-stats">
       <div class="sb-stat"><span class="sb-stat-val" id="sbSkus">&mdash;</span><span class="sb-stat-lbl">SKU en vista</span></div>
@@ -516,6 +541,7 @@ svg text{font-family:'Inter',sans-serif}
         <div class="f"><label>Proveedor</label><div class="ms-wrap" id="ms-prov"></div></div>
         <div class="f"><label>Marca</label><div class="ms-wrap" id="ms-marca"></div></div>
         <div class="f"><label>Categor&iacute;a</label><div class="ms-wrap" id="ms-categoria"></div></div>
+        <div class="f"><label>Responsable</label><div class="ms-wrap" id="ms-resp"></div></div>
         <div class="f"><label>Causa (Obs)</label><div class="ms-wrap" id="ms-causa"></div></div>
         <div class="f"><label>Pareto</label><div class="ms-wrap" id="ms-pareto"></div></div>
         <div class="f"><label>Estado vs. semana pasada</label><div class="ms-wrap" id="ms-mov"></div></div>
@@ -678,7 +704,51 @@ svg text{font-family:'Inter',sans-serif}
 
   </div><!-- /categoria -->
 
-    <p class="status" id="foot"></p>
+    <div class="panel hidden" id="p-responsables">
+    <section class="card">
+      <h2>Agotados por responsable de compra</h2>
+      <p class="hint">El responsable sale de la categoría del producto, con el mismo mapa del tablero de días de inventario. Cada tarjeta abre o copia la vista filtrada de esa persona.</p>
+      <div class="respgrid" id="respCards"></div>
+    </section>
+    <section class="grid two">
+      <div class="card">
+        <h2>Causas por responsable</h2>
+        <p class="hint">Solo agotados con causa registrada.</p>
+        <div id="matrixResp" style="overflow:auto"></div>
+      </div>
+      <div class="card">
+        <h2>Categorías de cada responsable</h2>
+        <p class="hint">Peso de cada categoría dentro de su agotado actual.</p>
+        <div class="tblwrap" style="max-height:420px"><table id="tblResp"></table></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="panel hidden" id="p-proveedores">
+    <section class="grid kpis" id="kpisProv"></section>
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div>
+          <h2>Ranking de cumplimiento de proveedores</h2>
+          <p class="hint" id="provCount">—</p>
+        </div>
+        <div class="tools">
+          <label class="umbral">SKU mínimos
+            <input type="number" id="minSkus" value="5" min="1" max="200">
+          </label>
+          <button class="btn" id="btnProvCsv">Descargar CSV</button>
+        </div>
+      </div>
+      <div class="tblwrap" style="max-height:600px"><table id="tblProv"></table></div>
+      <p class="hint" style="margin-top:10px">Cumplimiento = 100 − (45 × tasa de agotado + 25 × tasa de recurrencia + 20 × tasa de agotado en Pareto + 10 × participación de causas atribuibles al proveedor). Causas atribuibles: agotado por proveedor, incumplimiento de lead time y problema con proveedor.</p>
+    </section>
+    <section class="grid two">
+      <div class="card"><h2>Los 12 con peor cumplimiento</h2><p class="hint">Sobre el mínimo de SKU indicado.</p><div id="chartProvScore"></div></div>
+      <div class="card"><h2>Reincidencia</h2><p class="hint">SKU que llevan dos semanas seguidas en cero, por proveedor.</p><div id="chartProvRecur"></div></div>
+    </section>
+  </div>
+
+  <p class="status" id="foot"></p>
     </div><!-- /panels-wrap -->
   </div><!-- /main-content -->
 </div><!-- /app -->
@@ -852,11 +922,26 @@ function parseDelim(text){
   return rowsToRecords(headers,rows);
 }
 
+/* ─── responsables por categoría (mismo mapa que Días de Inventario) ─── */
+var RESPONSABLES={
+  'Despensa':'Edwin', 'Pasabocas':'Lore', 'Lácteos y Refrigerados':'Jorge',
+  'Congelados':'Lore', 'Bebés & Niños|Congelados':'Lore', 'Panadería':'Edwin',
+  'Despensa|Repostería':'Jorge', 'Cárnicos':'Lore', 'Pasabocas|Despensa':'Lore',
+  'Suplementos':'Jorge', 'Bebidas':'Edwin', 'Chocolatería y Confitería':'Edwin',
+  'Cuidado Personal':'Lore', 'Repostería':'Jorge', 'Cuidado del Hogar':'Edwin',
+  'Bebés & Niños':'Lore', 'Frutas y Verduras':'Angie', 'Mascotas':'Jorge',
+  'Vinos y Licores':'Jorge', 'Ejercicio en Casa':'Jorge',
+  'Bebés & Niños|Pasabocas':'Lore', 'Medicamentos':'Angie', 'Insumos':'Angie'
+};
+var RESP_COLORS={'Edwin':'#175cd3','Lore':'#ba24d5','Jorge':'#6941c6','Angie':'#079455','Sin asignar':'#667085'};
+function respDe(cat){ return RESPONSABLES[cat] || 'Sin asignar'; }
+
 /* ============================ STATE ============================ */
 var CUR=[], PREV=[], UNI=[], LOADED_AT=null;
 var TH=0, PAGE=150, SHOWN=150, TAB='resumen', ALERTSEL='';
-var F={tienda:[],prov:[],marca:[],categoria:[],causa:[],pareto:[],mov:[],busca:''};
-var FKEYS=['tienda','prov','marca','categoria','causa','pareto','mov'];
+var F={tienda:[],prov:[],marca:[],categoria:[],resp:[],causa:[],pareto:[],mov:[],busca:''};
+var FKEYS=['tienda','prov','marca','categoria','resp','causa','pareto','mov'];
+var TABS=['resumen','alertas','detalle','categoria','responsables','proveedores'];
 var SORT={col:'qtyCur',dir:1};
 
 function build(){
@@ -889,6 +974,7 @@ function isPareto(v){
 }
 function decorate(){
   UNI.forEach(function(r){
+    r.resp = respDe(r.categoria);
     r.esPareto = isPareto(r.pareto);
     r.actCur  = r.inCur  && !isExcluded(r.obsCur);
     r.actPrev = r.inPrev && !isExcluded(r.obsPrev);
@@ -915,6 +1001,7 @@ function filtered(){
     if(!sel(F.prov,r.proveedor)) return false;
     if(!sel(F.marca,r.marca)) return false;
     if(!sel(F.categoria,r.categoria)) return false;
+    if(!sel(F.resp,r.resp)) return false;
     if(!sel(F.causa,r.obsCur)) return false;
     if(!sel(F.pareto,r.pareto)) return false;
     if(!sel(F.mov,r.mov)) return false;
@@ -1661,7 +1748,7 @@ function kpiCard(cls,lbl,val,foot){
 }
 
 /* --------- caches de calculo: solo se recalcula lo que cambio --------- */
-var FROWS=null, FSIG='', DIRTY={resumen:1,alertas:1,detalle:1,categoria:1};
+var FROWS=null, FSIG='', DIRTY={};
 
 function filterSig(){
   return [F.tienda,F.prov,F.marca,F.categoria,F.causa,F.pareto,F.mov,F.busca,TH].join('\u0001');
@@ -1672,7 +1759,7 @@ function rowsNow(){
   FSIG=sig; FROWS=filtered();
   return FROWS;
 }
-function invalidate(){ FROWS=null; DIRTY={resumen:1,alertas:1,detalle:1,categoria:1}; }
+function invalidate(){ FROWS=null; markDirty(); }
 
 /* metricas derivadas, una sola pasada */
 function metrics(rows){
@@ -1704,7 +1791,7 @@ function render(){
   renderTopStats(rows);
   var vacio = rows.length===0;
   $('#emptyState').classList.toggle('hidden', !vacio);
-  ['resumen','alertas','detalle','categoria'].forEach(function(t){
+  TABS.forEach(function(t){
     $('#p-'+t).classList.toggle('hidden', vacio || t!==TAB);
   });
   renderChips();
@@ -1712,7 +1799,8 @@ function render(){
   $('#foot').textContent='Sheet '+CFG.sheetId.slice(0,10)+'\u2026 \u00b7 pesta\u00f1as "'+CFG.tabCur+'" y "'+CFG.tabPrev+'" \u00b7 '+
     fmt(CUR.length)+' filas semana actual, '+fmt(PREV.length)+' semana pasada.';
 }
-function invalidateKeepData(){ DIRTY={resumen:1,alertas:1,detalle:1,categoria:1}; }
+function markDirty(){ TABS.forEach(function(t){ DIRTY[t]=1; }); }
+function invalidateKeepData(){ markDirty(); }
 
 /* barra superior + contadores del sidebar */
 function renderTopStats(rows){
@@ -1748,6 +1836,8 @@ function paint(tab){
   else if(tab==='alertas')   paintAlertasTab(rows);
   else if(tab==='detalle')   renderTable(rows);
   else if(tab==='categoria') paintCategoria(rows);
+  else if(tab==='responsables') paintResponsables(rows);
+  else if(tab==='proveedores') paintProveedores(rows);
   DIRTY[tab]=0;
 }
 
@@ -1828,7 +1918,7 @@ function paintAlertasTab(rows){
 /* ---------------- detail table ---------------- */
 var COLS=[
   {k:'tienda',t:'Tienda'},{k:'sku',t:'SKU'},{k:'producto',t:'Producto',cls:'prod'},
-  {k:'marca',t:'Marca'},{k:'categoria',t:'Categoría'},{k:'proveedor',t:'Proveedor'},
+  {k:'marca',t:'Marca'},{k:'categoria',t:'Categoría'},{k:'resp',t:'Responsable'},{k:'proveedor',t:'Proveedor'},
   {k:'qtyPrev',t:'Sem. pasada',num:true},{k:'qtyCur',t:'Sem. actual',num:true},
   {k:'delta',t:'Δ',num:true},{k:'qtyCedi',t:'CEDI',num:true},
   {k:'obsCur',t:'Causa'},{k:'pareto',t:'Pareto'},{k:'mov',t:'Estado vs. pasada'}
@@ -1845,6 +1935,7 @@ function rowHtml(r){
     '<td class="prod">'+esc(r.producto)+(r.nuevoCat?' <span class="tag t-blue">nuevo</span>':'')+'</td>'+
     '<td>'+esc(r.marca)+'</td>'+
     '<td>'+esc(r.categoria)+'</td>'+
+    '<td>'+respTag(r.resp)+'</td>'+
     '<td>'+esc(r.proveedor)+'</td>'+
     celQty(r.qtyPrev,r.inPrev,r.outPrev)+
     celQty(r.qtyCur,r.inCur,r.outCur)+
@@ -1874,7 +1965,7 @@ function renderTable(rows){
   $('#tbl').querySelector('thead').innerHTML='<tr>'+thead+'</tr>';
   var body=rows.slice(0,SHOWN).map(rowHtml).join('');
   $('#tbl').querySelector('tbody').innerHTML=body||
-    '<tr><td colspan="13" style="color:var(--muted);padding:18px">Nada que mostrar con estos filtros.</td></tr>';
+    '<tr><td colspan="14" style="color:var(--muted);padding:18px">Nada que mostrar con estos filtros.</td></tr>';
   $('#tblwrapDet').scrollTop=0;
   updDetCount();
 }
@@ -1911,6 +2002,10 @@ var MOVTIP={
 };
 var MOVCLS={'Nuevo':'t-red','Recurrente':'t-amber','Recuperado':'t-green','NuevoCodigo':'t-blue',
             'Alta':'t-blue','Fuera':'t-gray','Excluido':'t-gray','Sin agotado':'t-gray'};
+function respTag(n){
+  var c=RESP_COLORS[n]||'#667085';
+  return '<span class="resp-dot" style="background:'+c+'"></span>'+esc(n);
+}
 function movTag(m){
   var t=MOVTIP[m]?' title="'+esc(MOVTIP[m])+'"':'';
   return '<span class="tag '+(MOVCLS[m]||'t-gray')+'"'+t+'>'+(MOVLBL[m]||m)+'</span>';
@@ -1998,6 +2093,7 @@ function buildFilters(){
   msOptions('prov',      uniq(UNI.map(function(r){return r.proveedor;})));
   msOptions('marca',     uniq(UNI.map(function(r){return r.marca;})));
   msOptions('categoria', uniq(UNI.map(function(r){return r.categoria;})));
+  msOptions('resp',      uniq(UNI.map(function(r){return r.resp;})));
   msOptions('causa',     uniq(UNI.map(function(r){return r.obsCur;})));
   msOptions('pareto',    uniq(UNI.map(function(r){return r.pareto;})));
   var movs=['Nuevo','Recurrente','Recuperado','NuevoCodigo','Fuera','Alta','Sin agotado','Excluido']
@@ -2088,7 +2184,7 @@ function applyStateToUI(){
   Array.prototype.forEach.call(document.querySelectorAll('.sb-btn'),function(b){
     b.classList.toggle('active', b.getAttribute('data-tab')===TAB);
   });
-  ['resumen','alertas','detalle','categoria'].forEach(function(t){
+  TABS.forEach(function(t){
     $('#p-'+t).classList.toggle('hidden', t!==TAB);
   });
   RESTORING=false;
@@ -2096,7 +2192,7 @@ function applyStateToUI(){
 var SOLOAGOT=true;
 
 /* ---------------- chips de filtros activos ---------------- */
-var FLABEL={tienda:'Tienda',prov:'Proveedor',marca:'Marca',categoria:'Categor\u00eda',
+var FLABEL={tienda:'Tienda',prov:'Proveedor',marca:'Marca',categoria:'Categor\u00eda',resp:'Responsable',
             causa:'Causa',pareto:'Pareto',mov:'Estado',busca:'Busca'};
 
 function renderChips(){
@@ -2182,6 +2278,7 @@ function openSku(key){
 
   h+='<div class="dwsec"><h4>Ficha</h4><dl class="kv">'+
      '<dt>Proveedor</dt><dd>'+esc(r.proveedor)+'</dd>'+
+     '<dt>Responsable</dt><dd>'+respTag(r.resp)+'</dd>'+
      '<dt>Causa esta semana</dt><dd>'+esc(r.obsCur)+'</dd>'+
      '<dt>Causa semana pasada</dt><dd>'+esc(r.obsPrev)+'</dd>'+
      '<dt>Pareto</dt><dd>'+esc(r.pareto)+'</dd>'+
@@ -2252,11 +2349,245 @@ function agoTxt(ms){
   return 'hace '+Math.round(hh/24)+' d\u00edas';
 }
 
+
+/* ══════════════ VISTA POR RESPONSABLE ══════════════ */
+function vistaUrl(extra){
+  var q=[];
+  Object.keys(extra).forEach(function(k){ q.push(k+'='+encodeURIComponent([].concat(extra[k]).join('~'))); });
+  if(TH) q.push('th='+TH);
+  return location.origin+location.pathname+'#'+q.join('&');
+}
+function paintResponsables(rows){
+  var by={};
+  rows.forEach(function(r){
+    var k=r.resp;
+    by[k]=by[k]||{resp:k,act:0,out:0,prevOut:0,nuevos:0,recur:0,recup:0,pareto:0,paretoOut:0,cedi:0,cats:{},causas:{}};
+    var b=by[k];
+    if(r.actCur) b.act++;
+    if(r.esPareto && r.actCur) b.pareto++;
+    if(r.outPrev) b.prevOut++;
+    if(r.outCur){
+      b.out++;
+      if(r.esPareto) b.paretoOut++;
+      if(r.qtyCedi>0) b.cedi++;
+      b.cats[r.categoria]=(b.cats[r.categoria]||0)+1;
+      if(!sinCausa(r.obsCur)) b.causas[r.obsCur]=(b.causas[r.obsCur]||0)+1;
+    }
+    if(r.mov==='Nuevo'||r.mov==='NuevoCodigo') b.nuevos++;
+    else if(r.mov==='Recurrente') b.recur++;
+    else if(r.mov==='Recuperado') b.recup++;
+  });
+  var list=Object.keys(by).map(function(k){return by[k];}).sort(function(a,b){return b.out-a.out;});
+
+  $('#respCards').innerHTML = list.map(function(b){
+    var col=RESP_COLORS[b.resp]||'#667085';
+    var pc=b.act?(b.out/b.act*100):0;
+    var d=b.out-b.prevOut;
+    return '<div class="respcard" style="border-top-color:'+col+'">'+
+      '<h3><span class="resp-dot" style="background:'+col+'"></span>'+esc(b.resp)+'</h3>'+
+      '<div class="who">'+fmt(b.act)+' SKU activos \u00b7 '+Object.keys(b.cats).length+' categor\u00edas con agotado</div>'+
+      '<div class="big" style="color:'+(pc>META?'var(--red)':'var(--green)')+'">'+fmt(b.out)+
+        ' <span style="font-size:13px;font-weight:700;color:var(--muted)">('+pc.toFixed(1).replace('.',',')+'%)</span></div>'+
+      '<div style="font-size:11.5px;margin-top:5px" class="'+(d>0?'up':(d<0?'down':'flat'))+'">'+
+        (d>0?'+':'')+fmt(d)+' vs. semana pasada</div>'+
+      '<div class="mini">'+
+        '<div><b style="color:var(--red)">'+fmt(b.nuevos)+'</b><span>Nuevos</span></div>'+
+        '<div><b style="color:var(--yellow)">'+fmt(b.recur)+'</b><span>Recurr.</span></div>'+
+        '<div><b style="color:var(--green)">'+fmt(b.cedi)+'</b><span>En CEDI</span></div>'+
+      '</div>'+
+      '<div class="acts">'+
+        '<button class="btn" data-ract="ver" data-r="'+esc(b.resp)+'">Ver sus SKU</button>'+
+        '<button class="btn" data-ract="link" data-r="'+esc(b.resp)+'">Copiar link</button>'+
+        '<button class="btn" data-ract="mail" data-r="'+esc(b.resp)+'">Correo</button>'+
+      '</div>'+
+    '</div>';
+  }).join('') || '<p class="status">Sin datos con estos filtros.</p>';
+
+  matrixTable(rows,$('#matrixResp'),'resp',true);
+
+  var h='<thead><tr><th>Responsable</th><th>Categor\u00eda</th><th class="num">Agotados</th><th class="num">% de su total</th></tr></thead><tbody>';
+  list.forEach(function(b){
+    Object.keys(b.cats).sort(function(x,y){return b.cats[y]-b.cats[x];}).forEach(function(c){
+      h+='<tr><td>'+respTag(b.resp)+'</td><td>'+esc(c)+'</td><td class="num zero">'+fmt(b.cats[c])+'</td>'+
+         '<td class="num">'+(b.out?(b.cats[c]/b.out*100).toFixed(1).replace('.',','):'0')+'%</td></tr>';
+    });
+  });
+  $('#tblResp').innerHTML=h+'</tbody>';
+  RESPDATA=list;
+}
+var RESPDATA=[];
+
+function respEmail(resp){
+  var b=null; RESPDATA.forEach(function(x){ if(x.resp===resp) b=x; });
+  if(!b) return null;
+  var rows=rowsNow().filter(function(r){ return r.resp===resp && r.outCur; });
+  var L=[];
+  L.push('Hola '+resp+',');
+  L.push('');
+  L.push('Estado de agotados de tus categor\u00edas \u00b7 semana actual vs. semana pasada:');
+  L.push('');
+  L.push('\u2022 SKU agotados: '+fmt(b.out)+' de '+fmt(b.act)+' activos ('+(b.act?(b.out/b.act*100).toFixed(1).replace('.',','):'0')+'%)');
+  L.push('\u2022 Se agotaron esta semana: '+fmt(b.nuevos));
+  L.push('\u2022 Siguen agotados de la semana pasada: '+fmt(b.recur));
+  L.push('\u2022 Se recuperaron: '+fmt(b.recup));
+  L.push('\u2022 Con existencia en CEDI para trasladar: '+fmt(b.cedi));
+  L.push('');
+  var causas=Object.keys(b.causas).sort(function(x,y){return b.causas[y]-b.causas[x];}).slice(0,5);
+  if(causas.length){
+    L.push('Causas principales:');
+    causas.forEach(function(c){ L.push('  - '+c+': '+fmt(b.causas[c])); });
+    L.push('');
+  }
+  var recur=rows.filter(function(r){return r.mov==='Recurrente';})
+    .sort(function(a,c){ return (c.esPareto?1:0)-(a.esPareto?1:0); }).slice(0,15);
+  if(recur.length){
+    L.push('Prioridad \u2014 llevan dos semanas en cero:');
+    recur.forEach(function(r){
+      L.push('  - '+r.tienda+' \u00b7 '+r.sku+' \u00b7 '+r.producto+' ('+r.proveedor+')'+(r.esPareto?' [Pareto]':''));
+    });
+    L.push('');
+  }
+  L.push('Detalle completo: '+vistaUrl({resp:resp, tab:'detalle'}));
+  L.push('');
+  L.push('Equipo de Abastecimiento');
+  return {subject:'Agotados \u00b7 '+resp+' \u00b7 semana al '+(LOADED_AT?LOADED_AT.toLocaleDateString('es-CO'):''), body:L.join('\n')};
+}
+
+/* ══════════════ CUMPLIMIENTO DE PROVEEDORES ══════════════ */
+function esAtribuible(obs){
+  var n=norm(obs);
+  return n.indexOf('agotado por proveedor')>=0 || n.indexOf('incumplimiento')>=0 ||
+         n.indexOf('lead time')>=0 || n.indexOf('problema con proveedor')>=0;
+}
+var PROVDATA=[], PROVSORT={col:'score',dir:1};
+function computeProv(rows){
+  var by={};
+  rows.forEach(function(r){
+    var k=r.proveedor||'—';
+    by[k]=by[k]||{prov:k,act:0,out:0,prevAct:0,prevOut:0,recur:0,nuevos:0,recup:0,
+                  pareto:0,paretoOut:0,atrib:0,cedi:0,tiendas:{},resp:{}};
+    var b=by[k];
+    if(r.actCur){ b.act++; if(r.esPareto) b.pareto++; }
+    if(r.actPrev) b.prevAct++;
+    if(r.outPrev) b.prevOut++;
+    if(r.outCur){
+      b.out++; b.tiendas[r.tienda]=1; b.resp[r.resp]=1;
+      if(r.esPareto) b.paretoOut++;
+      if(esAtribuible(r.obsCur)) b.atrib++;
+      if(r.qtyCedi>0) b.cedi++;
+    }
+    if(r.mov==='Recurrente') b.recur++;
+    else if(r.mov==='Nuevo'||r.mov==='NuevoCodigo') b.nuevos++;
+    else if(r.mov==='Recuperado') b.recup++;
+  });
+  PROVDATA=Object.keys(by).map(function(k){
+    var b=by[k];
+    b.tasaOut   = b.act ? b.out/b.act : 0;
+    b.tasaRecur = b.act ? b.recur/b.act : 0;
+    b.tasaPareto= b.pareto ? b.paretoOut/b.pareto : 0;
+    b.tasaAtrib = b.out ? b.atrib/b.out : 0;
+    b.score = Math.max(0, Math.round(100 - (45*b.tasaOut + 25*b.tasaRecur + 20*b.tasaPareto + 10*b.tasaAtrib)));
+    b.prevTasa = b.prevAct ? b.prevOut/b.prevAct : null;
+    b.deltaTasa = b.prevTasa==null ? null : (b.tasaOut-b.prevTasa)*100;
+    b.nTiendas = Object.keys(b.tiendas).length;
+    b.respTxt = Object.keys(b.resp).sort().join(', ')||'—';
+    return b;
+  });
+  return PROVDATA;
+}
+function scoreColor(v){ return v>=90?'var(--green)':(v>=75?'var(--yellow)':'var(--red)'); }
+function scoreTag(v){
+  return '<span class="score" style="color:'+scoreColor(v)+'">'+v+
+    '<span class="scorebar"><i style="width:'+v+'%;background:'+scoreColor(v)+'"></i></span></span>';
+}
+var PCOLS=[
+  {k:'prov',t:'Proveedor'},{k:'score',t:'Cumplimiento',num:true},
+  {k:'act',t:'SKU activos',num:true},{k:'out',t:'Agotados',num:true},
+  {k:'tasaOut',t:'% agotado',num:true},{k:'deltaTasa',t:'vs. pasada',num:true},
+  {k:'recur',t:'Recurrentes',num:true},{k:'paretoOut',t:'Pareto agot.',num:true},
+  {k:'atrib',t:'Causa suya',num:true},{k:'cedi',t:'Cubre CEDI',num:true},
+  {k:'nTiendas',t:'Tiendas',num:true},{k:'respTxt',t:'Responsable'}
+];
+function paintProveedores(rows){
+  computeProv(rows);
+  var min=Math.max(1,parseInt($('#minSkus').value,10)||5);
+  var list=PROVDATA.filter(function(b){ return b.act>=min; });
+  var fuera=PROVDATA.length-list.length;
+
+  var criticos=list.filter(function(b){return b.score<75;});
+  var buenos=list.filter(function(b){return b.score>=90;});
+  var prom=list.length?Math.round(list.reduce(function(a,b){return a+b.score;},0)/list.length):0;
+  var peor=list.slice().sort(function(a,b){return a.score-b.score;})[0];
+  $('#kpisProv').innerHTML=
+    kpiCard('blue','Proveedores evaluados', fmt(list.length), 'Con al menos '+min+' SKU activos'+(fuera?' \u00b7 '+fmt(fuera)+' con muestra menor':''))+
+    kpiCard(prom>=90?'green':(prom>=75?'amber':'red'),'Cumplimiento promedio', prom, 'Ponderado por proveedor, no por volumen')+
+    kpiCard('red','En rojo (bajo 75)', fmt(criticos.length), peor?('El m\u00e1s bajo: '+esc(peor.prov)+' con '+peor.score):'\u2014')+
+    kpiCard('green','En verde (90 o m\u00e1s)', fmt(buenos.length), 'Sin agotados relevantes esta semana');
+
+  list.sort(function(a,b){
+    var A=a[PROVSORT.col], B=b[PROVSORT.col];
+    if(A==null) A=-1; if(B==null) B=-1;
+    if(typeof A==='number'&&typeof B==='number') return (A-B)*PROVSORT.dir;
+    return String(A).localeCompare(String(B),'es')*PROVSORT.dir;
+  });
+  PROVSHOWN=list;
+  var h='<thead><tr>'+PCOLS.map(function(c){
+    return '<th class="'+(c.num?'num':'')+'" data-pcol="'+c.k+'">'+c.t+
+      (PROVSORT.col===c.k?(PROVSORT.dir>0?' \u25b2':' \u25bc'):'')+'</th>';
+  }).join('')+'</tr></thead><tbody>';
+  h+=list.map(function(b){
+    var d=b.deltaTasa;
+    return '<tr class="clickable" data-prov="'+esc(b.prov)+'">'+
+      '<td style="font-weight:600">'+esc(b.prov)+'</td>'+
+      '<td class="num">'+scoreTag(b.score)+'</td>'+
+      '<td class="num">'+fmt(b.act)+'</td>'+
+      '<td class="num '+(b.out?'zero':'')+'">'+fmt(b.out)+'</td>'+
+      '<td class="num">'+(b.tasaOut*100).toFixed(1).replace('.',',')+'%</td>'+
+      '<td class="num">'+(d==null?'<span class="nodata">\u00b7</span>':
+        '<span style="color:'+(d>0?'var(--red)':(d<0?'var(--green)':'var(--muted)'))+';font-weight:700">'+
+        (d>0?'+':'')+d.toFixed(1).replace('.',',')+' pts</span>')+'</td>'+
+      '<td class="num">'+(b.recur?'<b style="color:var(--yellow)">'+fmt(b.recur)+'</b>':'<span class="nodata">\u00b7</span>')+'</td>'+
+      '<td class="num">'+(b.paretoOut?'<b style="color:var(--red)">'+fmt(b.paretoOut)+'</b>':'<span class="nodata">\u00b7</span>')+'</td>'+
+      '<td class="num">'+(b.atrib?fmt(b.atrib):'<span class="nodata">\u00b7</span>')+'</td>'+
+      '<td class="num">'+(b.cedi?'<b style="color:var(--green)">'+fmt(b.cedi)+'</b>':'<span class="nodata">\u00b7</span>')+'</td>'+
+      '<td class="num">'+b.nTiendas+'</td>'+
+      '<td>'+esc(b.respTxt)+'</td>'+
+    '</tr>';
+  }).join('')||'<tr><td colspan="12" class="nodata" style="padding:18px">Ning\u00fan proveedor supera el m\u00ednimo de SKU.</td></tr>';
+  $('#tblProv').innerHTML=h+'</tbody>';
+  $('#provCount').textContent=fmt(list.length)+' proveedores evaluados \u00b7 clic en una fila para ver sus SKU'+
+    (fuera?' \u00b7 '+fmt(fuera)+' quedaron fuera por tener menos de '+min+' SKU activos':'');
+
+  var peores=list.slice().sort(function(a,b){return a.score-b.score;}).slice(0,12)
+    .map(function(b){ return {label:b.prov,value:b.score,color:scoreColor(b.score)}; });
+  hbars(peores,$('#chartProvScore'),{labelW:190});
+  var rec=list.slice().sort(function(a,b){return b.recur-a.recur;}).filter(function(b){return b.recur>0;}).slice(0,12)
+    .map(function(b){ return {label:b.prov,value:b.recur,color:C.amber}; });
+  hbars(rec,$('#chartProvRecur'),{labelW:190});
+}
+var PROVSHOWN=[];
+function provCsv(){
+  var head=PCOLS.map(function(c){return c.t;}).join(';');
+  var lines=PROVSHOWN.map(function(b){
+    return PCOLS.map(function(c){
+      var v=b[c.k]; if(v==null) v='';
+      if(c.k==='tasaOut') v=(b.tasaOut*100).toFixed(2);
+      if(c.k==='deltaTasa') v=(b.deltaTasa==null?'':b.deltaTasa.toFixed(2));
+      return '"'+String(v).replace(/"/g,'""')+'"';
+    }).join(';');
+  });
+  var blob=new Blob(['\ufeff'+head+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cumplimiento-proveedores.csv';
+  a.click();
+}
+
 /* ---------------- tabs ---------------- */
 function setTab(name,noScroll){
   TAB=name;
   var vacio = FROWS && FROWS.length===0;
-  ['resumen','alertas','detalle','categoria'].forEach(function(t){
+  TABS.forEach(function(t){
     $('#p-'+t).classList.toggle('hidden', vacio || t!==name);
   });
   Array.prototype.forEach.call(document.querySelectorAll('.sb-btn'),function(b){
@@ -2370,6 +2701,7 @@ document.addEventListener('DOMContentLoaded',function(){
   msInit('prov','#ms-prov','Proveedor','Todos');
   msInit('marca','#ms-marca','Marca','Todas');
   msInit('categoria','#ms-categoria','Categoría','Todas');
+  msInit('resp','#ms-resp','Responsable','Todos');
   msInit('causa','#ms-causa','Causa','Todas');
   msInit('pareto','#ms-pareto','Pareto','Todos');
   msInit('mov','#ms-mov','Estado','Todos');
@@ -2440,6 +2772,38 @@ document.addEventListener('DOMContentLoaded',function(){
     clearFilter(b.getAttribute('data-f'), b.getAttribute('data-v'));
   });
   $('#btnEmptyClear').addEventListener('click',clearAll);
+
+  /* vista por responsable */
+  $('#respCards').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-ract]'); if(!b) return;
+    var resp=b.getAttribute('data-r'), act=b.getAttribute('data-ract');
+    if(act==='ver'){ F.resp=[resp]; msSync('resp'); onFilterChange(); setTab('detalle'); return; }
+    if(act==='link'){
+      var u=vistaUrl({resp:resp, tab:'detalle'});
+      if(navigator.clipboard) navigator.clipboard.writeText(u);
+      b.textContent='Copiado'; setTimeout(function(){ b.textContent='Copiar link'; },1500);
+      return;
+    }
+    if(act==='mail'){
+      var d=respEmail(resp); if(!d) return;
+      window.open('https://mail.google.com/mail/?view=cm&fs=1&su='+encodeURIComponent(d.subject)+
+        '&body='+encodeURIComponent(d.body),'_blank');
+    }
+  });
+
+  /* ranking de proveedores */
+  $('#minSkus').addEventListener('change',function(){ DIRTY.proveedores=1; paint('proveedores'); });
+  $('#btnProvCsv').addEventListener('click',provCsv);
+  $('#tblProv').addEventListener('click',function(e){
+    var th=e.target.closest('th[data-pcol]');
+    if(th){
+      var c=th.getAttribute('data-pcol');
+      PROVSORT.dir = (PROVSORT.col===c) ? -PROVSORT.dir : (c==='prov'||c==='respTxt'?1:-1);
+      PROVSORT.col=c; DIRTY.proveedores=1; paint('proveedores'); return;
+    }
+    var tr=e.target.closest('tr[data-prov]'); if(!tr) return;
+    F.prov=[tr.getAttribute('data-prov')]; msSync('prov'); onFilterChange(); setTab('detalle');
+  });
   /* --- ficha de SKU: clic en cualquier fila --- */
   ['#tbl','#alertBlocks','#traslados','#drawer'].forEach(function(sel){
     $(sel).addEventListener('click',function(e){
