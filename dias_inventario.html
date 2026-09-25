@@ -953,7 +953,7 @@
 <div id="tooltip"></div>
 
 <script>
-const APPS_URL = 'https://script.google.com/macros/s/AKfycbwkphy4UmvxqdrPlpiqCsVZ5EpJMZHyz-UPvs2i42kSyHoTZOFNM05RdI19D1qlxu29Qg/exec';
+const APPS_URL = 'https://script.google.com/macros/s/AKfycbxsKpEIJ-3XLPRfrs8OPHrQNL9Hb3NgsHYd8KsJ8Enhk_RMljntc5JMUOVE9QsabDIkBw/exec';
 const SESSION_KEY = 'fithub_dias_inv_cache_v8';
 const STORE_CIUDAD = {
   'STF 15': 'Bogotá', 'STF 93': 'Bogotá', 'STF 82': 'Bogotá',
@@ -1420,6 +1420,10 @@ async function loadData() {
       setLoader('Descargando datos…', 30);
       raw = await fetchJSONP(APPS_URL);
       if (raw && raw.error) throw new Error('Apps Script: ' + raw.error);
+      if (raw && Array.isArray(raw.h) && Array.isArray(raw.d)) {
+        const pk = raw;
+        raw = pk.d.map(fila => { const o = {}; pk.h.forEach((k, i) => { o[k] = fila[i]; }); return o; });
+      }
       if (!Array.isArray(raw) || !raw.length) throw new Error('Sin datos');
       try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(raw)); } catch(e) {}
     }
