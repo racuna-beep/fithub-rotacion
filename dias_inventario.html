@@ -3671,10 +3671,6 @@ document.addEventListener('mouseout',e=>{ if(!e.target.closest('[data-tip]')) re
 // ── INIT ──────────────────────────────────────────────────────────────────────
 try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} // siempre datos frescos al recargar
 loadData();
-setTimeout(()=>{
-  const ls=document.getElementById('loading-screen');
-  if(ls&&ls.style.display!=='none'){ls.style.display='none';const appEl=document.getElementById('app');appEl.style.display='block';}
-},15000);
 </script>
 </body>
 </html>
