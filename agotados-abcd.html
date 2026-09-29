@@ -510,7 +510,7 @@ td.c,th.c{text-align:center}
    CONFIGURACIÓN
    Pega aquí la URL /exec del Apps Script (ABCD_Clasificacion.gs)
    ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwAotVa3P0L985pyDIYPLFsy_wXPU9sJTN7JUrvMUZa9DHG2y9oLYwRejBIWgZ45fuBbg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwIzdHQ3idIiuodbAx7eqYhzCdPUH45rR4xyNLZhwPFYeQ3nlVfgVd7pTmd_lEold8XKw/exec';
 
 const QS = ['A','B','C','D'];
 const TIENDAS_CEDI = ['STF 51'];   // en estas tiendas el stock disponible = tienda + CEDI
@@ -567,24 +567,44 @@ function jsonp(url, timeout=150000){
     const s=document.createElement('script');
     const t=setTimeout(()=>{clean();rej(new Error('La clasificación tardó demasiado. Intenta de nuevo o usa "Pegar datos".'))},timeout);
     function clean(){clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined} s.remove();}
-    window[cb]=d=>{clean();res(d)};
+    let done=false;
+    window[cb]=d=>{done=true;clean();res(d)};
+    // Si el script cargó pero no llamó al callback (p. ej. respondió una página de login), fallar rápido
+    s.onload=()=>setTimeout(()=>{ if(!done){ clean(); rej(new Error('Apps Script respondió una página de inicio de sesión o de error en lugar de datos.')); } },400);
     s.onerror=()=>{clean();rej(new Error('Apps Script no devolvió datos (respondió una página de error o de inicio de sesión). Abre la URL /exec en otra pestaña para ver el mensaje exacto.'))};
     s.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();
     document.body.appendChild(s);
   });
 }
 
+// Copia de datos que el Apps Script publica cada hora en este mismo repo (respaldo para Safari u otros bloqueos)
+const SNAPSHOT_URL = 'data/abcd-data.json';
+
+async function loadSnapshot(){
+  const r = await fetch(SNAPSHOT_URL + '?t=' + Date.now(), {cache:'no-store'});
+  if(!r.ok) throw new Error('No hay copia de datos publicada ('+r.status+').');
+  const d = await r.json();
+  if(!d || !d.ok || !d.rows) throw new Error('La copia de datos está vacía.');
+  return d;
+}
 async function boot(recalc){
   const L=document.getElementById('loader'); L.classList.remove('hide');
   document.getElementById('ldErr').style.display='none'; document.getElementById('ldActs').classList.remove('show');
-  if(!API_URL || API_URL.startsWith('PEGA_')){ ld(0,0,'Falta configurar la URL del Apps Script.'); ldFail('Edita API_URL en el HTML con la URL /exec de la aplicación web, o carga los datos pegándolos.'); return; }
+  let d=null, origen='vivo', errVivo=null;
   try{
+    if(!API_URL || API_URL.startsWith('PEGA_')) throw new Error('Falta configurar API_URL.');
     ld(0,10,'Conectando con Google Sheets…');
     let tick=12; const iv=setInterval(()=>{ tick=Math.min(tick+2,62); ld(1,tick,'Clasificando el portafolio en el Sheet…'); },900);
-    const d = await jsonp(API_URL + (recalc===false ? '?cache=1' : '')).finally(()=>clearInterval(iv));
+    d = await jsonp(API_URL + (recalc===false ? '?cache=1' : '')).finally(()=>clearInterval(iv));
     if(!d || !d.ok) throw new Error((d&&d.error)||'Respuesta vacía del Apps Script.');
+  }catch(e){
+    errVivo=e; d=null;
+    try{ ld(1,40,'Conexión en vivo bloqueada por el navegador. Cargando copia de datos…'); d=await loadSnapshot(); origen='copia'; }
+    catch(e2){ ld(0,0,'No fue posible cargar los datos.'); ldFail(errVivo.message+' · Copia: '+e2.message); return; }
+  }
+  try{
     ld(2,75,'Procesando '+d.rows.length.toLocaleString('es-CO')+' filas…');
-    META = {ts:d.actualizado, meses:d.meses||[], cfg:d.config||{}};
+    META = {ts:d.actualizado + (origen==='copia'?' (copia)':''), meses:d.meses||[], cfg:d.config||{}, origen};
     RAW = parseRows(d.headers, d.rows);
     await new Promise(r=>setTimeout(r,60));
     ld(3,92,'Construyendo el tablero…');
