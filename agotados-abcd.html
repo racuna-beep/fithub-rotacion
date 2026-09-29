@@ -194,10 +194,30 @@ td.c,th.c{text-align:center}
 .f .ms-opt input{min-width:0;max-width:none;width:15px;height:15px;padding:0;border:0}
 .f .ms-q{min-width:0;max-width:none;width:100%}
 
+/* ---------- Semana / responsables ---------- */
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:var(--sf)}
+.seg button{border:0;background:none;padding:7px 14px;font-weight:600;font-size:13px;color:var(--tx2)}
+.seg button.on{background:var(--or);color:#fff}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.dg{color:#067647;font-weight:800}.db{color:#b42318;font-weight:800}.dn{color:var(--tx2);font-weight:700}.d0{color:var(--tx3)}
+.hs .dlt{display:block;font-size:11px;font-weight:700;margin-top:1px}
+.tag.blue{background:#dbeafe;color:#1e40af}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.rc{border:1px solid var(--bd);border-top:4px solid var(--tx3);border-radius:var(--r);padding:14px 16px;background:var(--sf)}
+.rc h3{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.rdot{display:inline-block;width:9px;height:9px;border-radius:99px;margin-right:6px;vertical-align:1px}
+.rc h3 .rdot{margin-right:0}
+.rc-sub{font-size:12.5px;color:var(--tx2)}
+.rc-big{font-size:34px;font-weight:900;letter-spacing:-.02em;margin:8px 0 0;line-height:1.1}
+.rc-d{font-size:12px;margin-top:4px}
+.rc-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0;padding-top:10px;border-top:1px dashed var(--bd)}
+.rc-mini div{text-align:center}.rc-mini b{display:block;font-size:17px;font-weight:900}.rc-mini span{font-size:11px;color:var(--tx2)}
+.cbox{display:inline-block;min-width:26px;padding:3px 6px;border-radius:6px;font-weight:800;color:#fff;text-align:center}
+
 /* ---------- Pivote por observación ---------- */
 .pv-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,640px),1fr));gap:22px}
 .pv{min-width:0}
-.pv th,.pv td{padding:8px 9px}
+.pv th,.pv td{padding:8px 9px;white-space:nowrap}
 .pv h3{text-align:center;font-size:14px;font-weight:800;margin-bottom:8px}
 .pv table{font-size:13px}
 .pv th{background:#faf9f7;text-transform:uppercase;font-size:11px;letter-spacing:.03em;border-bottom:2px solid var(--or);text-align:right}
@@ -308,6 +328,7 @@ td.c,th.c{text-align:center}
     <a href="#matriz" data-p="matriz" class="on">Matriz ABCD</a>
     <a href="#agotados" data-p="agotados">Agotados por cuadrante</a>
     <a href="#tipos" data-p="tipos">Tipificaciones</a>
+    <a href="#resp" data-p="resp">Categorías y responsables</a>
     <a href="#alertas" data-p="alertas">Alertas <span class="cnt" id="navAl">0</span></a>
     <a href="#proveedores" data-p="proveedores">Proveedores</a>
     <a href="#detalle" data-p="detalle">Detalle por SKU</a>
@@ -332,7 +353,7 @@ td.c,th.c{text-align:center}
       <div class="hstats">
         <div class="hs"><small>Portafolio activo</small><b class="num" id="hsSku">—</b></div>
         <div class="hs"><small>Agotados</small><b class="num" id="hsAg">—</b></div>
-        <div class="hs"><small>% disponible</small><b class="num" id="hsPct" style="color:var(--ok)">—</b></div>
+        <div class="hs"><small>% disponible</small><b class="num" id="hsPct" style="color:var(--ok)">—</b><small class="dlt" id="hsPctD"></small></div>
         <div class="hs"><small>Agotado A + B</small><b class="num" id="hsAB" style="color:var(--bad)">—</b></div>
         <div class="hs"><small>Venta/mes en riesgo</small><b class="num" id="hsRisk">—</b></div>
       </div>
@@ -344,6 +365,8 @@ td.c,th.c{text-align:center}
       <div class="f"><label>Categoría</label><div class="ms" id="fC"></div></div>
       <div class="f"><label>Tipificación (Obs)</label><div class="ms" id="fO"></div></div>
       <div class="f"><label>Pareto</label><div class="ms" id="fPa"></div></div>
+      <div class="f"><label>Responsable</label><div class="ms" id="fR"></div></div>
+      <div class="f"><label>Movimiento</label><div class="ms" id="fMv"></div></div>
       <div class="f"><label>Cuadrante</label><div class="qpills" id="fQ">
         <button class="qp" data-q="A">A</button><button class="qp" data-q="B">B</button><button class="qp" data-q="C">C</button><button class="qp" data-q="D">D</button><button class="qp" data-q="N">N</button></div></div>
       <div class="f"><label for="fThr">Agotado si stock ≤</label><input type="number" id="fThr" value="0" step="1"></div>
@@ -355,9 +378,10 @@ td.c,th.c{text-align:center}
   <!-- ============ MATRIZ ============ -->
   <section class="page on" id="p-matriz">
     <div class="card">
-      <div class="card-head"><div><h2>Resumen por observación</h2>
+      <div class="card-head"><div><h2 id="pivTitle">Resumen por observación</h2>
       <p class="desc">Conteo de SKU (COUNTA de product) por tipificación, igual que en Control de Agotados. El % se calcula sobre el <b>portafolio activo para compra</b>, que excluye Nueva Codificación y Pedido de tienda. Responde a los filtros de arriba, incluido el cuadrante.</p></div>
-      <button class="btn sm" onclick="dlPivot()">Descargar CSV</button></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="seg" id="pivSeg"><button data-w="cur" class="on">Semana actual</button><button data-w="prev">Semana pasada</button><button data-w="var">Variación</button></div>
+      <button class="btn sm" onclick="dlPivot()">Descargar CSV</button></div></div>
       <div class="pv-wrap" id="pivots"></div>
     </div>
     <div class="card">
@@ -439,6 +463,31 @@ td.c,th.c{text-align:center}
     </div>
   </section>
 
+  <!-- ============ CATEGORÍAS Y RESPONSABLES ============ -->
+  <section class="page" id="p-resp">
+    <div class="card">
+      <h2>Por responsable de compra</h2>
+      <p class="desc">El responsable sale de la categoría del producto, con el mismo mapa de Días de Inventario y Control de Agotados. Disponibilidad sobre su portafolio activo; nuevos, recurrentes y recuperados comparan contra la semana pasada.</p>
+      <div class="rgrid" id="respCards"></div>
+    </div>
+    <div class="card">
+      <h2>Responsable × cuadrante</h2>
+      <p class="desc">% disponible del portafolio activo de cada responsable en cada cuadrante. Entre paréntesis, los agotados.</p>
+      <div class="tw"><table id="tRespQ"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Agotados por categoría</h2>
+      <p class="desc">Disponibilidad, variación contra la semana pasada, agotados en A y B, del Pareto y causa principal de cada categoría.</p></div>
+      <button class="btn sm" onclick="dlCat()">Descargar CSV</button></div>
+      <div class="tw"><table id="tCat"></table></div>
+    </div>
+    <div class="card">
+      <h2>Categoría × causa</h2>
+      <p class="desc">Agotados activos con causa registrada. El color se intensifica con el número de SKU.</p>
+      <div class="tw"><table id="tCatCausa"></table></div>
+    </div>
+  </section>
+
   <!-- ============ ALERTAS ============ -->
   <section class="page" id="p-alertas">
     <div class="card">
@@ -510,7 +559,7 @@ td.c,th.c{text-align:center}
    CONFIGURACIÓN
    Pega aquí la URL /exec del Apps Script (ABCD_Clasificacion.gs)
    ========================================================= */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwIzdHQ3idIiuodbAx7eqYhzCdPUH45rR4xyNLZhwPFYeQ3nlVfgVd7pTmd_lEold8XKw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzLylHUO1N1mkMEPXyCOtSPwVJixwkkhDy4T76D6V4UMRuITC6PtjL4V2sbzdctJJSR3Q/exec';
 
 const QS = ['A','B','C','D'];
 const TIENDAS_CEDI = ['STF 51'];   // en estas tiendas el stock disponible = tienda + CEDI
@@ -523,6 +572,7 @@ const QINFO = {
 };
 const QCOL = {A:'#2563eb',B:'#e8612c',C:'#16a34a',D:'#dc2626',N:'#667085'};
 
+let ALL = [], PREV = [], HAS_PREV = false, CATROWS = [];
 let RAW = [], META = {}, VIEW = [], ALERTS = [], ALV = [], ALF = null;
 const F = {q:new Set(),s:'',thr:0};
 const page = {al:200, det:200, prov:60};
@@ -605,7 +655,7 @@ async function boot(recalc){
   try{
     ld(2,75,'Procesando '+d.rows.length.toLocaleString('es-CO')+' filas…');
     META = {ts:d.actualizado + (origen==='copia'?' (copia)':''), meses:d.meses||[], cfg:d.config||{}, origen};
-    RAW = parseRows(d.headers, d.rows);
+    setData(parseRows(d.headers, d.rows));
     await new Promise(r=>setTimeout(r,60));
     ld(3,92,'Construyendo el tablero…');
     init();
@@ -613,6 +663,9 @@ async function boot(recalc){
   }catch(err){ ld(0,0,'No fue posible cargar los datos.'); ldFail(err.message); }
 }
 
+function setData(all){
+  ALL = all; RAW = all.filter(r=>r.inCur); PREV = all.filter(r=>r.inPrev); HAS_PREV = PREV.length>0;
+}
 function parseRows(headers, rows){
   const out = parseRows_(headers, rows);
   const H={}; headers.forEach((h,i)=>H[String(h).trim()]=i);
@@ -621,6 +674,10 @@ function parseRows(headers, rows){
     if(!usa) r.cedi = null;
     const d = ('Stock disponible' in H) ? r._disp : null;
     r.disp = d!=null ? d : r.stock + (usa ? (r.cedi||0) : 0);
+    r.cediP = usa ? r._cediP : null;
+    r.dispP = r._dispP!=null ? r._dispP : (r.stockP==null ? null : r.stockP + (usa ? (r.cediP||0) : 0));
+    if(r.inPrev && !r.obsP) r.obsP='Disponible';
+    r.resp = respDe(r.cat);
   });
   return out;
 }
@@ -642,7 +699,11 @@ function parseRows_(headers, rows){
       plazo:n(r,'Plazo pago'), tipo:String(g(r,'Tipo pago')||''), costo:n(r,'Costo sin IVA'), precio:n(r,'Precio sin IVA'),
       margen: marg!=null && marg>1 ? marg/100 : marg,
       serie:String(g(r,'Serie Und')||'').split('|').filter(x=>x!=='').map(Number),
-      obs:String(g(r,'Tipificación')||'').replace(/\s+/g,' ').trim()||'Disponible', cedi:n(r,'Stock CEDI'), llave:String(g(r,'Llave')||'').trim(), _disp:n(r,'Stock disponible'), paretoH:String(g(r,'Pareto')||'')
+      obs:String(g(r,'Tipificación')||'').replace(/\s+/g,' ').trim()||'Disponible', cedi:n(r,'Stock CEDI'), llave:String(g(r,'Llave')||'').trim(), _disp:n(r,'Stock disponible'), paretoH:String(g(r,'Pareto')||''),
+      inCur:String(g(r,'En semana actual')||'SI').trim().toUpperCase()!=='NO',
+      inPrev:String(g(r,'En semana pasada')||'').trim().toUpperCase()==='SI',
+      obsP:String(g(r,'Obs pasada')||'').replace(/\s+/g,' ').trim(),
+      stockP:n(r,'Stock pasada'), _cediP:n(r,'CEDI pasada'), _dispP:n(r,'Disponible pasada')
     };
   });
 }
@@ -656,7 +717,7 @@ function loadPaste(){
   try{
     const lines=txt.split(/\r?\n/).filter(l=>l.trim()); const sep=lines[0].includes('\t')?'\t':(lines[0].split(';').length>lines[0].split(',').length?';':',');
     const rows=lines.map(l=>l.split(sep));
-    RAW=parseRows(rows[0],rows.slice(1)); META={ts:'datos pegados',meses:[],cfg:{}};
+    setData(parseRows(rows[0],rows.slice(1))); META={ts:'datos pegados',meses:[],cfg:{}};
     closePaste(); init(); document.getElementById('loader').classList.add('hide');
   }catch(e){ alert(e.message); }
 }
@@ -665,7 +726,7 @@ function loadPaste(){
 /* Multi-filtro con buscador: cada filtro guarda un Set de valores; vacío = todos.
    Las opciones se recalculan según los otros filtros (cascada) y muestran cuántos SKU tienen. */
 const MS = {};
-const MSDEF = [['fT','t','Todas'],['fP','prov','Todos'],['fM','marca','Todas'],['fC','cat','Todas'],['fO','obs','Todas'],['fPa','paretoH','Todos']];
+const MSDEF = [['fT','t','Todas'],['fP','prov','Todos'],['fM','marca','Todas'],['fC','cat','Todas'],['fO','obs','Todas'],['fPa','paretoH','Todos'],['fR','resp','Todos'],['fMv','mov','Todos']];
 function msInit(){
   MSDEF.forEach(([id,field,all])=>{
     const host=document.getElementById(id);
@@ -692,7 +753,7 @@ function msLabel(m){
   m.btn.title = n ? [...m.sel].join(' · ') : m.all;
   m.host.classList.toggle('on', n>0);
 }
-function msPass(r, skip){ return Object.values(MS).every(m=> m.id===skip || !m.sel.size || m.sel.has(r[m.field])); }
+function msPass(r, skip){ const sk=[].concat(skip||[]); return Object.values(MS).every(m=> sk.includes(m.id) || !m.sel.size || m.sel.has(r[m.field])); }
 function msList(m){
   const q=nrm(m.q.value), cnt={};
   RAW.forEach(r=>{ if(msPass(r,m.id)){ const v=r[m.field]; if(v) cnt[v]=(cnt[v]||0)+1; } });
@@ -728,6 +789,59 @@ const isAgM = r => isAg(r) && isAct(r);          // agotado que cuenta en la mé
 const sinCausa = r => nrm(r.obs)==='disponible' || !r.obs;
 const provCause = r => { const n=nrm(r.obs); return n.includes('proveedor') || n.includes('lead time'); };
 const tipLbl = r => sinCausa(r) ? 'Sin tipificar (Disponible)' : r.obs;
+
+/* Responsables por categoría (mismo mapa de Días de Inventario / Control de Agotados) */
+const RESPONSABLES={
+  'Despensa':'Edwin','Pasabocas':'Lore','Lácteos y Refrigerados':'Jorge',
+  'Congelados':'Lore','Bebés & Niños|Congelados':'Lore','Panadería':'Edwin',
+  'Despensa|Repostería':'Jorge','Cárnicos':'Lore','Pasabocas|Despensa':'Lore',
+  'Suplementos':'Jorge','Bebidas':'Edwin','Chocolatería y Confitería':'Edwin',
+  'Cuidado Personal':'Lore','Repostería':'Jorge','Cuidado del Hogar':'Edwin',
+  'Bebés & Niños':'Lore','Frutas y Verduras':'Angie','Mascotas':'Jorge',
+  'Vinos y Licores':'Jorge','Ejercicio en Casa':'Jorge',
+  'Bebés & Niños|Pasabocas':'Lore','Medicamentos':'Angie','Insumos':'Angie'
+};
+const RESP_COLORS={'Edwin':'#175cd3','Lore':'#ba24d5','Jorge':'#6941c6','Angie':'#079455','Sin asignar':'#667085'};
+function respDe(cat){ return RESPONSABLES[cat] || 'Sin asignar'; }
+function respTag(k){ return `<span class="rdot" style="background:${RESP_COLORS[k]||'#667085'}"></span>${esc(k)}`; }
+
+/* Semana pasada */
+function isExclP(r){ if(r._exP===undefined){const n=nrm(r.obsP); r._exP = n.includes('nueva codif') || (n.includes('pedido')&&n.includes('tienda'));} return r._exP; }
+const isActP = r => r.inPrev && !isExclP(r);
+const isAgP = r => isActP(r) && (r.dispP==null || r.dispP<=F.thr);
+const sinCausaP = r => nrm(r.obsP)==='disponible' || !r.obsP;
+const MOV={nuevo:'Se agotó esta semana', rec:'Sigue agotado (2 semanas)', recup:'Se recuperó', ncod:'Código nuevo en cero',
+  alta:'Código nuevo con stock', fuera:'Ya no está en la semana actual', ex:'Fuera de análisis', ok:'Con existencia', ag:'Agotado'};
+const MOVCLS={[MOV.nuevo]:'ag',[MOV.rec]:'alta',[MOV.recup]:'ok',[MOV.ncod]:'blue',[MOV.alta]:'blue',[MOV.fuera]:'baja',[MOV.ex]:'baja',[MOV.ok]:'baja',[MOV.ag]:'ag'};
+function movOf(r){
+  if(!r.inCur) return MOV.fuera;
+  if(!isAct(r)) return MOV.ex;
+  const a=isAg(r);
+  if(!HAS_PREV) return a?MOV.ag:MOV.ok;
+  const p=isAgP(r);
+  if(a&&p) return MOV.rec;
+  if(a&&!r.inPrev) return MOV.ncod;
+  if(a) return MOV.nuevo;
+  if(p) return MOV.recup;
+  if(!r.inPrev) return MOV.alta;
+  return MOV.ok;
+}
+const movTag = m => `<span class="tag ${MOVCLS[m]||'baja'}">${esc(m)}</span>`;
+function dN(v,good){ if(!v) return '<span class="d0">0</span>'; const cls=good===0?'dn':((v>0)===(good>0)?'dg':'db'); return `<span class="${cls}">${v>0?'+':'−'}${nf(Math.abs(v))}</span>`; }
+function dP(a,b,good,noArrow){
+  if(a==null||b==null||isNaN(a)||isNaN(b)) return '<span class="d0">—</span>';
+  const v=(a-b)*100; if(Math.abs(v)<0.005) return '<span class="d0">0,00 pp</span>';
+  const cls=good===0?'dn':((v>0)===(good>0)?'dg':'db');
+  return `<span class="${cls}">${noArrow?(v>0?'+':'−'):(v>0?'▲ +':'▼ −')}${Math.abs(v).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})} pp</span>`;
+}
+function isoWeek(d){ const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const day=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y)/864e5+1)/7); }
+function applyP(ignoreQ){
+  return PREV.filter(r=>msPass(r,['fO','fMv'])
+    &&(ignoreQ||!F.q.size||F.q.has(r.q))
+    &&(!F.s||(r.sku+' '+r.llave+' '+r.prod+' '+r.marca+' '+r.prov).toLowerCase().includes(F.s)));
+}
+const dispRate = arr => { const a=arr.length; return a ? arr.filter(r=>!isAg(r)).length/a : null; };
+const dispRateP = arr => { const a=arr.filter(isActP); return a.length ? a.filter(r=>!isAgP(r)).length/a.length : null; };
 function applyF(ignoreQ){
   return RAW.filter(r=>msPass(r)
     &&(ignoreQ||!F.q.size||F.q.has(r.q))
@@ -746,6 +860,7 @@ onlyAg.addEventListener('change',()=>{page.det=200;renderDetail()});
 const TITLES={matriz:['Matriz ABCD','Agotado actual leído desde el nivel de ventas y el patrón de ventas de cada SKU'],
   agotados:['Agotados por cuadrante','Dónde está el agotado y cuánta venta se está dejando de hacer'],
   tipos:['Tipificaciones','Causa del agotado leída por cuadrante, tienda y proveedor'],
+  resp:['Categorías y responsables','Disponibilidad y agotados por responsable de compra y por categoría'],
   alertas:['Alertas','SKU que se salen del lineamiento de su cuadrante'],
   proveedores:['Proveedores','Mezcla del portafolio de cada proveedor en la matriz'],
   detalle:['Detalle por SKU','Clasificación, stock, días de inventario, plazo y margen de cada SKU-tienda'],
@@ -769,13 +884,16 @@ try{ if(localStorage.getItem('abcd_side_off')==='1') document.body.classList.add
 function render(){
   if(!RAW.length) return;
   readF();
+  RAW.forEach(r=>{ r.mov=movOf(r); });
   VIEW=applyF(false);
   const act=VIEW.filter(isAct), ag=act.filter(isAg);
   hsSku.textContent=nf(act.length); hsAg.textContent=nf(ag.length);
   hsPct.textContent=act.length?pct(1-ag.length/act.length):'—';
+  if(HAS_PREV){ const pa=applyP(false); hsPctD.innerHTML=dP(act.length?1-ag.length/act.length:null, dispRateP(pa), 1)+' <span style="color:var(--tx3);font-weight:600">vs sem. pasada</span>'; }
+  else hsPctD.innerHTML='';
   hsAB.textContent=nf(ag.filter(r=>r.q==='A'||r.q==='B').length);
   hsRisk.textContent=mShort(ag.reduce((s,r)=>s+r.pp,0));
-  renderPivot(); renderMatrix(); renderStoreQ(); renderAgotados(); renderTipos(); buildAlerts(); renderAlerts(); renderProv(); renderDetail();
+  renderPivot(); renderMatrix(); renderStoreQ(); renderAgotados(); renderTipos(); renderResp(); buildAlerts(); renderAlerts(); renderProv(); renderDetail();
 }
 
 function qStats(arr){
@@ -787,11 +905,13 @@ function qStats(arr){
 }
 function renderMatrix(){
   const base=applyF(true); const totV=base.reduce((s,r)=>s+r.pp,0)||1;
+  const baseP=HAS_PREV?applyP(true):[];
   matrix.innerHTML=QS.map(q=>{
     const st=qStats(base.filter(r=>r.q===q)), I=QINFO[q];
+    const dq=HAS_PREV?`<br>${dP(st.n?1-st.p:null, dispRateP(baseP.filter(r=>r.q===q)), 1)} <span style="color:var(--tx3)">vs semana pasada</span>`:'';
     return `<button class="mq ${F.q.has(q)?'sel':''}" style="--c:var(--${q});--cbg:var(--${q}bg)" onclick="toggleQ('${q}')" aria-pressed="${F.q.has(q)}">
       <div class="mq-h"><span class="badge">${q}</span><div><b>${I.t}</b><small>${I.s}</small></div></div>
-      <div class="mq-big"><strong class="num">${st.n?pct(1-st.p):'—'}</strong><span>disponible · ${nf(st.n-st.ag)} de ${nf(st.n)} SKU activos<br><b style="color:var(--bad)">${nf(st.ag)} agotados (${pct(st.p)})</b>${st.ex?` · ${nf(st.ex)} excluidos`:''}</span></div>
+      <div class="mq-big"><strong class="num">${st.n?pct(1-st.p):'—'}</strong><span>disponible · ${nf(st.n-st.ag)} de ${nf(st.n)} SKU activos<br><b style="color:var(--bad)">${nf(st.ag)} agotados (${pct(st.p)})</b>${st.ex?` · ${nf(st.ex)} excluidos`:''}${dq}</span></div>
       <div class="mq-bar"><i style="width:${st.n?Math.max(0,100-st.p*100):0}%"></i></div>
       <div class="mq-kpis">
         <div><small>% de la venta</small><b class="num">${pct(st.venta/totV)}</b></div>
@@ -863,39 +983,118 @@ function emptyBox(t='Ningún SKU cumple estos filtros',d='Prueba quitando alguno
 /* ---------- Pivote por observación (tabla tipo Control de Agotados) ---------- */
 let PIVCSV=[];
 const esDisp = r => nrm(r.obs)==='disponible' || !r.obs;
-function pivot(title, arr, stores){
-  const tips=[...new Set(arr.map(r=>r.obs))].sort((a,b)=>a.localeCompare(b,'es'));
-  const act=arr.filter(isAct), actN=act.length;
-  const by=(f,t)=>arr.filter(r=>(t==null||r.t===t)&&f(r)).length;
-  const cell=v=>v?nf(v):'';
-  const rows=tips.map(k=>{const ex=isExcl({obs:k}); const tot=by(r=>r.obs===k);
-    PIVCSV.push([title,k,...stores.map(t=>by(r=>r.obs===k,t)),tot,ex?'':dec(tot/(actN||1),4)]);
-    return `<tr class="${ex?'ex':''}"><td>${esc(k)}</td>${stores.map(t=>`<td class="num">${cell(by(r=>r.obs===k,t))}</td>`).join('')}<td class="num"><b>${nf(tot)}</b></td><td class="num pc">${ex?'':pct(tot/(actN||1),2)}</td></tr>`}).join('');
-  const actBy=t=>act.filter(r=>r.t===t).length, dispBy=t=>act.filter(r=>r.t===t&&esDisp(r)).length;
-  const dispN=act.filter(esDisp).length;
-  const pD=t=>{const a=t==null?actN:actBy(t), d=t==null?dispN:dispBy(t); return a?d/a:null;};
-  PIVCSV.push([title,'Suma total',...stores.map(t=>by(()=>true,t)),arr.length,'']);
-  PIVCSV.push([title,'Portafolio activo para compra',...stores.map(actBy),actN,'']);
-  PIVCSV.push([title,'% Disponible',...stores.map(t=>dec(pD(t),4)),dec(pD(null),4),'']);
-  PIVCSV.push([title,'% Agotado',...stores.map(t=>pD(t)==null?'':dec(1-pD(t),4)),pD(null)==null?'':dec(1-pD(null),4),'']);
-  return `<div class="pv"><h3>${esc(title)} · ${nf(arr.length)} SKU</h3><div class="tw"><table>
-    <thead><tr><th>Counta de product</th>${stores.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Suma total</th><th>%</th></tr></thead>
+let PIVW='cur';
+function exK(k){ const n=nrm(k); return n.includes('nueva codif') || (n.includes('pedido')&&n.includes('tienda')); }
+function pivData(arr, key){
+  const cnt={}, tot={}, act={}, dsp={};
+  arr.forEach(r=>{ const k=r[key]||'Disponible', t=r.t;
+    (cnt[k]=cnt[k]||{})[t]=((cnt[k]||{})[t]||0)+1; tot[t]=(tot[t]||0)+1;
+    if(!exK(k)){ act[t]=(act[t]||0)+1; if(nrm(k)==='disponible') dsp[t]=(dsp[t]||0)+1; } });
+  return {cnt,tot,act,dsp,n:arr.length};
+}
+const sumO=o=>Object.values(o||{}).reduce((a,b)=>a+b,0);
+function pivHTML(title, D, stores, P){
+  const V=!!P;
+  const tips=[...new Set([...Object.keys(D.cnt),...(V?Object.keys(P.cnt):[])])].sort((a,b)=>a.localeCompare(b,'es'));
+  const cc=(X,k,t)=>{const o=X.cnt[k]||{}; return t==null?sumO(o):(o[t]||0);};
+  const tt=(X,t)=>t==null?X.n:(X.tot[t]||0);
+  const aa=(X,t)=>t==null?sumO(X.act):(X.act[t]||0);
+  const pd=(X,t)=>{const a=aa(X,t), d=t==null?sumO(X.dsp):(X.dsp[t]||0); return a?d/a:null;};
+  const cell=(x,y,good)=>V?dN(x-y,good):(x?nf(x):'');
+  const aD=aa(D,null)||1, aP=V?(aa(P,null)||1):1;
+  const rows=tips.map(k=>{
+    const ex=exK(k), good=nrm(k)==='disponible'?1:(ex?0:-1);
+    const tot=cc(D,k,null), totP=V?cc(P,k,null):0;
+    PIVCSV.push([title+(V?' (variación)':''),k,...stores.map(t=>V?cc(D,k,t)-cc(P,k,t):cc(D,k,t)),V?tot-totP:tot,
+      ex?'':dec(V?(tot/aD-totP/aP):tot/aD,4)]);
+    return `<tr class="${ex?'ex':''}"><td>${esc(k)}</td>${stores.map(t=>`<td class="num">${cell(cc(D,k,t),V?cc(P,k,t):0,good)}</td>`).join('')}
+      <td class="num"><b>${cell(tot,totP,good)}</b></td><td class="num pc">${ex?'':(V?dP(tot/aD,totP/aP,good,1):pct(tot/aD,2))}</td></tr>`;
+  }).join('');
+  const rowT=(lbl,f,good)=>`${stores.map(t=>`<td class="num">${V?dN(f(D,t)-f(P,t),good):nf(f(D,t))}</td>`).join('')}<td class="num">${V?dN(f(D,null)-f(P,null),good):nf(f(D,null))}</td>`;
+  const rowP=(f,good)=>`${stores.map(t=>`<td class="num v">${V?dP(f(D,t),f(P,t),good,1):pct(f(D,t),2)}</td>`).join('')}<td class="num v">${V?dP(f(D,null),f(P,null),good,1):pct(f(D,null),2)}</td>`;
+  const agR=(X,t)=>{const v=pd(X,t); return v==null?null:1-v;};
+  PIVCSV.push([title,'% Disponible',...stores.map(t=>V?dec((pd(D,t)||0)-(pd(P,t)||0),4):dec(pd(D,t),4)),V?dec((pd(D,null)||0)-(pd(P,null)||0),4):dec(pd(D,null),4),'']);
+  return `<div class="pv"><h3>${esc(title)} · ${nf(D.n)} SKU${V?` <span style="font-weight:600;font-size:12px">(${dN(D.n-P.n,0)} vs pasada)</span>`:''}</h3><div class="tw"><table>
+    <thead><tr><th>${V?'Variación':'Counta de product'}</th>${stores.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Suma total</th><th>%</th></tr></thead>
     <tbody>${rows}
-      <tr class="tot"><td>Suma total</td>${stores.map(t=>`<td class="num">${nf(by(()=>true,t))}</td>`).join('')}<td class="num">${nf(arr.length)}</td><td></td></tr>
-      <tr class="act"><td>Portafolio activo para compra</td>${stores.map(t=>`<td class="num">${nf(actBy(t))}</td>`).join('')}<td class="num">${nf(actN)}</td><td></td></tr>
-      <tr class="pd"><td><b>% Disponible</b></td>${stores.map(t=>`<td class="num v">${pct(pD(t),2)}</td>`).join('')}<td class="num v">${pct(pD(null),2)}</td><td></td></tr>
-      <tr class="pa"><td><b>% Agotado</b></td>${stores.map(t=>`<td class="num v">${pD(t)==null?'—':pct(1-pD(t),2)}</td>`).join('')}<td class="num v">${pD(null)==null?'—':pct(1-pD(null),2)}</td><td></td></tr>
+      <tr class="tot"><td>Suma total</td>${rowT('',tt,0)}<td></td></tr>
+      <tr class="act"><td>Portafolio activo para compra</td>${rowT('',aa,0)}<td></td></tr>
+      <tr class="pd"><td><b>% Disponible</b></td>${rowP(pd,1)}<td></td></tr>
+      <tr class="pa"><td><b>% Agotado</b></td>${rowP(agR,-1)}<td></td></tr>
     </tbody></table></div></div>`;
 }
 function renderPivot(){
   PIVCSV=[];
-  const base=VIEW; if(!base.length){ pivots.innerHTML=emptyBox(); return; }
-  const tienePareto=RAW.some(r=>r.paretoH);
-  const par=base.filter(r=>nrm(r.paretoH)==='si');
-  const st=[...new Set(base.map(r=>r.t))].sort();
-  pivots.innerHTML=pivot('General Fithub',base,st)+(tienePareto?(par.length?pivot('Pareto',par,st):`<div class="pv"><h3>Pareto</h3>${emptyBox('Sin SKU Pareto con estos filtros','')}</div>`):'');
+  if(!HAS_PREV) PIVW='cur';
+  document.querySelectorAll('#pivSeg button').forEach(b=>{ b.classList.toggle('on',b.dataset.w===PIVW); b.disabled = b.dataset.w!=='cur' && !HAS_PREV; b.title = b.disabled?'Agrega la pestaña "Data Semana Pasada" para comparar':''; });
+  const lbl={cur:'semana actual',prev:'semana pasada',var:'variación vs semana pasada'}[PIVW];
+  pivTitle.textContent=`Semana ${isoWeek(new Date())} · ${lbl}`;
+  const cur=VIEW, prev=HAS_PREV?applyP(false):[];
+  if(!(PIVW==='prev'?prev:cur).length){ pivots.innerHTML=emptyBox(); return; }
+  const st=[...new Set([...cur,...prev].map(r=>r.t))].sort();
+  const isPar=r=>nrm(r.paretoH)==='si';
+  const one=(title,c,p)=> PIVW==='cur' ? pivHTML(title,pivData(c,'obs'),st)
+    : PIVW==='prev' ? pivHTML(title,pivData(p,'obsP'),st)
+    : pivHTML(title,pivData(c,'obs'),st,pivData(p,'obsP'));
+  pivots.innerHTML = one('General Fithub',cur,prev) + (RAW.some(r=>r.paretoH) ? one('Pareto',cur.filter(isPar),prev.filter(isPar)) : '');
 }
-function dlPivot(){ const st=[...new Set(VIEW.map(r=>r.t))].sort(); csv('abcd_resumen_observacion.csv',['Tabla','Observación',...st,'Suma total','%'],PIVCSV); }
+document.getElementById('pivSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||b.disabled) return; PIVW=b.dataset.w; renderPivot(); });
+function dlPivot(){ const st=[...new Set([...VIEW,...(HAS_PREV?applyP(false):[])].map(r=>r.t))].sort(); csv('abcd_resumen_observacion.csv',['Tabla','Observación',...st,'Suma total','%'],PIVCSV); }
+
+/* ---------- Categorías y responsables ---------- */
+function verResp(k){ msSet('fR',[k]); onlyAg.checked=true; page.det=200; render(); location.hash='detalle'; }
+function renderResp(){
+  const prevAll = HAS_PREV?applyP(false):[];
+  const by={}; const B=k=>by[k]=by[k]||{k,act:0,ag:0,agP:0,actP:0,nuevo:0,rec:0,recup:0,ab:0,cats:{}};
+  VIEW.forEach(r=>{ const b=B(r.resp); if(isAct(r)) b.act++;
+    if(isAgM(r)){ b.ag++; b.cats[r.cat]=1; if(r.q==='A'||r.q==='B') b.ab++; }
+    if(r.mov===MOV.nuevo||r.mov===MOV.ncod) b.nuevo++; else if(r.mov===MOV.rec) b.rec++; else if(r.mov===MOV.recup) b.recup++; });
+  prevAll.forEach(r=>{ const b=B(r.resp); if(isActP(r)) b.actP++; if(isAgP(r)) b.agP++; });
+  const list=Object.values(by).filter(b=>b.act||b.actP).sort((a,b)=>b.ag-a.ag);
+  respCards.innerHTML = list.length ? list.map(b=>{
+    const col=RESP_COLORS[b.k]||'#667085', pc=b.act?1-b.ag/b.act:null, pp=b.actP?1-b.agP/b.actP:null;
+    return `<div class="rc" style="border-top-color:${col}"><h3><span class="rdot" style="background:${col}"></span>${esc(b.k)}</h3>
+      <div class="rc-sub">${nf(b.act)} SKU activos · ${nf(Object.keys(b.cats).length)} categorías con agotado</div>
+      <div class="rc-big num" style="color:${col}">${pct(pc)}</div>
+      <div class="rc-sub">disponible · <b style="color:var(--bad)">${nf(b.ag)} agotados</b> · ${nf(b.ab)} en A/B</div>
+      ${HAS_PREV?`<div class="rc-d">${dP(pc,pp,1)} <span style="color:var(--tx3)">· ${dN(b.ag-b.agP,-1)} agotados vs semana pasada</span></div>`:''}
+      <div class="rc-mini"><div><b style="color:var(--bad)">${nf(b.nuevo)}</b><span>Nuevos</span></div><div><b style="color:#b54708">${nf(b.rec)}</b><span>Recurrentes</span></div><div><b style="color:var(--ok)">${nf(b.recup)}</b><span>Recuperados</span></div></div>
+      <button class="btn sm" onclick="verResp(${JSON.stringify(b.k).replace(/"/g,'&quot;')})">Ver sus SKU agotados</button></div>`;
+  }).join('') : emptyBox();
+
+  const cols=['A','B','C','D','N'];
+  const cellQ=(a,q)=>{ if(!a.length) return '—'; const ag=a.filter(isAg).length;
+    return `<span class="heat num" style="${heat(ag/a.length,q)}">${pct(1-ag/a.length)} <small>(${nf(ag)})</small></span>`; };
+  tRespQ.innerHTML = list.length ? `<thead><tr><th>Responsable</th>${cols.map(q=>`<th class="c"><span class="qt ${q}">${q}</span></th>`).join('')}<th class="r">Total</th></tr></thead>
+    <tbody>${list.map(b=>{ const rs=VIEW.filter(r=>r.resp===b.k&&isAct(r)), ag=rs.filter(isAg).length;
+      return `<tr><td><b>${respTag(b.k)}</b></td>${cols.map(q=>`<td class="c">${cellQ(rs.filter(r=>r.q===q),q)}</td>`).join('')}
+        <td class="r num"><b>${rs.length?pct(1-ag/rs.length):'—'}</b> <small style="color:var(--tx3)">(${nf(ag)})</small></td></tr>`; }).join('')}</tbody>`
+    : `<tbody><tr><td>${emptyBox()}</td></tr></tbody>`;
+
+  const cm={}; const C=k=>cm[k]=cm[k]||{k,resp:respDe(k),act:0,ag:0,ab:0,par:0,agP:0,actP:0,causas:{}};
+  VIEW.forEach(r=>{ const c=C(r.cat); if(isAct(r)) c.act++;
+    if(isAgM(r)){ c.ag++; if(r.q==='A'||r.q==='B') c.ab++; if(nrm(r.paretoH)==='si') c.par++; if(!sinCausa(r)) c.causas[r.obs]=(c.causas[r.obs]||0)+1; } });
+  prevAll.forEach(r=>{ const c=C(r.cat); if(isActP(r)) c.actP++; if(isAgP(r)) c.agP++; });
+  CATROWS=Object.values(cm).filter(c=>c.act).map(c=>{ c.top=Object.entries(c.causas).sort((a,b)=>b[1]-a[1])[0]||null; c.pd=c.act?1-c.ag/c.act:null; c.pdP=c.actP?1-c.agP/c.actP:null; return c; })
+    .sort((a,b)=>b.ag-a.ag||a.k.localeCompare(b.k,'es'));
+  tCat.innerHTML = CATROWS.length ? `<thead><tr><th>Categoría</th><th>Responsable</th><th class="r">Activos</th><th class="r">Agotados</th><th class="r">% disponible</th>${HAS_PREV?'<th class="r">vs sem. pasada</th>':''}<th class="r">Agot. A+B</th><th class="r">Agot. Pareto</th><th>Causa principal</th></tr></thead>
+    <tbody>${CATROWS.map(c=>`<tr><td><b>${esc(c.k)}</b></td><td>${respTag(c.resp)}</td><td class="r num">${nf(c.act)}</td>
+      <td class="r num" style="${c.ag?'color:var(--bad);font-weight:800':''}">${nf(c.ag)}</td><td class="r num"><b>${pct(c.pd)}</b></td>
+      ${HAS_PREV?`<td class="r num">${dP(c.pd,c.pdP,1)} <small style="color:var(--tx3)">${dN(c.ag-c.agP,-1)}</small></td>`:''}
+      <td class="r num">${c.ab?`<b style="color:var(--bad)">${nf(c.ab)}</b>`:'—'}</td><td class="r num">${c.par?nf(c.par):'—'}</td>
+      <td>${c.top?`${esc(c.top[0])} <small style="color:var(--tx3)">(${nf(c.top[1])})</small>`:'<span style="color:var(--tx3)">—</span>'}</td></tr>`).join('')}</tbody>`
+    : `<tbody><tr><td>${emptyBox()}</td></tr></tbody>`;
+
+  const ok=VIEW.filter(r=>isAgM(r)&&!sinCausa(r));
+  const cats=[...new Set(ok.map(r=>r.cat))].sort((a,b)=>a.localeCompare(b,'es')), causas=[...new Set(ok.map(r=>r.obs))].sort((a,b)=>a.localeCompare(b,'es'));
+  const m={}; let mx=0; ok.forEach(r=>{ const k=r.cat+'||'+r.obs; m[k]=(m[k]||0)+1; if(m[k]>mx) mx=m[k]; });
+  tCatCausa.innerHTML = cats.length ? `<thead><tr><th>Categoría</th>${causas.map(c=>`<th class="c" style="white-space:normal;min-width:86px">${esc(c)}</th>`).join('')}<th class="r">Total</th></tr></thead>
+    <tbody>${cats.map(c=>{ let tot=0; return `<tr><td><b>${esc(c)}</b> <small style="color:var(--tx3)">${esc(respDe(c))}</small></td>${causas.map(k=>{ const v=m[c+'||'+k]||0; tot+=v;
+      return `<td class="c">${v?`<span class="cbox" style="background:rgba(192,38,31,${(0.18+(v/mx)*0.72).toFixed(2)})">${v}</span>`:'<span style="color:var(--tx3)">·</span>'}</td>`; }).join('')}<td class="r num"><b>${nf(tot)}</b></td></tr>`; }).join('')}</tbody>`
+    : `<tbody><tr><td>${emptyBox('Sin agotados con causa registrada','')}</td></tr></tbody>`;
+}
+function dlCat(){ csv('abcd_categorias.csv',['Categoría','Responsable','Activos','Agotados','% disponible','% disponible sem. pasada','Agotados sem. pasada','Agotados A+B','Agotados Pareto','Causa principal'],
+  CATROWS.map(c=>[c.k,c.resp,c.act,c.ag,dec(c.pd,4),dec(c.pdP,4),c.agP,c.ab,c.par,c.top?c.top[0]:''])); }
 
 /* ---------- Tipificaciones ---------- */
 let TIPROWS=[], CEDIL=[]; page.cedi=100;
@@ -956,6 +1155,7 @@ function dlTipos(){ csv('abcd_tipificaciones.csv',['Tipificación','A','B','C','
 /* ---------- Alertas ---------- */
 const ALTYPES = [
   {id:'agA', lbl:'Agotado en A', pr:'crit', col:'#b42318'},
+  {id:'recAB', lbl:'Sigue agotado en A/B (2 semanas)', pr:'crit', col:'#7a271a'},
   {id:'agB', lbl:'Agotado en B', pr:'alta', col:'#e8612c'},
   {id:'cedi', lbl:'STF 51 · piso vacío con CEDI', pr:'alta', col:'#0e9384'},
   {id:'sinT', lbl:'Agotado sin tipificar', pr:'media', col:'#b54708'},
@@ -975,6 +1175,7 @@ function buildAlerts(){
   VIEW.forEach(r=>{
     const ag=isAg(r), agm=isAgM(r), causa=sinCausa(r)?'sin causa cargada':r.obs;
     if(agm&&r.q==='A') add(r,'agA',`Reponer ya: un A nunca debe quebrar (${causa})`);
+    if(agm&&(r.q==='A'||r.q==='B')&&r.mov===MOV.rec) add(r,'recAB',`Dos semanas en cero (${causa}): escalar con el proveedor`);
     if(agm&&r.q==='B') add(r,'agB',`Reponer con colchón de seguridad y frecuencia mayor (${causa})`);
     if(isAct(r)&&pisoVacio(r)&&r.q!=='N') add(r,'cedi',`Tienda en cero: pasar a piso desde CEDI (${nf(r.cedi)} und)`);
     if(agm&&sinCausa(r)&&r.q!=='N') add(r,'sinT','En cero sin tipificación: cargar la causa en Observación');
@@ -1046,7 +1247,10 @@ const DCOLS=[
   {k:'cv',l:'CV',c:'r',f:r=>r.cv==null?'—':r.cv.toLocaleString('es-CO',{maximumFractionDigits:2})},
   {k:'dias',l:'Días inv.',c:'r',f:r=>nf1(r.dias)},
   {k:'plazo',l:'Plazo',c:'r',f:r=>r.plazo==null?'—':nf(r.plazo)+' d'},
-  {k:'margen',l:'Margen',c:'r',f:r=>pct(r.margen)}
+  {k:'margen',l:'Margen',c:'r',f:r=>pct(r.margen)},
+  {k:'mov',l:'Movimiento',f:r=>movTag(r.mov)},
+  {k:'dispP',l:'Sem. pasada',c:'r',f:r=>r.inPrev?`${nf(r.dispP)}${!sinCausaP(r)&&r.obsP?` <small style="color:var(--tx3)" title="${esc(r.obsP)}">·</small>`:''}`:'—'},
+  {k:'resp',l:'Responsable',f:r=>respTag(r.resp)}
 ];
 function detRows(){
   let L=onlyAg.checked?VIEW.filter(isAgM):VIEW.slice();
@@ -1064,7 +1268,7 @@ function renderDetail(){
     :`<tbody><tr><td>${emptyBox()}</td></tr></tbody>`;
   detMore.innerHTML=DETL.length>page.det?`<button class="btn" onclick="page.det+=300;renderDetail()">Ver 300 más</button>`:'';
 }
-function sortDet(k){ detSort = detSort.k===k?{k,d:-detSort.d}:{k,d:(['t','prod','prov','q','obs'].includes(k)?1:-1)}; renderDetail(); }
+function sortDet(k){ detSort = detSort.k===k?{k,d:-detSort.d}:{k,d:(['t','prod','prov','q','obs','mov','resp'].includes(k)?1:-1)}; renderDetail(); }
 
 /* ---------- Drawer ---------- */
 function spark(s){
@@ -1084,6 +1288,9 @@ function openDrawer(i,src){
     <div class="dgrid">
       <div><small>Tienda · CEDI · disponible</small><b class="num">${nf(r.stock)} · ${r.cedi==null?'—':nf(r.cedi)} · ${nf(r.disp)} ${isAg(r)?(isAct(r)?'<span class="tag ag">Agotado</span>':'<span class="tag baja">Excluido</span>'):''}</b></div>
       <div><small>Tipificación</small><b>${esc(r.obs)}${isExcl(r)?' <span class="tag baja">fuera de la métrica</span>':''}</b></div>
+      <div><small>Semana pasada</small><b class="num">${r.inPrev?`${nf(r.dispP)} · ${esc(r.obsP)}`:'No venía en la semana pasada'}</b></div>
+      <div><small>Movimiento</small><b>${movTag(r.mov)}</b></div>
+      <div><small>Responsable</small><b>${respTag(r.resp)}</b></div>
       <div><small>Días de inventario</small><b class="num">${nf1(r.dias)}</b></div>
       <div><small>Und/mes · Venta/mes</small><b class="num">${nf1(r.pu)} · ${mShort(r.pp)}</b></div>
       <div><small>Part. venta tienda</small><b class="num">${pct(r.part,2)}</b></div>
@@ -1111,8 +1318,8 @@ function csv(name, head, rows){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'})); a.download=name; a.click();
 }
 const dec=(n,d=2)=>n==null?'':String(Math.round(n*10**d)/10**d).replace('.',',');
-function dlDetail(){ csv('abcd_detalle.csv',['Tienda','SKU','Llave','Producto','Marca','Proveedor','Categoría','Cuadrante','Nivel','Patrón','CV','Stock tienda','Stock CEDI','Stock disponible','Tipificación','Activo compra','Agotado','Und/mes','Venta $/mes','Part. tienda','Días inv.','Plazo','Tipo pago','Margen'],
-  DETL.map(r=>[r.t,r.sku,r.llave,r.prod,r.marca,r.prov,r.cat,r.q,r.nivel,r.patron,dec(r.cv),r.stock,r.cedi==null?'':r.cedi,r.disp,r.obs,isAct(r)?'SI':'NO',isAg(r)?'SI':'NO',dec(r.pu,1),Math.round(r.pp),dec(r.part,4),dec(r.dias,1),r.plazo,r.tipo,dec(r.margen,4)])); }
+function dlDetail(){ csv('abcd_detalle.csv',['Tienda','SKU','Llave','Producto','Marca','Proveedor','Categoría','Cuadrante','Nivel','Patrón','CV','Stock tienda','Stock CEDI','Stock disponible','Tipificación','Activo compra','Agotado','Movimiento','Obs sem. pasada','Disponible sem. pasada','Responsable','Und/mes','Venta $/mes','Part. tienda','Días inv.','Plazo','Tipo pago','Margen'],
+  DETL.map(r=>[r.t,r.sku,r.llave,r.prod,r.marca,r.prov,r.cat,r.q,r.nivel,r.patron,dec(r.cv),r.stock,r.cedi==null?'':r.cedi,r.disp,r.obs,isAct(r)?'SI':'NO',isAg(r)?'SI':'NO',r.mov,r.inPrev?r.obsP:'',r.inPrev?r.dispP:'',r.resp,dec(r.pu,1),Math.round(r.pp),dec(r.part,4),dec(r.dias,1),r.plazo,r.tipo,dec(r.margen,4)])); }
 function dlAlerts(){ const L=ALF?ALERTS.filter(a=>a.id===ALF):ALERTS; csv('abcd_alertas.csv',['Prioridad','Alerta','Cuadrante','Tienda','SKU','Producto','Proveedor','Stock','Und/mes','Días inv.','Acción'],
   L.map(a=>[PRN[a.t.pr],a.t.lbl,a.r.q,a.r.t,a.r.sku,a.r.prod,a.r.prov,a.r.stock,dec(a.r.pu,1),dec(a.r.dias,1),a.acc])); }
 function dlProv(){ csv('abcd_proveedores.csv',['Proveedor','SKU','SKU activos','A','B','C','D','N','Venta $/mes','Agotados activos','% agotado','Agotados A+B','% atribuible proveedor','Plazo prom.','Margen prom.','Lectura'],
@@ -1133,6 +1340,10 @@ function renderMethod(){
   <p>Cada SKU-tienda se identifica por su <b>Llave</b>. Un SKU está <b>agotado</b> si su <b>stock disponible</b> es menor o igual al valor del filtro "Agotado si stock ≤" (por defecto 0). En <b>STF 51</b> el stock disponible es tienda + CEDI: si la tienda está en cero pero hay existencia en CEDI, el SKU está disponible y aparece en la lista para pasar a piso. En las demás tiendas solo cuenta el stock de tienda. La causa sale de la columna <b>Observación</b> de la Data.</p>
   <p>El <b>% de agotado</b> se calcula sobre el <b>portafolio activo para compra</b>, igual que en el tablero de Control de Agotados: se excluyen del numerador y del denominador los SKU tipificados como <b>Nueva Codificación</b> y <b>Pedido de tienda</b>. Siguen visibles en la vista de Tipificaciones y en el detalle, marcados como excluidos.</p>
   <p><b>Disponible</b> en un SKU en cero significa existencia en cero sin causa cargada: cuenta como agotado, pero no entra en el análisis de causas y genera la alerta "Agotado sin tipificar". Las causas <b>atribuibles al proveedor</b> son agotado por proveedor, incumplimiento de lead time y problema con proveedor.</p>
+  <h3>Comparación semanal</h3>
+  <p>El script lee la pestaña <b>Data Semana Actual</b> y, si existe, <b>Data Semana Pasada</b>, y las cruza por <b>Llave</b>. El cuadrante ABCD es el de la semana actual. Los movimientos siguen la lógica de Control de Agotados: <b>Se agotó esta semana</b> (tenía existencia y hoy está en cero), <b>Sigue agotado</b> (en cero las dos semanas), <b>Se recuperó</b> (estaba en cero y hoy tiene existencia), <b>Código nuevo en cero / con stock</b> (no venía la semana pasada) y <b>Fuera de análisis</b> (Nueva Codificación o Pedido de tienda). La variación de disponibilidad se expresa en puntos porcentuales (pp).</p>
+  <h3>Responsables</h3>
+  <p>El responsable de compra sale de la categoría, con el mismo mapa del tablero de Días de Inventario: Despensa, Panadería, Bebidas, Chocolatería y Cuidado del Hogar → Edwin; Pasabocas, Congelados, Cárnicos, Cuidado Personal y Bebés & Niños → Lore; Lácteos y Refrigerados, Repostería, Suplementos, Mascotas, Vinos y Licores y Ejercicio en Casa → Jorge; Frutas y Verduras, Medicamentos e Insumos → Angie. Una categoría fuera del mapa aparece como "Sin asignar".</p>
   <h3>Días de inventario</h3>
   <p> Los <b>días de inventario</b> son stock ÷ (unidades promedio mes ÷ 30). La <b>venta en riesgo</b> es la venta promedio mensual de los SKU que hoy están en cero.</p>
   <h3>Lineamientos aplicados</h3>
