@@ -629,6 +629,30 @@ function jsonp(url, timeout=150000){
 
 // Copia de datos que el Apps Script publica cada hora en este mismo repo (respaldo para Safari u otros bloqueos)
 const SNAPSHOT_URL = 'data/abcd-data.json';
+// Segundo respaldo: lectura directa del Sheet (misma vía que Control de Agotados).
+// Requiere que el Sheet esté compartido como "Cualquier persona con el enlace · Lector".
+const SHEET_ID = '1TuIBEcXK8hpmNuFvsr_cmdoxZM6EOy9djneSaR2HT7w';
+const SHEET_TAB = 'Clasificacion_ABCD';
+function loadGviz(timeout=90000){
+  return new Promise((res,rej)=>{
+    const cb='gviz_'+Date.now(); const s=document.createElement('script');
+    const t=setTimeout(()=>{clean();rej(new Error('Google Sheets no respondió a tiempo.'))},timeout);
+    function clean(){clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined} s.remove();}
+    window[cb]=resp=>{ clean();
+      try{
+        if(!resp||resp.status==='error'){ const m=resp&&resp.errors&&resp.errors[0]?(resp.errors[0].detailed_message||resp.errors[0].message):'error'; return rej(new Error('Sheets: '+String(m).replace(/<[^>]+>/g,''))); }
+        const cols=resp.table.cols||[], rows=resp.table.rows||[];
+        let headers=cols.map(c=>c.label||'');
+        let data=rows.map(r=>(r.c||[]).map(c=>c==null?'':(c.v==null?'':c.v)));
+        if(headers.filter(h=>String(h).trim()).length<3 && data.length) headers=data.shift().map(String);
+        res({ok:true, actualizado:'lectura directa del Sheet', meses:[], config:{}, headers, rows:data});
+      }catch(err){ rej(err); }
+    };
+    s.onerror=()=>{clean();rej(new Error('No se pudo leer el Sheet (¿está compartido con el enlace?).'))};
+    s.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json;responseHandler:'+cb+'&headers=1&sheet='+encodeURIComponent(SHEET_TAB)+'&t='+Date.now();
+    document.head.appendChild(s);
+  });
+}
 
 async function loadSnapshot(){
   const r = await fetch(SNAPSHOT_URL + '?t=' + Date.now(), {cache:'no-store'});
@@ -649,8 +673,14 @@ async function boot(recalc){
     if(!d || !d.ok) throw new Error((d&&d.error)||'Respuesta vacía del Apps Script.');
   }catch(e){
     errVivo=e; d=null;
-    try{ ld(1,40,'Conexión en vivo bloqueada por el navegador. Cargando copia de datos…'); d=await loadSnapshot(); origen='copia'; }
-    catch(e2){ ld(0,0,'No fue posible cargar los datos.'); ldFail(errVivo.message+' · Copia: '+e2.message); return; }
+    let e2=null, e3=null;
+    try{ ld(1,35,'Conexión con Apps Script bloqueada. Leyendo el Sheet directamente…'); d=await loadGviz(); origen='sheet'; }
+    catch(x){ e2=x; }
+    if(!d){
+      try{ ld(1,45,'Cargando copia de datos…'); d=await loadSnapshot(); origen='copia'; }
+      catch(x){ e3=x; }
+    }
+    if(!d){ ld(0,0,'No fue posible cargar los datos.'); ldFail(errVivo.message+' · Sheet: '+e2.message+' · Copia: '+e3.message); return; }
   }
   try{
     ld(2,75,'Procesando '+d.rows.length.toLocaleString('es-CO')+' filas…');
@@ -687,6 +717,9 @@ function parseRows_(headers, rows){
   const miss=need.filter(k=>!(k in H)); if(miss.length) throw new Error('Faltan columnas: '+miss.join(', ')+'. ¿Pegaste la pestaña Clasificacion_ABCD?');
   const g=(r,k)=> k in H ? r[H[k]] : '';
   const n=(r,k)=> numCO(g(r,k));
+  // Si el SKU llega vacío (p. ej. lectura directa de Sheets con tipos mezclados), se deriva de la Llave
+  const skuOf=r=>{ const v=String(g(r,'SKU')==null?'':g(r,'SKU')).trim(); if(v) return v; const t=String(g(r,'Tienda')||'').trim(), l=String(g(r,'Llave')||'').trim(); return l.indexOf(t)===0?l.slice(t.length).trim():l; };
+  rows.forEach(r=>{ if('SKU' in H) r[H['SKU']]=skuOf(r); });
   return rows.filter(r=>String(g(r,'Tienda')).trim() && String(g(r,'SKU')).trim()).map(r=>{
     let part=n(r,'Part. venta'), marg=n(r,'Margen %');
     return {
