@@ -667,6 +667,8 @@ async function boot(recalc){
   let d=null, origen='vivo', errVivo=null;
   try{
     if(!API_URL || API_URL.startsWith('PEGA_')) throw new Error('Falta configurar API_URL.');
+    // ?via=sheet fuerza la lectura directa del Sheet (sirve para probar lo que ve alguien con Apps Script bloqueado)
+    if(new URLSearchParams(location.search).get('via')==='sheet') throw new Error('Prueba: lectura directa forzada.');
     ld(0,10,'Conectando con Google Sheets…');
     let tick=12; const iv=setInterval(()=>{ tick=Math.min(tick+2,62); ld(1,tick,'Clasificando el portafolio en el Sheet…'); },900);
     d = await jsonp(API_URL + (recalc===false ? '?cache=1' : '')).finally(()=>clearInterval(iv));
