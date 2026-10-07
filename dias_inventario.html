@@ -1394,7 +1394,7 @@ function fetchJSONP(url, timeout = 120000) {
 async function fetchDiagnostico(fullUrl, cbName) {
   let res, txt;
   try {
-    res = await fetch(fullUrl, { redirect: 'follow', cache: 'no-store' });
+    res = await fetch(fullUrl, { redirect: 'follow', cache: 'no-store', credentials: 'omit' });
     txt = await res.text();
   } catch (e) {
     console.error('[Fithub] fetch falló:', e);
@@ -1452,7 +1452,14 @@ async function loadData() {
 
     if (!raw) {
       setLoader('Descargando datos…', 30);
-      raw = await fetchJSONP(APPS_URL);
+      // 1º fetch sin cookies (evita el 404 por varias cuentas Google); 2º JSONP de respaldo
+      try {
+        const cb0 = 'fithub_f_' + Date.now();
+        raw = await fetchDiagnostico(APPS_URL + (APPS_URL.includes('?') ? '&' : '?') + 'callback=' + cb0 + '&_=' + Date.now(), cb0);
+      } catch (eFetch) {
+        console.warn('[Fithub] fetch falló, intento JSONP:', eFetch.message);
+        raw = await fetchJSONP(APPS_URL);
+      }
       if (raw && raw.error) throw new Error('Apps Script: ' + raw.error);
       if (raw && Array.isArray(raw.h) && Array.isArray(raw.d)) {
         const pk = raw;
