@@ -616,7 +616,7 @@
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
-const DASH_VERSION = 'v2026-08-05.8 (fix CSS opciones multiselect)';
+const DASH_VERSION = 'v2026-10-08.1 (fix rotación ponderada proveedores)';
 // Meta de rotación para el Estado (Cumple / No cumple)
 const OBS_META = 1.30;
 console.log('%cDashboard Rotación Fithub · ' + DASH_VERSION, 'color:#f97316;font-weight:bold');
@@ -2378,6 +2378,44 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+// ─── AGREGADO POR PROVEEDOR (ponderado Vta/Inv, igual que el KPI) ──────────
+// Rotación mes = Σ Venta del mes / Σ Inv. prom del mes de todas las filas del proveedor.
+// Evita que un SKU con inventario casi en cero (rotación 1.000+) distorsione al proveedor.
+function buildProvData(rows) {
+  const map = {};
+  rows.forEach(r => {
+    const key = r.supplier + '||' + r.brand;
+    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, nuevos: 0, vta_mes: 0, inv_prom: 0, tipo: r['Tipo de Pago'] || '', mv: {} };
+    const d = map[key];
+    d.skus++;
+    if (r.obs === 'Nuevo') d.nuevos++;
+    d.vta_mes += r.vta_mes || 0;
+    d.inv_prom += r.inv_prom || 0;
+    ROT_MONTHS.forEach(m => {
+      const vtaK = m.vtaKey || 'vta_mes', invK = m.invKey || 'inv_prom';
+      if (!d.mv[m.key]) d.mv[m.key] = { vta: 0, inv: 0 };
+      d.mv[m.key].vta += r[vtaK] || 0;
+      d.mv[m.key].inv += r[invK] || 0;
+    });
+  });
+  return Object.values(map).map(d => {
+    const monthRot = {};
+    ROT_MONTHS.forEach(m => {
+      const x = d.mv[m.key];
+      monthRot[m.key] = (x && x.inv > 0) ? x.vta / x.inv : null;
+    });
+    // Promedio: media de las rotaciones ponderadas mensuales (coherente con las columnas)
+    const vals = ROT_MONTHS.map(m => monthRot[m.key]).filter(v => v != null);
+    const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
+    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
+    // Obs: rotación ponderada del mes actual vs meta
+    const curRot = CURRENT_MONTH_KEY ? monthRot[CURRENT_MONTH_KEY] : null;
+    const obs = (d.nuevos === d.skus) ? 'Nuevo' : (curRot != null && curRot >= OBS_META ? 'Cumple' : 'No cumple');
+    const { mv, ...rest } = d;
+    return { ...rest, ...monthRot, rot_prom, dias, obs };
+  });
+}
+
 // ─── PROVEEDORES ───────────────────────────────────────────────────────────
 let provSortCol = '';
 let provSortDir = -1;
@@ -2406,39 +2444,7 @@ function renderProveedores(rows) {
     });
   });
 
-  // Group by supplier + brand — acumular vta e inv para calcular rotación ponderada (igual que KPI)
-  const map = {};
-  rows.forEach(r => {
-    const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, nuevos: 0, vta_mes: 0, inv_prom: 0, tipo: r['Tipo de Pago'] || '', months: {} };
-    map[key].skus++;
-    if (r.obs === 'Nuevo') map[key].nuevos++;
-    map[key].vta_mes += r.vta_mes || 0;
-    map[key].inv_prom += r.inv_prom || 0;
-    ROT_MONTHS.forEach(m => {
-      if (r[m.key] != null) {
-        if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
-        map[key].months[m.key].sum += r[m.key];
-        map[key].months[m.key].n++;
-      }
-    });
-  });
-
-  let data = Object.values(map).map(d => {
-    // meses históricos: promedio de promedios (no tenemos vta/inv histórico por mes)
-    const monthAvgs = {};
-    ROT_MONTHS.forEach(m => {
-      monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
-    });
-    // rot_prom: promedio de los meses con datos (consistente con las columnas mostradas)
-    const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
-    const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
-    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
-    // Obs del proveedor: calculado con la rotación del mes actual (no del primer SKU)
-    const curAvg = CURRENT_MONTH_KEY ? monthAvgs[CURRENT_MONTH_KEY] : null;
-    const obs = (d.nuevos === d.skus) ? 'Nuevo' : (curAvg != null && curAvg >= OBS_META ? 'Cumple' : 'No cumple');
-    return { ...d, ...monthAvgs, rot_prom, dias, obs };
-  });
+  let data = buildProvData(rows);
 
   // Filter by search
   const term = provSearchTerm.toLowerCase().trim();
@@ -2485,36 +2491,7 @@ function renderProveedores(rows) {
 function exportProvCSV() {
   const rows = lastRows;
   if (!rows.length) return;
-  const map = {};
-  rows.forEach(r => {
-    const key = r.supplier + '||' + r.brand;
-    if (!map[key]) map[key] = { supplier: r.supplier, brand: r.brand, skus: 0, nuevos: 0, vta_mes: 0, inv_prom: 0, tipo: r['Tipo de Pago'] || '', months: {} };
-    map[key].skus++;
-    if (r.obs === 'Nuevo') map[key].nuevos++;
-    map[key].vta_mes += r.vta_mes || 0;
-    map[key].inv_prom += r.inv_prom || 0;
-    ROT_MONTHS.forEach(m => {
-      if (r[m.key] != null) {
-        if (!map[key].months[m.key]) map[key].months[m.key] = { sum: 0, n: 0 };
-        map[key].months[m.key].sum += r[m.key];
-        map[key].months[m.key].n++;
-      }
-    });
-  });
-  let data = Object.values(map).map(d => {
-    const monthAvgs = {};
-    ROT_MONTHS.forEach(m => {
-      monthAvgs[m.key] = d.months[m.key] ? d.months[m.key].sum / d.months[m.key].n : null;
-    });
-    // rot_prom: promedio de los meses con datos (consistente con la tabla)
-    const vals = ROT_MONTHS.map(m => monthAvgs[m.key]).filter(v => v != null);
-    const rot_prom = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : null;
-    const dias = rot_prom && rot_prom > 0 ? 30 / rot_prom : null;
-    // Obs del proveedor: calculado con la rotación del mes actual (no del primer SKU)
-    const curAvg = CURRENT_MONTH_KEY ? monthAvgs[CURRENT_MONTH_KEY] : null;
-    const obs = (d.nuevos === d.skus) ? 'Nuevo' : (curAvg != null && curAvg >= OBS_META ? 'Cumple' : 'No cumple');
-    return { ...d, ...monthAvgs, rot_prom, dias, obs };
-  }).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
+  let data = buildProvData(rows).sort((a, b) => (b.rot_prom || 0) - (a.rot_prom || 0));
 
   // Respetar la búsqueda activa (igual que la tabla visible)
   const term = provSearchTerm.toLowerCase().trim();
